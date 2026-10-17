@@ -15,7 +15,7 @@
     "icon": "electron _icon.js",
     "pack": "electron-builder --dir",
     "dist": "electron-builder --win nsis",
-    "release": "electron-builder --win nsis --publish always",
+    "release": "node release.js",
     "release:dry": "electron-builder --win nsis --publish never",
     "test:update": "electron _update-test.js"
   },
