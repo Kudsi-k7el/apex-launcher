@@ -12,20 +12,25 @@
 // ---------------------------------------------------------------------------
 // Release configuration
 // ---------------------------------------------------------------------------
+const REPO = 'https://github.com/Kudsi-k7el/apex-launcher';
+
 const CONFIG = {
   version: '2.7.0',
 
-  // Where the installer is served from.
-  //   * Previewing from the repo: keep the relative path to ./dist, which the
-  //     bundled backend (server/server.js) serves at /dist/... for you.
-  //   * Hosting for real: point this at your release asset, e.g.
-  //     'https://github.com/you/apex/releases/download/v2.7.0/Apex-Launcher-Setup-2.7.0.exe'
-  downloadUrl: '../dist/Apex-Launcher-Setup-2.7.0.exe',
+  // The installer is a GitHub Release asset, and the link is built out of
+  // `version` a few lines below so it can never drift from the version the page
+  // advertises. Serving it from GitHub also means the web server never has to
+  // carry an 86 MB file, and downloads never compete with the API for bandwidth.
+  releases: REPO + '/releases',
+  downloadUrl: '',
 
-  // Shown in the spec table until the page can measure the file for itself; on a
-  // server that has no installer, the row is left blank instead.
+  // Shown in the spec table until the page can measure the file for itself; if
+  // the probe cannot reach the asset the sized row is left blank instead.
   installerSize: '~82 MB'
 };
+
+CONFIG.downloadUrl = CONFIG.releases + '/download/v' + CONFIG.version +
+  '/Apex-Launcher-Setup-' + CONFIG.version + '.exe';
 
 (function () {
   const $ = (sel, root) => (root || document).querySelector(sel);
@@ -61,6 +66,17 @@ const CONFIG = {
     // "not built yet" warning would be crying wolf at a real release.
     if (location.protocol === 'file:') return;
     if (!window.fetch) return;
+
+    // Only a copy served from this same origin can be probed. A cross-origin
+    // release asset cannot: GitHub sends no Access-Control-* headers on the
+    // download redirect, so the request would fail for a reason that says
+    // nothing about whether the file exists. The size in CONFIG is the real one;
+    // this probe exists for a locally served installer.
+    let sameOrigin = false;
+    try {
+      sameOrigin = new URL(CONFIG.downloadUrl, location.href).origin === location.origin;
+    } catch { sameOrigin = false; }
+    if (!sameOrigin) return;
 
     fetch(CONFIG.downloadUrl, { method: 'HEAD' })
       .then(function (res) {

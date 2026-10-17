@@ -22,7 +22,20 @@
 const crypto = require('node:crypto');
 const fs = require('node:fs');
 const path = require('node:path');
-const { DatabaseSync } = require('node:sqlite');
+
+// `node:sqlite` is built into Node, which is the whole reason this backend has
+// no dependencies - but it only arrived in Node 22.5 and only became usable
+// without a flag in Node 24. Saying so plainly beats the ERR_UNKNOWN_BUILTIN_MODULE
+// a deployed server would otherwise die with.
+let DatabaseSync;
+try {
+  ({ DatabaseSync } = require('node:sqlite'));
+} catch {
+  throw new Error(
+    `This server needs Node 24 or newer - node:sqlite is not available in ${process.version}. ` +
+    'Install the current Node LTS from https://nodejs.org and start the server with that.'
+  );
+}
 
 // --- password hashing -------------------------------------------------------
 // N=2^14 / r=8 / p=1 lands around 50-80 ms on a desktop CPU: slow enough to be

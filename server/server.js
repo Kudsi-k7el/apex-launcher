@@ -17,6 +17,12 @@
  *   node server/server.js                 # http://127.0.0.1:8787
  *   node server/server.js --port 9000     # somewhere else
  *   node server/server.js --host 0.0.0.0  # reachable from the LAN
+ *   node server/server.js --trust-proxy   # behind Cloudflare Tunnel / Caddy
+ *   node server/server.js --allow-origin https://example.com   # site elsewhere
+ *
+ * Every flag also reads an environment variable - APEX_PORT, APEX_HOST, APEX_DB,
+ * APEX_TRUST_PROXY, APEX_ALLOW_ORIGINS - which is far easier to set for a
+ * Windows service or scheduled task than a quoted command line.
  *
  * Safety posture: loopback by default (binding to 0.0.0.0 has to be asked for on
  * purpose), a 30-day sliding session, per-IP rate limits on the credential
@@ -101,10 +107,32 @@ function tokenOf(req) {
   return parseCookies(req.headers.cookie)[COOKIE] || '';
 }
 
-function sessionCookie(token, maxAgeSec) {
+function sessionCookie(token, maxAgeSec, secure) {
   // SameSite=Lax keeps the cookie off cross-site POSTs; it is only ever a
   // convenience for the website, since the launcher uses the bearer header.
-  return `${COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAgeSec}`;
+  //
+  // `Secure` is added only when the browser really did reach us over TLS. On the
+  // local loopback setup that is not the case, and a Secure cookie on plain HTTP
+  // is silently dropped by the browser - which would look exactly like the
+  // session not persisting.
+  return `${COOKIE}=${encodeURIComponent(token)}; Path=/; HttpOnly${secure ? '; Secure' : ''}; SameSite=Lax; Max-Age=${maxAgeSec}`;
+}
+
+/**
+ * Was this request made over HTTPS?
+ *
+ * Once the server sits behind a TLS terminator (Cloudflare Tunnel, Caddy, nginx)
+ * the connection to us is plain HTTP, so the scheme has to come from the proxy -
+ * and only when that proxy is trusted. Without the check a client could forge
+ * `X-Forwarded-Proto` and talk us into telling the browser to pin a cookie to a
+ * scheme that was never used.
+ */
+function isSecureReq(req, opts = {}) {
+  if (opts.trustProxy) {
+    const proto = String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim().toLowerCase();
+    if (proto) return proto === 'https';
+  }
+  return !!(req.socket && req.socket.encrypted);
 }
 
 // ---------------------------------------------------------------------------
@@ -248,6 +276,20 @@ function createServer(opts = {}) {
   const useLimits = opts.rateLimit !== false;
   const withStatic = opts.static !== false;
   const staticOpts = { site: opts.site || SITE, dist: opts.dist || DIST };
+  const trustProxy = opts.trustProxy === true;
+
+  // Which origins may read responses cross-origin. Empty by default: the website
+  // is served from this same origin, and the launcher sends no Origin header at
+  // all, so nothing needs it. Reflecting back whatever a caller sends - with
+  // credentials allowed - is the classic way an API ends up readable by any page
+  // on the web.
+  const allowOrigins = (opts.allowOrigins || [])
+    .map((o) => String(o).trim().replace(/\/+$/, ''))
+    .filter(Boolean);
+
+  // The cookie has to know whether the request arrived over TLS, so this closes
+  // over the trust-proxy setting once instead of at each call site.
+  const cookieFor = (req, token, maxAgeSec) => sessionCookie(token, maxAgeSec, isSecureReq(req, { trustProxy }));
 
   const ipLimit = makeLimiter(40, 10 * 60 * 1000);    // per IP, all /auth traffic
   const userLimit = makeLimiter(10, 15 * 60 * 1000);  // per email, failed logins
@@ -266,7 +308,7 @@ function createServer(opts = {}) {
       const r = store.createUser(body.value, ctxOf(req));
       if (r.error) return fail(res, 400, r.error);
       send(res, 201, { ok: true, token: r.token, user: r.user }, {
-        'Set-Cookie': sessionCookie(r.token, 30 * 24 * 3600)
+        'Set-Cookie': cookieFor(req, r.token, 30 * 24 * 3600)
       });
     },
 
@@ -292,13 +334,13 @@ function createServer(opts = {}) {
       }
       if (useLimits) userLimit.clear(email);
       send(res, 200, { ok: true, token: r.token, user: r.user }, {
-        'Set-Cookie': sessionCookie(r.token, 30 * 24 * 3600)
+        'Set-Cookie': cookieFor(req, r.token, 30 * 24 * 3600)
       });
     },
 
     'POST /auth/logout': (req, res) => {
       store.endSession(tokenOf(req));
-      send(res, 200, { ok: true }, { 'Set-Cookie': sessionCookie('', 0) });
+      send(res, 200, { ok: true }, { 'Set-Cookie': sessionCookie('', 0, isSecureReq(req, { trustProxy })) });
     },
 
     'GET /auth/me': (req, res) => {
@@ -323,7 +365,7 @@ function createServer(opts = {}) {
       const again = store.authenticate({ email: session.user.email, password: next }, ctxOf(req));
       if (again.error) return fail(res, 400, again.error);
       send(res, 200, { ok: true, token: again.token, user: again.user }, {
-        'Set-Cookie': sessionCookie(again.token, 30 * 24 * 3600)
+        'Set-Cookie': cookieFor(req, again.token, 30 * 24 * 3600)
       });
     },
 
@@ -361,12 +403,13 @@ function createServer(opts = {}) {
     // that is perfectly healthy.
     const lookup = req.method === 'HEAD' ? route.replace(/^HEAD /, 'GET ') : route;
 
-    // CORS: the launcher is an Electron app (no Origin), the website is
-    // same-origin. Reflecting the origin keeps the site working if it is ever
-    // hosted separately, and the bearer token - not the origin - is the auth.
-    const origin = req.headers.origin;
-    if (origin) {
-      res.setHeader('Access-Control-Allow-Origin', origin);
+    // CORS: the launcher is an Electron app (no Origin header), and the website
+    // is served from this very origin, so neither of them needs a CORS grant.
+    // Only an explicitly allowed origin gets one - see `--allow-origin`, for the
+    // case where the site is hosted somewhere other than beside its API.
+    const origin = String(req.headers.origin || '').replace(/\/+$/, '');
+    if (origin && allowOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
       res.setHeader('Access-Control-Allow-Credentials', 'true');
       res.setHeader('Vary', 'Origin');
     }
@@ -425,13 +468,25 @@ function clientIp(req, opts = {}) {
 // CLI
 // ---------------------------------------------------------------------------
 function parseArgs(argv) {
-  const out = { port: 8787, host: '127.0.0.1', dbFile: null };
+  // Environment first, flags second. A scheduled task or service has no natural
+  // place to put a long quoted command line, so the environment is the friendlier
+  // way to configure a deployed server; anything on the command line still wins.
+  const env = process.env;
+  const list = (v) => String(v || '').split(',').map((s) => s.trim()).filter(Boolean);
+  const out = {
+    port: Number(env.APEX_PORT) || 8787,
+    host: String(env.APEX_HOST || '').trim() || '127.0.0.1',
+    dbFile: String(env.APEX_DB || '').trim() || null,
+    trustProxy: /^(1|true|yes)$/i.test(String(env.APEX_TRUST_PROXY || '')),
+    allowOrigins: list(env.APEX_ALLOW_ORIGINS)
+  };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
     if (a === '--port' || a === '-p') out.port = Number(argv[++i]) || out.port;
     else if (a === '--host' || a === '-h') out.host = String(argv[++i] || out.host);
     else if (a === '--db') out.dbFile = String(argv[++i] || '');
     else if (a === '--trust-proxy') out.trustProxy = true;
+    else if (a === '--allow-origin') out.allowOrigins = out.allowOrigins.concat(list(argv[++i]));
   }
   return out;
 }
@@ -446,7 +501,12 @@ function start() {
     console.log(`  website + API   http://${shown}:${args.port}${where}`);
     console.log(`  launcher URL    http://${shown}:${args.port}`);
     console.log(`  database        ${server.dbFile}`);
-    console.log(`  accounts        ${server.store.count()}\n`);
+    console.log(`  accounts        ${server.store.count()}`);
+    if (args.trustProxy) {
+      console.log('  proxy           trusted (x-forwarded-* honoured; cookies marked Secure over https)');
+    }
+    if (args.allowOrigins.length) console.log(`  cors origins    ${args.allowOrigins.join(', ')}`);
+    console.log('');
   });
   server.on('error', (err) => {
     if (err && err.code === 'EADDRINUSE') {

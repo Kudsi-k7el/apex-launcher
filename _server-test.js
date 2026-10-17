@@ -32,8 +32,8 @@ function listen(opts) {
   });
 }
 
-async function req(base, method, p, { body, token, cookie } = {}) {
-  const headers = {};
+async function req(base, method, p, { body, token, cookie, headers: extra } = {}) {
+  const headers = Object.assign({}, extra);
   if (body !== undefined) headers['Content-Type'] = 'application/json';
   if (token) headers.Authorization = `Bearer ${token}`;
   if (cookie) headers.Cookie = cookie;
@@ -232,6 +232,65 @@ async function main() {
   check('a different account still gets a normal answer', otherAccount.status === 401, otherAccount.status);
   await new Promise((r) => rl.close(r));
   rl.store.close();
+
+  // --- behind a TLS terminator ---------------------------------------------
+  // A tunnel or reverse proxy speaks plain HTTP to us and reports the real
+  // scheme and caller in headers. Both mistakes here are quiet rather than
+  // loud: forget to trust the proxy and the cookie merely stops being marked
+  // Secure, trust it when you should not and any client can forge the header.
+  const proxy = await listen({
+    dbFile: path.join(tmp, 'proxy.db'),
+    static: false,
+    trustProxy: true,
+    allowOrigins: ['https://apex.example.com']
+  });
+  const proxied = await req(proxy.base, 'POST', '/auth/register', {
+    body: { username: 'Behind_Tunnel', email: 'tunnel@example.com', password: 'a good password' },
+    headers: { 'X-Forwarded-Proto': 'https', 'X-Forwarded-For': '203.0.113.9' }
+  });
+  const proxiedCookie = String(proxied.headers.get('set-cookie') || '');
+  check('behind a trusted proxy an https request gets a Secure cookie',
+    proxied.status === 201 && /;\s*Secure/i.test(proxiedCookie) && /HttpOnly/i.test(proxiedCookie),
+    proxiedCookie.slice(0, 72));
+
+  const proxiedHttp = await req(proxy.base, 'POST', '/auth/login', {
+    body: { email: 'tunnel@example.com', password: 'a good password' },
+    headers: { 'X-Forwarded-Proto': 'http' }
+  });
+  check('the same proxy passing http through does not get a Secure cookie',
+    proxiedHttp.status === 200 && !/Secure/i.test(String(proxiedHttp.headers.get('set-cookie') || '')),
+    proxiedHttp.status);
+
+  const allowedOrigin = await req(proxy.base, 'GET', '/health', {
+    headers: { Origin: 'https://apex.example.com' }
+  });
+  check('an explicitly allowed origin is granted CORS access',
+    allowedOrigin.headers.get('access-control-allow-origin') === 'https://apex.example.com',
+    String(allowedOrigin.headers.get('access-control-allow-origin')));
+
+  // --- and without that trust ----------------------------------------------
+  const direct = await listen({ dbFile: path.join(tmp, 'direct.db'), static: false });
+  const forged = await req(direct.base, 'POST', '/auth/register', {
+    body: { username: 'Direct_Client', email: 'direct@example.com', password: 'a good password' },
+    headers: { 'X-Forwarded-Proto': 'https' }
+  });
+  check('X-Forwarded-Proto alone does not mark a cookie Secure',
+    forged.status === 201 && !/Secure/i.test(String(forged.headers.get('set-cookie') || '')),
+    forged.status);
+
+  // Reflecting whatever Origin a caller sends - with credentials allowed - is
+  // how an API ends up readable by any page on the web.
+  const strayOrigin = await req(direct.base, 'GET', '/health', {
+    headers: { Origin: 'https://evil.example' }
+  });
+  check('an unlisted origin gets no CORS grant at all',
+    strayOrigin.status === 200 && !strayOrigin.headers.get('access-control-allow-origin'),
+    String(strayOrigin.headers.get('access-control-allow-origin')));
+
+  await new Promise((r) => proxy.close(r));
+  proxy.store.close();
+  await new Promise((r) => direct.close(r));
+  direct.store.close();
 
   // --- the database file is real -------------------------------------------
   check('a real SQLite file was written to disk',
