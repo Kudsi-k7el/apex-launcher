@@ -1,0 +1,114 @@
+/* =========================================================================
+   Performance overlay window. The window itself is transparent, so the panel
+   is the only painted surface.
+   ========================================================================= */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  height: 100%;
+  background: transparent;
+  overflow: hidden;
+  font-family: "Segoe UI", system-ui, sans-serif;
+  color: #eef1f6;
+  user-select: none;
+  cursor: default;
+}
+
+#panel {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 11px 12px 10px;
+  border-radius: 13px;
+  background: linear-gradient(160deg, rgba(12, 15, 22, .93), rgba(8, 10, 15, .95));
+  border: 1px solid rgba(0, 168, 255, .32);
+  box-shadow: 0 14px 38px rgba(0, 0, 0, .6), inset 0 0 0 1px rgba(255, 255, 255, .03);
+}
+
+/* --- header --------------------------------------------------------------- */
+.ov-head { display: flex; align-items: center; gap: 7px; }
+.ov-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: #2ecc71; box-shadow: 0 0 8px #2ecc71;
+}
+.ov-title {
+  flex: 1; font-size: 10.5px; font-weight: 700;
+  letter-spacing: 1.7px; text-transform: uppercase; color: #9fb0c6;
+}
+.ov-key {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1px;
+  color: #7f8ea3; border: 1px solid rgba(255, 255, 255, .16);
+  border-radius: 4px; padding: 1px 5px;
+}
+
+/* --- meters --------------------------------------------------------------- */
+.ov-meters { display: flex; flex-direction: column; gap: 6px; }
+.ov-meter { display: grid; grid-template-columns: 34px 1fr 74px; align-items: center; gap: 8px; }
+.ov-label {
+  font-size: 9.5px; font-weight: 700; letter-spacing: 1.2px; color: #8b93a3;
+}
+.ov-track {
+  height: 7px; border-radius: 4px; overflow: hidden;
+  background: rgba(255, 255, 255, .09);
+}
+.ov-fill {
+  display: block; height: 100%; width: 0%;
+  border-radius: 4px; background: #00a8ff;
+  transition: width .35s ease, background-color .35s ease;
+}
+.ov-meter[data-meter="gpu"] .ov-fill { background: #7d5cff; }
+.ov-meter[data-meter="mem"] .ov-fill { background: #2ecc71; }
+.ov-meter[data-meter="vram"] .ov-fill { background: #f5a623; }
+/* Amber once a resource is genuinely busy, red when it is saturated. */
+.ov-meter.hot .ov-fill { background: #f5a623 !important; }
+.ov-meter.critical .ov-fill { background: #ff5c5c !important; }
+
+.ov-value {
+  font-size: 11px; text-align: right; color: #cfd8e6;
+  font-variant-numeric: tabular-nums;
+  font-family: Consolas, "Cascadia Mono", monospace;
+}
+
+/* --- sparkline ------------------------------------------------------------ */
+#spark { width: 100%; height: 34px; display: block; }
+
+/* --- active game ---------------------------------------------------------- */
+.ov-game {
+  border-top: 1px solid rgba(255, 255, 255, .09);
+  padding-top: 7px;
+}
+.ov-game-title {
+  font-size: 11.5px; font-weight: 650; color: #eef1f6;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  margin-bottom: 5px;
+}
+.ov-game-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px; }
+.ov-game-stats span { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.ov-game-stats b {
+  font-size: 11px; font-weight: 650; color: #cfd8e6;
+  font-family: Consolas, "Cascadia Mono", monospace;
+  white-space: nowrap; overflow: hidden;
+}
+.ov-game-stats i {
+  font-size: 8.5px; font-style: normal; letter-spacing: 1px; color: #7f8ea3;
+}
+
+/* --- footer --------------------------------------------------------------- */
+.ov-foot {
+  display: flex; align-items: baseline; gap: 12px;
+  border-top: 1px solid rgba(255, 255, 255, .09);
+  padding-top: 6px;
+}
+.ov-present { display: flex; align-items: baseline; gap: 5px; }
+.ov-present b {
+  font-size: 11.5px; color: #cfd8e6;
+  font-family: Consolas, "Cascadia Mono", monospace;
+}
+.ov-present i {
+  font-size: 8.5px; font-style: normal; letter-spacing: 1px; color: #7f8ea3;
+  text-transform: uppercase;
+}
+.ov-src { margin-left: auto; font-size: 8.5px; letter-spacing: 1px; color: #5d6b80; text-transform: uppercase; }

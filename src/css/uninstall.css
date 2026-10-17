@@ -1,0 +1,66 @@
+/* =========================================================================
+   Uninstall dialog (src/js/uninstall.js)
+   The dialog that offers both "delete the files" and "just hide it".
+   ========================================================================= */
+
+.un-head {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px; margin-bottom: 16px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 12px;
+}
+.un-art {
+  width: 132px; height: 62px; flex-shrink: 0;
+  border-radius: 8px; overflow: hidden;
+}
+.un-headtext { min-width: 0; }
+.un-headtext strong { display: block; font-size: 15px; }
+.un-headtext small { font-size: 12px; color: var(--muted); }
+
+.un-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+.un-card {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 14px; border-radius: 12px;
+  background: var(--bg); border: 1px solid var(--border);
+}
+.un-card.danger {
+  background: color-mix(in srgb, var(--danger) 7%, var(--bg));
+  border-color: color-mix(in srgb, var(--danger) 26%, var(--border));
+}
+.un-card h4 {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 13px; color: var(--text);
+}
+.un-card.danger h4 { color: var(--danger); }
+.un-card p { font-size: 12.5px; line-height: 1.55; color: var(--muted); }
+.un-card p strong { color: var(--text); }
+
+/* The exact folders and sizes, so the user agrees to something concrete. */
+.un-row {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 9px; border-radius: 8px;
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  border: 1px solid var(--border);
+}
+.un-row .ico { color: var(--accent); flex-shrink: 0; }
+.un-row code {
+  flex: 1; min-width: 0; font-size: 11.5px; color: #b7c0d0;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  user-select: text;
+}
+.un-row span { font-size: 11.5px; color: var(--muted); flex-shrink: 0; }
+.un-row.blocked { border-color: color-mix(in srgb, var(--warn) 30%, var(--border)); }
+.un-row.blocked .ico { color: var(--warn); }
+.un-row.blocked span { color: var(--warn); }
+.un-row.muted { color: var(--muted); font-size: 12px; }
+.un-row.muted .ico { color: var(--muted); }
+
+.un-note {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin-top: 14px; font-size: 12px; line-height: 1.5; color: var(--muted);
+}
+.un-note .ico { color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+
+@media (max-width: 620px) {
+  .un-grid { grid-template-columns: 1fr; }
+}

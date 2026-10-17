@@ -1,0 +1,224 @@
+/* =========================================================================
+   itch.io: browse surface, cards and the build/install dialog.
+   ========================================================================= */
+
+.itch-toolbar { align-items: flex-start; }
+
+/* --- feed chips ---------------------------------------------------------- */
+.itch-feedbar {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.itch-chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 7px 14px; border-radius: 20px;
+  background: var(--panel); border: 1px solid var(--border);
+  font-size: 12.5px; color: var(--muted); white-space: nowrap;
+  transition: background .2s, color .2s, box-shadow .2s, border-color .2s;
+}
+.itch-chip:hover { background: var(--hover); color: var(--text); box-shadow: 0 0 12px rgba(255, 255, 255, .07); }
+.itch-chip.active {
+  color: #fff;
+  background: linear-gradient(135deg, #fa5c5c, #d63f6b);
+  border-color: color-mix(in srgb, #fa5c5c 70%, transparent);
+  box-shadow: 0 0 16px color-mix(in srgb, #fa5c5c 55%, transparent);
+}
+.itch-chip .ico { flex: 0 0 auto; }
+
+/* --- status line --------------------------------------------------------- */
+.itch-status {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12.5px; color: var(--muted);
+  margin: 4px 0 14px;
+  min-height: 18px;
+}
+.itch-status:empty { display: none; }
+.itch-status.loading .ico { animation: itchSpin 1s linear infinite; color: var(--accent); }
+.itch-status.error { color: #ff8a8a; }
+.itch-status.error .ico { color: #ff6b6b; }
+@keyframes itchSpin { to { transform: rotate(360deg); } }
+
+/* --- grid + cards -------------------------------------------------------- */
+.itch-grid { align-items: stretch; }
+
+.itch-card { display: flex; flex-direction: column; }
+.itch-card .card-info { display: flex; flex-direction: column; flex: 1; }
+.itch-card .actions { margin-top: auto; }
+
+/* "where it comes from" badge, bottom-left of the art */
+.itch-origin {
+  position: absolute; left: 10px; bottom: 10px; z-index: 3;
+  color: #ffd9d9;
+  background: rgba(8, 6, 16, .72);
+  border-color: rgba(250, 92, 92, .55);
+  backdrop-filter: blur(6px);
+}
+.itch-origin .ico { color: #ff6b6b; }
+
+/* price / demo markers, top-right of the art */
+.itch-price {
+  position: absolute; right: 10px; top: 10px; z-index: 3;
+  font-size: 11px; font-weight: 800; letter-spacing: .2px;
+  padding: 4px 9px; border-radius: 6px;
+  color: #fff;
+  background: rgba(8, 6, 16, .72);
+  border: 1px solid rgba(255, 255, 255, .16);
+  backdrop-filter: blur(6px);
+}
+.itch-price.free { color: #04140a; background: color-mix(in srgb, var(--ok) 88%, #000); border-color: transparent; }
+
+.itch-demo {
+  position: absolute; right: 10px; top: 42px; z-index: 3;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 750;
+  padding: 3px 8px; border-radius: 6px;
+  color: #1b1206;
+  background: #f0b429;
+}
+
+/* --- pager --------------------------------------------------------------- */
+.itch-pager {
+  display: flex; align-items: center; justify-content: center; gap: 14px;
+  margin: 26px 0 8px;
+}
+.itch-page-n { font-size: 12.5px; color: var(--muted); }
+.itch-pager .btn:disabled { opacity: .4; pointer-events: none; }
+
+/* =========================================================================
+   Detail dialog
+   ========================================================================= */
+.itch-det { display: flex; flex-direction: column; gap: 16px; }
+
+.itch-det-hero {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border-radius: 12px;
+  overflow: hidden;
+  background: var(--hover);
+  border: 1px solid var(--border);
+}
+.itch-det-shade {
+  position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(0deg, rgba(8, 6, 16, .78), transparent 55%);
+}
+.itch-det-origin { position: absolute; left: 12px; top: 12px; }
+
+.itch-det-head h2 { margin: 0 0 4px; font-size: 21px; letter-spacing: -.3px; }
+.itch-det-sub {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  font-size: 12.5px; color: var(--muted);
+}
+.itch-det-price { font-weight: 800; color: var(--accent); }
+.itch-det-price.free { color: var(--ok); }
+.itch-det-blurb { margin: 10px 0 0; font-size: 13px; line-height: 1.6; color: var(--muted); }
+.itch-det-head .tags { margin-top: 10px; }
+
+/* --- screenshots --------------------------------------------------------- */
+.itch-shots {
+  display: flex; gap: 10px; overflow-x: auto;
+  padding-bottom: 6px;
+}
+.itch-shots:empty { display: none; }
+.itch-shots img {
+  height: 168px; width: auto; flex: 0 0 auto;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--hover);
+  object-fit: cover;
+}
+
+/* --- install area -------------------------------------------------------- */
+.itch-install {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.itch-builds-title {
+  display: flex; align-items: center; gap: 7px;
+  margin: 0 0 10px; font-size: 13px; font-weight: 700; color: var(--text);
+}
+.itch-builds-title .ico { color: var(--accent); }
+
+.itch-builds { display: flex; flex-direction: column; gap: 8px; }
+.itch-build {
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--panel);
+}
+.itch-build-plat {
+  flex: 0 0 auto;
+  min-width: 76px;
+  font-size: 10px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px;
+  color: #ffb3b3;
+  background: color-mix(in srgb, #fa5c5c 18%, transparent);
+  border: 1px solid color-mix(in srgb, #fa5c5c 42%, transparent);
+  border-radius: 6px;
+  padding: 4px 8px;
+  text-align: center;
+}
+.itch-build-text { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.itch-build-text b {
+  font-size: 12.5px; font-weight: 650; color: var(--text);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.itch-build-text small { font-size: 11px; color: var(--muted); }
+
+/* --- "needs a key" / plain notices --------------------------------------- */
+.itch-need {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px;
+  border: 1px solid color-mix(in srgb, #fa5c5c 34%, var(--border));
+  border-radius: 12px;
+  background:
+    linear-gradient(135deg, color-mix(in srgb, #fa5c5c 10%, transparent), transparent 62%),
+    var(--panel);
+}
+.itch-need-ico {
+  flex: 0 0 auto;
+  width: 42px; height: 42px; border-radius: 11px;
+  display: flex; align-items: center; justify-content: center;
+  color: #ff8a8a;
+  background: color-mix(in srgb, #fa5c5c 18%, transparent);
+}
+.itch-need-text { min-width: 0; flex: 1; }
+.itch-need-text h4 { margin: 0 0 4px; font-size: 13.5px; }
+.itch-need-text p { margin: 0; font-size: 12px; line-height: 1.55; color: var(--muted); }
+
+.itch-note {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 12.5px; color: var(--muted);
+  padding: 10px 0;
+}
+.itch-note .ico { color: var(--accent); flex: 0 0 auto; }
+.itch-note.warn { color: #ffb47a; }
+.itch-note.warn .ico { color: var(--warn); }
+
+/* The dialog gets cramped on a short window; let the build list scroll. */
+.modal-body .itch-det { max-height: none; }
+@media (max-height: 760px) {
+  .itch-shots img { height: 120px; }
+}
+
+/* =========================================================================
+   Settings › itch.io
+   ========================================================================= */
+.itch-key {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.itch-key .select { flex: 1 1 260px; min-width: 0; }
+.itch-key .btn { flex: 0 0 auto; }
+
+.itch-conn {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 10px;
+  font-size: 12.5px; color: var(--muted);
+}
+.itch-conn .ico { flex: 0 0 auto; color: var(--muted); }
+.itch-conn.ok { color: var(--ok); }
+.itch-conn.ok .ico { color: var(--ok); }
+.itch-conn b { color: var(--text); font-weight: 700; }
+

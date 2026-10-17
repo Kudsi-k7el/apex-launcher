@@ -1,0 +1,118 @@
+/* =========================================================================
+   Store page: hero carousel, content rows, store cards
+   ========================================================================= */
+
+/* --- hero carousel ------------------------------------------------------- */
+.carousel {
+  position: relative; height: 400px; border-radius: 16px; overflow: hidden;
+  box-shadow: 0 18px 46px rgba(0, 0, 0, .62);
+  border: 1px solid var(--border);
+}
+.slide { position: absolute; inset: 0; opacity: 0; transition: opacity .7s ease; pointer-events: none; }
+.slide.active { opacity: 1; pointer-events: auto; }
+.slide.active .art img { animation: heroZoom 8s ease-out forwards; }
+@keyframes heroZoom { from { transform: scale(1.06); } to { transform: scale(1); } }
+.slide .art-fb { font-size: 42px; }
+.slide-shade {
+  position: absolute; inset: 0;
+  background:
+    linear-gradient(90deg, rgba(8, 10, 14, .94) 0%, rgba(8, 10, 14, .6) 46%, transparent 82%),
+    linear-gradient(0deg, rgba(8, 10, 14, .85), transparent 55%);
+}
+.slide-body { position: absolute; left: 44px; bottom: 40px; max-width: 560px; }
+.tag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: 2px; color: var(--accent); font-weight: 700; }
+.slide-body h1 { font-size: 42px; margin: 10px 0 12px; line-height: 1.05; text-shadow: 0 3px 16px rgba(0, 0, 0, .75); }
+.slide-chips { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 12px; }
+.slide-chips .meta-chip { background: rgba(255, 255, 255, .1); border-color: rgba(255, 255, 255, .16); color: #dfe5ef; }
+.slide-body p { color: #cfd5e0; margin-bottom: 10px; line-height: 1.55; max-width: 500px; }
+.slide-meta { color: var(--muted); font-size: 13px; margin-bottom: 18px; }
+
+.car-btn {
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
+  width: 44px; height: 44px; border-radius: 50%;
+  background: rgba(0, 0, 0, .5); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .2s, background .2s, box-shadow .2s;
+}
+.carousel:hover .car-btn { opacity: 1; }
+.car-btn:hover { background: var(--accent); color: #04121c; box-shadow: 0 0 18px var(--accent); }
+.car-btn.left { left: 14px; }
+.car-btn.right { right: 14px; }
+
+.dots { position: absolute; right: 26px; bottom: 22px; display: flex; gap: 8px; z-index: 5; }
+.dots i { width: 9px; height: 9px; border-radius: 5px; background: rgba(255, 255, 255, .35); cursor: pointer; transition: all .3s; }
+.dots i:hover { background: rgba(255, 255, 255, .6); }
+.dots i.active { width: 28px; background: var(--accent); box-shadow: 0 0 10px var(--accent); }
+
+/* --- content rows -------------------------------------------------------- */
+.store-section { margin-top: 30px; }
+.section-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+.row-nav { display: flex; gap: 4px; }
+
+/* --- store search -------------------------------------------------------- */
+/* The field itself is styled by the shared `.search-box input` rule in
+   library.css; only the store's own width/position is set here. */
+.store-search { margin-left: 0; flex: 1 1 320px; max-width: 460px; }
+/* the hero makes no sense while a search is active */
+#store-hero.is-hidden { display: none; }
+
+.store-row {
+  display: flex; gap: 18px; padding: 4px 2px 14px;
+  overflow-x: auto; overflow-y: hidden;
+  scroll-behavior: smooth; scroll-snap-type: x proximity;
+}
+.store-row::-webkit-scrollbar { height: 8px; }
+
+/* --- store card ---------------------------------------------------------- */
+.scard {
+  flex: 0 0 258px; scroll-snap-align: start;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 12px;
+  overflow: hidden; display: flex; flex-direction: column;
+  transition: transform .3s var(--ease), box-shadow .3s, border-color .3s;
+}
+.scard:hover {
+  transform: translateY(-6px);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  box-shadow: 0 18px 38px rgba(0, 0, 0, .66), 0 0 24px color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.scard-art { position: relative; aspect-ratio: 16 / 9; overflow: hidden; }
+.scard-art::after { content: ''; position: absolute; inset: 0; background: linear-gradient(0deg, rgba(0, 0, 0, .55), transparent 55%); pointer-events: none; }
+.scard:hover .art img { transform: scale(1.1); }
+.scard-hover {
+  position: absolute; inset: 0; z-index: 3;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--accent) 22%, rgba(0, 0, 0, .45));
+  opacity: 0; transition: opacity .25s;
+  pointer-events: none;
+}
+.scard-hover span {
+  display: inline-flex; align-items: center; gap: 7px;
+  background: rgba(0, 0, 0, .7); color: #fff; padding: 8px 14px; border-radius: 8px;
+  font-size: 12px; font-weight: 600; backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, .18);
+}
+.scard:hover .scard-hover { opacity: 1; }
+
+/* store cards reused inside the "All Games" grid */
+.grid .scard { flex: 1 1 auto; height: 100%; }
+.grid .scard .scard-info { display: flex; flex-direction: column; flex: 1; }
+.grid .scard .actions { margin-top: auto; }
+
+.scard-badge {
+  position: absolute; top: 10px; left: 10px; z-index: 3;
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
+  padding: 4px 9px; border-radius: 6px; backdrop-filter: blur(6px);
+}
+.scard-badge.free { background: rgba(46, 204, 113, .9); color: #04140a; }
+.scard-badge.owned { background: rgba(0, 0, 0, .68); color: var(--ok); border: 1px solid rgba(46, 204, 113, .5); top: auto; bottom: 10px; left: 10px; }
+.scard .fav { z-index: 4; }
+
+.scard-info { padding: 14px; display: flex; flex-direction: column; gap: 9px; flex: 1; }
+.scard-title { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.scard-title h4 { font-size: 14.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scard-year { font-size: 11px; color: var(--muted); flex-shrink: 0; }
+.scard-dev { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.scard-info .actions { margin-top: auto; }
+.scard-info .actions .btn { flex: 1; }
+.scard-info .actions .dropdown { flex-shrink: 0; }

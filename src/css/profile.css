@@ -1,0 +1,332 @@
+/* ==========================================================================
+   Profile view, editor and avatar (local-only profile)
+   ========================================================================== */
+
+/* --- avatars ------------------------------------------------------------- */
+.avatar-img {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--hover);
+  color: var(--muted);
+  flex: 0 0 auto;
+  border: 2px solid var(--border);
+}
+.avatar-img img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.avatar-img.initials {
+  font-weight: 800;
+  letter-spacing: .02em;
+  color: #04121c;
+  background: linear-gradient(135deg, var(--accent), #6a3de8);
+  border-color: transparent;
+}
+.avatar-img.empty { background: var(--hover); }
+
+/* The title-bar button doubles as the avatar. */
+#btn-profile { padding: 5px; }
+.avatar-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--hover);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+}
+.avatar-btn img { width: 100%; height: 100%; object-fit: cover; }
+.avatar-btn.has-img { box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 55%, transparent); }
+
+.profile-menu .avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+
+/* --- hero ---------------------------------------------------------------- */
+.profile-hero {
+  position: relative;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin-bottom: 20px;
+  background: var(--panel);
+}
+.profile-cover {
+  height: 128px;
+  background:
+    radial-gradient(120% 160% at 12% -20%, color-mix(in srgb, var(--accent) 55%, transparent), transparent 62%),
+    linear-gradient(135deg, color-mix(in srgb, var(--accent) 30%, var(--panel)), color-mix(in srgb, #6a3de8 34%, var(--panel)));
+}
+.profile-id {
+  display: flex;
+  align-items: flex-end;
+  gap: 18px;
+  padding: 0 22px 18px;
+  margin-top: -46px;
+}
+.profile-avatar {
+  flex: 0 0 auto;
+  padding: 4px;
+  border-radius: 50%;
+  background: var(--panel);
+  display: flex;
+}
+.profile-idtext { flex: 1; min-width: 0; padding-bottom: 4px; }
+.profile-idtext h2 {
+  margin: 0 0 3px;
+  font-size: 22px;
+  font-weight: 700;
+  color: var(--text);
+}
+.profile-handle {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--muted);
+}
+.profile-bio {
+  margin: 8px 0 0;
+  font-size: 13.5px;
+  color: var(--text);
+  opacity: .86;
+  line-height: 1.55;
+}
+.profile-hero-actions { padding-bottom: 4px; }
+
+/* --- stat tiles ---------------------------------------------------------- */
+.stat-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(232px, 1fr));
+  gap: 12px;
+  margin-bottom: 20px;
+}
+.stat-tile {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 16px 18px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--panel);
+  position: relative;
+  overflow: hidden;
+}
+.stat-tile::before {
+  content: "";
+  position: absolute;
+  left: 0; top: 0; bottom: 0;
+  width: 3px;
+  background: linear-gradient(180deg, var(--accent), #6a3de8);
+  opacity: .7;
+}
+.st-ico {
+  width: 38px; height: 38px;
+  flex: 0 0 auto;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+  color: var(--accent);
+}
+.st-text { min-width: 0; display: flex; flex-direction: column; }
+.st-text strong {
+  font-size: 19px;
+  font-weight: 750;
+  color: var(--text);
+  line-height: 1.15;
+}
+.st-text small { font-size: 11.5px; color: var(--muted); }
+.st-sub {
+  font-style: normal;
+  font-size: 10.5px;
+  color: var(--muted);
+  opacity: .8;
+  margin-left: auto;
+  text-align: right;
+  max-width: 88px;
+}
+
+/* --- most played / recently played --------------------------------------- */
+.top-game { display: flex; gap: 16px; align-items: center; }
+.top-art {
+  flex: 0 0 auto;
+  width: 116px;
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+}
+.top-art .art { border-radius: 0; }
+.top-text { min-width: 0; display: flex; flex-direction: column; gap: 5px; }
+.top-text strong { font-size: 16px; color: var(--text); }
+.top-text small { font-size: 12.5px; color: var(--muted); }
+.top-actions { margin-top: 6px; }
+
+.recent-list { display: flex; flex-direction: column; gap: 9px; }
+.recent-row {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 9px 11px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+}
+.recent-art {
+  flex: 0 0 auto;
+  width: 76px;
+  border-radius: 7px;
+  overflow: hidden;
+}
+.recent-art .art { border-radius: 0; }
+.recent-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.recent-text strong {
+  font-size: 13.5px;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.recent-text small { font-size: 11.5px; color: var(--muted); }
+
+/* --- editor -------------------------------------------------------------- */
+.profile-editor {
+  display: flex;
+  gap: 26px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.pe-avatar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+.pe-avatar-frame {
+  padding: 5px;
+  border-radius: 50%;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  box-shadow: 0 0 26px color-mix(in srgb, var(--accent) 22%, transparent);
+  display: flex;
+}
+.pe-avatar-actions { display: flex; gap: 8px; }
+.pe-hint { font-size: 11px; color: var(--muted); text-align: center; max-width: 220px; }
+
+.pe-fields { flex: 1 1 280px; display: flex; flex-direction: column; gap: 14px; min-width: 240px; }
+.pe-fields textarea {
+  width: 100%;
+  resize: vertical;
+  padding: 10px 12px;
+  border-radius: 9px;
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--text);
+  font: inherit;
+  font-size: 13.5px;
+}
+.pe-fields textarea:focus { outline: none; border-color: var(--accent); }
+.pe-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+}
+
+/* --- achievements -------------------------------------------------------- */
+.ach-head { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+.ach-bar { flex: 1; height: 8px; border-radius: 999px; background: var(--hover); overflow: hidden; }
+.ach-fill { height: 100%; background: linear-gradient(90deg, var(--accent), #6a3de8); border-radius: 999px; transition: width .4s var(--ease); }
+.ach-count { font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+.ach-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.ach-tile {
+  display: flex; align-items: center; gap: 11px;
+  padding: 12px 14px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--panel);
+  opacity: .5;
+  transition: opacity .2s, border-color .2s, background .2s;
+}
+.ach-tile.got {
+  opacity: 1;
+  border-color: color-mix(in srgb, var(--ok) 34%, var(--border));
+  background: color-mix(in srgb, var(--ok) 6%, var(--panel));
+}
+.ach-ico {
+  flex: 0 0 auto;
+  width: 34px; height: 34px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--muted);
+}
+.ach-tile.got .ach-ico { background: color-mix(in srgb, var(--ok) 16%, transparent); color: var(--ok); }
+.ach-text { min-width: 0; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+.ach-text strong { font-size: 12.5px; font-weight: 700; color: var(--text); }
+.ach-text small { font-size: 11px; color: var(--muted); }
+.ach-check { flex: 0 0 auto; color: var(--ok); }
+
+/* --- account & cloud sync ----------------------------------------------- */
+.account-offline {
+  display: flex; gap: 12px; align-items: flex-start;
+  padding: 14px; border-radius: 10px;
+  background: var(--hover); color: var(--muted);
+}
+.account-offline strong { display: block; color: var(--text); margin-bottom: 3px; }
+.account-offline p { margin: 0; font-size: 12.5px; line-height: 1.55; }
+
+.account-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+.account-tab {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 7px 14px; border-radius: 8px;
+  background: var(--panel); border: 1px solid var(--border);
+  color: var(--muted); font-size: 12.5px; font-weight: 600;
+  transition: background .2s, color .2s, border-color .2s;
+}
+.account-tab.active { background: var(--accent); color: #04121c; border-color: var(--accent); }
+
+.account-form { display: flex; flex-direction: column; gap: 10px; }
+.account-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.account-status { font-size: 12px; color: var(--muted); }
+.account-status.err { color: #ff8a8a; }
+
+.account-signed { display: flex; flex-direction: column; gap: 12px; }
+.account-who { display: flex; align-items: center; gap: 12px; }
+.account-who .ico { color: var(--ok); flex: 0 0 auto; }
+.account-who strong { display: block; font-size: 14px; color: var(--text); }
+.account-who small { font-size: 12px; color: var(--muted); }
+.account-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.account-meta { font-size: 12px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  margin: 0 0 12px;
+  font-size: 13.5px;
+  line-height: 1.6;
+  color: var(--text);
+}
+.preorder-info .po-line {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+/* The live countdown leads the dialog: it is the thing the user came to see. */
+.preorder-info .po-line.big {
+  gap: 10px;
+  margin-bottom: 14px;
+  padding: 10px 14px;
+  border-radius: 9px;
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+  color: #ffd479;
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 38%, transparent);
+}
+.preorder-info .po-line.big .ico { color: var(--warn); }
+.preorder-info .po-line.big small { font-size: 11px; font-weight: 600; }
+.po-url { word-break: break-all; color: var(--accent); }

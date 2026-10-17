@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "_readme": [
+    "Apex Launcher download manifest.",
+    "List only content you are authorised to distribute or fetch: your own builds,",
+    "public-domain / open-source games, or your own internal mirror.",
+    "Each entry must have a real sha256 when settings.download.requireChecksum is true (the default).",
+    "Hosts on the blocked list in net/sources.js are refused even if they appear here."
+  ],
+  "items": []
+}

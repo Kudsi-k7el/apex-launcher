@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Apex Launcher — every game you own, one launcher</title>
+<meta name="description" content="Apex Launcher unites Steam, Epic, GOG, Xbox and itch.io in one fast, controller-friendly Windows launcher. Free download for Windows 10 and 11.">
+<meta name="theme-color" content="#0b0d12" id="meta-theme-color">
+<meta name="color-scheme" content="dark light">
+
+<!-- Social preview -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="Apex Launcher — every game you own, one launcher">
+<meta property="og:description" content="Steam, Epic, GOG, Xbox and itch.io in one fast, controller-friendly launcher for Windows.">
+<meta property="og:image" content="assets/img/hero-dock.webp">
+<meta name="twitter:card" content="summary_large_image">
+
+<link rel="icon" href="assets/img/icon.png">
+<link rel="apple-touch-icon" href="assets/img/icon.png">
+<link rel="stylesheet" href="assets/css/styles.css">
+<script>
+  // Runs before first paint so a saved theme never flashes the default one.
+  // The .js flag keeps the scroll-reveal animation from hiding content it
+  // could not bring back when scripting is off.
+  (function () {
+    var root = document.documentElement;
+    var KNOWN = ['dark', 'oled', 'neon', 'ember', 'day'];
+    var pick = 'dark';
+    try {
+      var saved = localStorage.getItem('apex-site-theme');
+      if (saved && KNOWN.indexOf(saved) !== -1) pick = saved;
+    } catch (e) { /* storage blocked: stay on the default theme */ }
+    root.setAttribute('data-theme', pick);
+    root.classList.add('js');
+  })();
+</script>
+</head>
+<body>
+
+<a class="skip-link" href="#main">Skip to content</a>
+
+<!-- =====================================================================
+     Navigation
+     ===================================================================== -->
+<header class="nav" id="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top" aria-label="Apex Launcher, back to top">
+      <img src="assets/img/icon.png" alt="" width="34" height="34">
+      <span class="brand-text"><strong>APEX</strong> LAUNCHER</span>
+    </a>
+
+    <nav class="nav-links" id="nav-links" aria-label="Main">
+      <a href="#features">Features</a>
+      <a href="#screens">Screenshots</a>
+      <a href="#download">Download</a>
+      <a href="#faq">FAQ</a>
+    </nav>
+
+    <div class="nav-cta">
+      <div class="theme-pick">
+        <button class="theme-btn" id="theme-btn" type="button"
+                aria-haspopup="true" aria-expanded="false" aria-controls="theme-menu"
+                aria-label="Change theme">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 3a9 9 0 1 0 0 18h1.6a2 2 0 0 0 1.4-3.4 2 2 0 0 1 1.4-3.4H18a3 3 0 0 0 3-3A9 9 0 0 0 12 3Z"/>
+            <circle cx="7.6" cy="11.6" r="1.15"/><circle cx="12" cy="7.6" r="1.15"/><circle cx="16.4" cy="11.6" r="1.15"/>
+          </svg>
+        </button>
+
+        <div class="theme-menu" id="theme-menu" role="menu" aria-label="Theme">
+          <button class="theme-opt" role="menuitemradio" aria-checked="true" data-theme-set="dark">
+            <span class="sw" style="--sw-bg:#0b0d12;--sw-accent:#00a8ff" aria-hidden="true"></span>
+            <span class="theme-opt-text"><strong>Dark</strong><small>Balanced dark grey</small></span>
+            <svg class="theme-tick" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>
+          </button>
+
+          <button class="theme-opt" role="menuitemradio" aria-checked="false" data-theme-set="oled">
+            <span class="sw" style="--sw-bg:#000000;--sw-accent:#00a8ff" aria-hidden="true"></span>
+            <span class="theme-opt-text"><strong>Pitch Black OLED</strong><small>True black for OLED panels</small></span>
+            <svg class="theme-tick" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>
+          </button>
+
+          <button class="theme-opt" role="menuitemradio" aria-checked="false" data-theme-set="neon">
+            <span class="sw" style="--sw-bg:#0a0616;--sw-accent:#ff2fd0" aria-hidden="true"></span>
+            <span class="theme-opt-text"><strong>Neon Accent</strong><small>Violet glow, vivid highlights</small></span>
+            <svg class="theme-tick" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>
+          </button>
+
+          <button class="theme-opt" role="menuitemradio" aria-checked="false" data-theme-set="ember">
+            <span class="sw" style="--sw-bg:#120d0b;--sw-accent:#ff7a2f" aria-hidden="true"></span>
+            <span class="theme-opt-text"><strong>Ember</strong><small>Warm sunset accent</small></span>
+            <svg class="theme-tick" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>
+          </button>
+
+          <button class="theme-opt" role="menuitemradio" aria-checked="false" data-theme-set="day">
+            <span class="sw" style="--sw-bg:#f5f7fa;--sw-accent:#0079c8" aria-hidden="true"></span>
+            <span class="theme-opt-text"><strong>Daylight</strong><small>Light theme, easy on the eyes</small></span>
+            <svg class="theme-tick" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>
+          </button>
+        </div>
+      </div>
+
+      <button class="btn btn-ghost btn-sm" id="auth-open" type="button">
+        <svg viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+          <path d="M10 17l5-5-5-5"/><path d="M15 12H3"/>
+        </svg>
+        <span class="auth-open-label">Sign in</span>
+      </button>
+
+      <div class="auth-chip" id="auth-chip" hidden>
+        <button class="auth-chip-btn" id="auth-chip-btn" type="button"
+                aria-haspopup="true" aria-expanded="false" aria-controls="auth-menu">
+          <span class="auth-av" id="auth-av" aria-hidden="true">A</span>
+          <span class="auth-name" id="auth-name">player</span>
+        </button>
+        <div class="auth-menu" id="auth-menu" role="menu">
+          <div class="auth-menu-head">
+            <strong id="auth-menu-name">player</strong>
+            <small id="auth-menu-mail"></small>
+            <span id="auth-menu-since"></span>
+          </div>
+          <button class="auth-menu-item" id="auth-menu-out" role="menuitem" type="button">
+            <svg viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/>
+              <path d="m10 17 5-5-5-5"/><path d="M15 12H3"/>
+            </svg>
+            Sign out
+          </button>
+        </div>
+      </div>
+
+      <a class="btn btn-primary btn-sm" href="#download" data-dl>Download</a>
+      <button class="nav-toggle" id="nav-toggle" type="button"
+              aria-label="Open menu" aria-expanded="false" aria-controls="nav-links">
+        <span></span><span></span><span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<main id="main">
+
+  <!-- ===================================================================
+       Hero
+       =================================================================== -->
+  <section class="hero" id="top">
+    <div class="hero-glow" aria-hidden="true"></div>
+
+    <div class="wrap hero-inner">
+      <div class="hero-copy">
+        <p class="eyebrow">
+          <span class="dot" aria-hidden="true"></span>
+          Free &middot; Windows 10 &amp; 11 &middot; v<span data-version>2.6.0</span>
+        </p>
+
+        <h1>Every game you own.<br><span class="grad">One launcher.</span></h1>
+
+        <p class="lede">
+          Apex pulls your Steam, Epic, GOG, Xbox and itch.io libraries into a single,
+          fast launcher &mdash; with real install detection, a couch-friendly Big Picture
+          mode and search that reaches the live storefronts.
+        </p>
+
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-lg" href="#download" data-dl>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14"/></svg>
+            Download for Windows
+          </a>
+          <a class="btn btn-ghost btn-lg" href="#features">See what&rsquo;s inside</a>
+        </div>
+
+        <ul class="hero-points">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>No telemetry, ever</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>Your account, your server</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>Controller ready</li>
+        </ul>
+      </div>
+
+      <div class="hero-art">
+        <div class="window" role="img"
+             aria-label="Apex Launcher showing the Store page with a pinned quick-launch dock">
+          <div class="window-bar" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <em>Apex Launcher</em>
+          </div>
+          <img src="assets/img/hero-dock.webp" width="1920" height="1032"
+               alt="Apex Launcher Store page with a pinned quick-launch dock of favourite games">
+        </div>
+      </div>
+    </div>
+
+    <!-- Storefronts we unify -->
+    <div class="wrap">
+      <ul class="stores" aria-label="Supported storefronts">
+        <li>Steam</li>
+        <li>Epic Games</li>
+        <li>GOG</li>
+        <li>Xbox</li>
+        <li>Ubisoft</li>
+        <li>EA</li>
+        <li>Battle.net</li>
+        <li>itch.io</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       Features
+       =================================================================== -->
+  <section class="section" id="features">
+    <div class="wrap">
+      <header class="section-head reveal">
+        <p class="kicker">Features</p>
+        <h2>Built to actually launch games</h2>
+        <p class="sub">Not a shop front. Apex finds what is already on your PC, keeps it
+        tidy, and gets you into the game in one click.</p>
+      </header>
+
+      <div class="grid grid-3">
+        <article class="card reveal">
+          <span class="card-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
+          </span>
+          <h3>One library, every store</h3>
+          <p>Steam licences, Epic manifests, GOG, Ubisoft, EA, Battle.net and Xbox installs
+          are detected on disk and merged into a single, deduplicated shelf.</p>
+        </article>
+
+        <article class="card reveal">
+          <span class="card-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="2" y="6" width="20" height="12" rx="4"/><path d="M7 12h3M8.5 10.5v3M16 11h.01M18 13h.01"/></svg>
+          </span>
+          <h3>Big Picture couch mode</h3>
+          <p>A full-screen, gamepad-driven interface with its own search, heroes and
+          power menu. Backspace and Esc never drop you out by accident.</p>
+        </article>
+
+        <article class="card reveal">
+          <span class="card-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-4.3-4.3"/></svg>
+          </span>
+          <h3>Search that reaches the stores</h3>
+          <p>One search box filters your library instantly &mdash; and keeps going, hitting
+          the live Steam store and itch.io catalogue when you want something new.</p>
+        </article>
+
+        <article class="card reveal">
+          <span class="card-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M4 5h16v10H4zM8 19h8M12 15v4"/></svg>
+          </span>
+          <h3>On-screen keyboard</h3>
+          <p>Focus the search box with a controller and a keyboard appears, so you can
+          type a title from the sofa without reaching for a desk.</p>
+        </article>
+
+        <article class="card reveal">
+          <span class="card-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M12 3v10m0 0 4-4m-4 4-4-4"/><path d="M4 15v3a3 3 0 0 0 3 3h10a3 3 0 0 0 3-3v-3"/></svg>
+          </span>
+          <h3>Downloads &amp; updates in-app</h3>
+          <p>A real download engine with pause, resume, speed caps and progress that
+          survives a restart &mdash; plus file verification before anything launches.</p>
+        </article>
+
+        <article class="card reveal">
+          <span class="card-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M6 4v16M18 4v16M6 12h12"/><circle cx="6" cy="4" r="1.6"/><circle cx="6" cy="20" r="1.6"/><circle cx="18" cy="4" r="1.6"/><circle cx="18" cy="20" r="1.6"/></svg>
+          </span>
+          <h3>Discord Rich Presence</h3>
+          <p>Your profile shows &ldquo;Browsing Apex Launcher&rdquo; or the game you are playing,
+          with a live timer. Local-only &mdash; it never touches a server of ours.</p>
+        </article>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       Screenshots
+       =================================================================== -->
+  <section class="section section-alt" id="screens">
+    <div class="wrap">
+      <header class="section-head reveal">
+        <p class="kicker">Screenshots</p>
+        <h2>A look around</h2>
+        <p class="sub">Real captures from the app &mdash; pick a view.</p>
+      </header>
+
+      <div class="shots reveal">
+        <div class="shot-tabs" role="tablist" aria-label="Choose a screenshot">
+          <button role="tab" class="shot-tab is-on" aria-selected="true"
+                  data-src="assets/img/shot-store.webp"
+                  data-caption="The Store: curated rows, live Steam search and a pinned quick-launch dock.">Store</button>
+          <button role="tab" class="shot-tab" aria-selected="false" tabindex="-1"
+                  data-src="assets/img/shot-library.webp"
+                  data-caption="Your Library: everything installed on this PC, with platform badges and one-click play.">Library</button>
+          <button role="tab" class="shot-tab" aria-selected="false" tabindex="-1"
+                  data-src="assets/img/shot-bigpicture.webp"
+                  data-caption="Big Picture: the full-screen, controller-first mode for the living room.">Big Picture</button>
+          <button role="tab" class="shot-tab" aria-selected="false" tabindex="-1"
+                  data-src="assets/img/shot-itch.webp"
+                  data-caption="itch.io: the site's own public feeds, browsable without an account.">itch.io</button>
+          <button role="tab" class="shot-tab" aria-selected="false" tabindex="-1"
+                  data-src="assets/img/shot-search.webp"
+                  data-caption="Unified search: local results first, then the live storefronts.">Search</button>
+          <button role="tab" class="shot-tab" aria-selected="false" tabindex="-1"
+                  data-src="assets/img/shot-profile.webp"
+                  data-caption="Profile: playtime, achievements and your local account.">Profile</button>
+        </div>
+
+        <figure class="shot-frame">
+          <div class="window window-flat">
+            <div class="window-bar" aria-hidden="true">
+              <span></span><span></span><span></span>
+              <em>Apex Launcher</em>
+            </div>
+            <img id="shot-img" src="assets/img/shot-store.webp" width="1920" height="1032"
+                 alt="Apex Launcher, Store view">
+          </div>
+          <figcaption id="shot-caption">
+            The Store: curated rows, live Steam search and a pinned quick-launch dock.
+          </figcaption>
+        </figure>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       Big Picture split
+       =================================================================== -->
+  <section class="section split">
+    <div class="wrap split-inner">
+      <div class="split-copy reveal">
+        <p class="kicker">Big Picture</p>
+        <h2>Plug in a pad. Sit back.</h2>
+        <p>Apex reads a standard gamepad, hands you d-pad navigation, focus rings and
+        shoulder-button tab switching. Search brings up the on-screen keyboard, and
+        <kbd>M</kbd> opens the power menu so you are never stranded without a Start button.</p>
+        <ul class="ticks">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>Full-screen, 10-foot interface</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>Per-section search: Steam for the Store, itch.io for itch.io</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>Hero banners with real prices and discounts</li>
+        </ul>
+      </div>
+
+      <div class="split-art reveal">
+        <div class="window">
+          <div class="window-bar" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <em>Big Picture</em>
+          </div>
+          <img src="assets/img/shot-bigpicture.webp" width="1920" height="1032" loading="lazy"
+               decoding="async" alt="Apex Launcher Big Picture mode showing the Store shelf">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       Download
+       =================================================================== -->
+  <section class="section download" id="download">
+    <div class="wrap">
+      <div class="dl-card reveal">
+        <div class="dl-main">
+          <p class="kicker">Download</p>
+          <h2>Get Apex Launcher</h2>
+          <p class="dl-lede">
+            A single Windows installer. No bundled toolbars, and uninstalling leaves nothing behind.
+            You will need an Apex account &mdash; it is free, it takes a minute, and the launcher asks
+            for it the first time you open it.
+          </p>
+
+          <div class="dl-actions">
+            <a class="btn btn-primary btn-lg" id="dl-main-btn" href="#"
+               data-dl download>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 21h14"/></svg>
+              Download for Windows
+            </a>
+            <a class="btn btn-ghost" href="#faq">Read the FAQ</a>
+          </div>
+
+          <!-- The launcher refuses to open without an account, so the account is
+               part of getting the installer rather than a separate errand. This
+               block is also what the launcher links to for "Account on the
+               website" (see site:open in main.js). -->
+          <div class="dl-account" id="account">
+            <span class="dl-account-ico" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 12a4 4 0 1 0 0-8 4 4 0 0 0 0 8Zm0 2c-3.9 0-7 2.2-7 5v1h14v-1c0-2.8-3.1-5-7-5Z"/></svg>
+            </span>
+            <div class="dl-account-text">
+              <strong>You&rsquo;ll need an Apex account.</strong>
+              <p>It is free and only takes a minute. Your profile, achievements and screenshots live on it,
+              so they follow you to any PC you sign in on.</p>
+            </div>
+            <button class="btn btn-ghost" type="button" id="dl-account-btn">Create your account</button>
+          </div>
+
+          <p class="dl-hint" id="dl-hint" hidden>
+            This server does not have that build&rsquo;s installer. If you are hosting the site
+            yourself, put the file where <code>CONFIG.downloadUrl</code> points &mdash; or run
+            <code>npm run dist</code> to build it.
+          </p>
+        </div>
+
+        <dl class="dl-specs">
+          <div>
+            <dt>Version</dt>
+            <dd data-version>2.7.0</dd>
+          </div>
+          <div>
+            <dt>Platform</dt>
+            <dd>Windows 10 &amp; 11 (64-bit)</dd>
+          </div>
+          <div>
+            <dt>Installer</dt>
+            <dd data-size>&mdash;</dd>
+          </div>
+          <div>
+            <dt>Licence</dt>
+            <dd>MIT</dd>
+          </div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       FAQ
+       =================================================================== -->
+  <section class="section" id="faq">
+    <div class="wrap narrow">
+      <header class="section-head reveal">
+        <p class="kicker">FAQ</p>
+        <h2>Good to know</h2>
+      </header>
+
+      <div class="faq reveal">
+        <details>
+          <summary>Is Apex free?</summary>
+          <p>Yes. Apex Launcher is free and open source under the MIT licence.</p>
+        </details>
+        <details>
+          <summary>Does it download games I do not own?</summary>
+          <p>No. Apex only ever offers a download for a title it can verify you own &mdash;
+          a Steam licence, an Epic manifest, or files already on your disk. Everything
+          else links out to the store that sells it.</p>
+        </details>
+        <details>
+          <summary>Do I need an account?</summary>
+          <p>Yes. Apex Launcher asks you to sign in the first time you open it, and it will not
+          launch, install or download anything until you do. The account is what carries your
+          profile, achievements and screenshots between PCs, and it is stored on the server you
+          point Apex at &mdash; run one yourself with <code>npm run serve</code>, or host it
+          anywhere. No telemetry is sent anywhere, and nothing is sent to us.</p>
+        </details>
+        <details>
+          <summary>Will it fight with Steam or Epic?</summary>
+          <p>No. Apex reads their metadata to know what is installed, and launches titles
+          through the store that owns the licence rather than replacing it.</p>
+        </details>
+        <details>
+          <summary>How do I uninstall it?</summary>
+          <p>Windows Settings &rarr; Apps, exactly like anything else. Your library state
+          lives in a single JSON file you can delete with it.</p>
+        </details>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="foot">
+  <div class="wrap foot-inner">
+    <a class="brand brand-sm" href="#top">
+      <img src="assets/img/icon.png" alt="" width="26" height="26">
+      <span class="brand-text"><strong>APEX</strong> LAUNCHER</span>
+    </a>
+    <p class="foot-note">
+      Not affiliated with Valve, Epic Games, CD Projekt, Microsoft, Ubisoft, Electronic Arts
+      or itch.io. All trademarks belong to their owners.
+    </p>
+    <p class="foot-legal">&copy; <span id="year">2026</span> Apex Launcher &middot; MIT</p>
+  </div>
+</footer>
+
+<!-- =====================================================================
+     Accounts: the sign in / create account modal (assets/js/auth.js)
+     ===================================================================== -->
+<div class="auth-modal" id="auth-modal" hidden>
+  <div class="auth-backdrop" data-auth-close></div>
+
+  <div class="auth-card" role="dialog" aria-modal="true" aria-labelledby="auth-title">
+    <button class="auth-x" type="button" data-auth-close aria-label="Close">&times;</button>
+
+    <div class="auth-brand">
+      <img src="assets/img/icon.png" alt="" width="32" height="32">
+      <div>
+        <strong id="auth-title">Your Apex account</strong>
+        <small>One account, every PC you play on.</small>
+      </div>
+    </div>
+
+    <p class="auth-reason" id="auth-reason" hidden></p>
+
+    <div class="auth-tabs" role="tablist" aria-label="Account">
+      <button role="tab" type="button" data-auth-tab="in" aria-selected="true">Sign in</button>
+      <button role="tab" type="button" data-auth-tab="up" aria-selected="false">Create account</button>
+    </div>
+
+    <form class="auth-form" id="auth-form-in" data-auth-form="in" novalidate>
+      <div class="auth-field">
+        <label for="si-email">Email</label>
+        <input id="si-email" name="email" type="email" autocomplete="email"
+               placeholder="you@example.com" spellcheck="false" required>
+      </div>
+      <div class="auth-field">
+        <label for="si-pass">Password</label>
+        <input id="si-pass" name="password" type="password" autocomplete="current-password"
+               placeholder="Your password" required>
+      </div>
+      <button class="btn btn-primary" type="submit">Sign in</button>
+      <p class="auth-swap">No account yet?
+        <a href="#create" data-auth-swap="up">Create one</a></p>
+    </form>
+
+    <form class="auth-form" id="auth-form-up" data-auth-form="up" novalidate hidden>
+      <div class="auth-field">
+        <label for="su-user">Username</label>
+        <input id="su-user" name="username" type="text" autocomplete="username"
+               placeholder="player_one" spellcheck="false" maxlength="24" required>
+        <small>3-24 characters: letters, numbers, dot, dash or underscore.</small>
+      </div>
+      <div class="auth-field">
+        <label for="su-email">Email</label>
+        <input id="su-email" name="email" type="email" autocomplete="email"
+               placeholder="you@example.com" spellcheck="false" required>
+        <small>Used to sign in. Nothing else is ever sent to it.</small>
+      </div>
+      <div class="auth-field">
+        <label for="su-pass">Password</label>
+        <input id="su-pass" name="password" type="password" autocomplete="new-password"
+               placeholder="At least 8 characters" required>
+      </div>
+      <div class="auth-field">
+        <label for="su-confirm">Confirm password</label>
+        <input id="su-confirm" name="confirm" type="password" autocomplete="new-password"
+               placeholder="Type it again" required>
+      </div>
+      <button class="btn btn-primary" type="submit">Create account</button>
+      <p class="auth-swap">Already have one?
+        <a href="#signin" data-auth-swap="in">Sign in</a></p>
+    </form>
+
+    <p class="auth-msg" id="auth-msg" role="status" aria-live="polite"></p>
+    <p class="auth-note">Passwords are stored only as a salted scrypt hash on your own server.</p>
+  </div>
+</div>
+
+<script src="assets/js/main.js"></script>
+<script src="assets/js/auth.js"></script>
+</body>
+</html>

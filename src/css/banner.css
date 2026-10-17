@@ -1,0 +1,142 @@
+/* =========================================================================
+   Intelligent fallback banners (typographic cover cards)
+   ========================================================================= */
+
+.art {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+}
+
+.art img {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform .6s var(--ease);
+}
+
+/* Titles whose official art is a wordmark (no full-bleed key visual) are
+   centred over the generated banner instead of being cropped to fill it. */
+.art img.contain {
+  object-fit: contain;
+  padding: 13%;
+  filter: drop-shadow(0 8px 22px rgba(0, 0, 0, .6));
+}
+.art img.contain:hover { transform: none; }
+/* A wide wordmark needs all the room it can get in the tall card slot. */
+.art:has(> .art-banner[data-kind="cover"]) img.contain { padding: 7%; }
+/* The card's own initials/title would otherwise sit behind the wordmark and
+   clash with it, so they step aside while one is showing. */
+.art:has(> img.contain) .art-banner-text,
+.art:has(> img.contain) .art-initials { display: none; }
+
+/* --- generated fallback card -------------------------------------------- */
+.art-banner {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 18px;
+  text-align: center;
+  overflow: hidden;
+}
+
+.art-stripes {
+  position: absolute;
+  inset: -25%;
+  background: repeating-linear-gradient(115deg, rgba(255, 255, 255, .055) 0 2px, transparent 2px 24px);
+  mix-blend-mode: overlay;
+  pointer-events: none;
+}
+
+.art-glow {
+  position: absolute;
+  width: 72%;
+  aspect-ratio: 1 / 1;
+  border-radius: 50%;
+  filter: blur(30px);
+  opacity: .45;
+  pointer-events: none;
+}
+
+.art-initials {
+  position: relative;
+  z-index: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  padding: 10px 18px;
+  border-radius: 16px;
+  font-size: 34px;
+  font-weight: 900;
+  letter-spacing: 2px;
+  color: #fff;
+  background: rgba(0, 0, 0, .34);
+  border: 1px solid color-mix(in srgb, var(--c2) 62%, transparent);
+  box-shadow:
+    0 0 28px color-mix(in srgb, var(--c2) 55%, transparent),
+    inset 0 0 22px rgba(255, 255, 255, .07);
+  text-shadow: 0 2px 16px rgba(0, 0, 0, .75);
+  backdrop-filter: blur(3px);
+}
+
+.art-banner-text { position: relative; z-index: 1; max-width: 100%; }
+.art-banner-text strong {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 15px;
+  font-weight: 800;
+  line-height: 1.25;
+  color: #fff;
+  text-shadow: 0 2px 12px rgba(0, 0, 0, .85);
+}
+.art-banner-text small {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  color: rgba(255, 255, 255, .68);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* --- wide / hero variants (horizontal) ---------------------------------- */
+.art-banner[data-kind="wide"],
+.art-banner[data-kind="hero"] {
+  flex-direction: row;
+  justify-content: flex-start;
+  text-align: left;
+  gap: 16px;
+  padding: 14px 20px;
+}
+.art-banner[data-kind="wide"] .art-initials,
+.art-banner[data-kind="hero"] .art-initials {
+  min-width: 54px;
+  padding: 7px 12px;
+  border-radius: 12px;
+  font-size: 22px;
+}
+.art-banner[data-kind="hero"] .art-initials { min-width: 66px; font-size: 28px; }
+.art-banner[data-kind="wide"] .art-banner-text strong,
+.art-banner[data-kind="hero"] .art-banner-text strong {
+  -webkit-line-clamp: 2;
+  font-size: 16px;
+}
+.art-banner[data-kind="hero"] .art-banner-text strong { font-size: 21px; }
+.art-banner[data-kind="wide"] .art-glow,
+.art-banner[data-kind="hero"] .art-glow { width: 40%; left: 4%; }

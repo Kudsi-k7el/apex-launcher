@@ -1,0 +1,294 @@
+/* =========================================================================
+   Shared components: buttons, pills, switches, menus, artwork, tags
+   ========================================================================= */
+
+/* --- buttons ------------------------------------------------------------- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+  padding: 9px 18px; border-radius: 7px; font-size: 13px; font-weight: 600;
+  white-space: nowrap;
+  transition: box-shadow .2s, filter .2s, transform .1s, background .2s, color .2s;
+}
+.btn:active:not(:disabled) { transform: scale(.96); }
+.btn.primary { background: var(--accent); color: #04121c; }
+.btn.warn { background: var(--warn); color: #1c1200; }
+.btn.secondary { background: var(--hover); color: var(--text); }
+.btn.danger { background: color-mix(in srgb, var(--danger) 18%, transparent); color: var(--danger); border: 1px solid color-mix(in srgb, var(--danger) 40%, transparent); }
+.btn.buy { background: linear-gradient(135deg, var(--accent), #6a3de8); color: #fff; }
+.btn.icon-only { padding: 9px 10px; }
+.btn.sm { padding: 7px 13px; font-size: 12px; }
+.btn.primary.glow:hover { box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 75%, transparent); filter: brightness(1.12); }
+.btn.warn.glow:hover { box-shadow: 0 0 22px rgba(245, 166, 35, .7); filter: brightness(1.1); }
+.btn.buy.glow:hover { box-shadow: 0 0 22px color-mix(in srgb, var(--accent) 65%, transparent); filter: brightness(1.1); }
+.btn.launch { position: relative; overflow: hidden; }
+.btn.launch::after {
+  content: ''; position: absolute; inset: 0;
+  background: linear-gradient(120deg, transparent 30%, rgba(255, 255, 255, .35) 50%, transparent 70%);
+  transform: translateX(-120%);
+}
+.btn.launch:hover::after { animation: sheen .8s var(--ease); }
+@keyframes sheen { to { transform: translateX(120%); } }
+.btn.secondary:hover:not(:disabled) { background: color-mix(in srgb, var(--hover) 78%, #fff 6%); box-shadow: 0 0 12px rgba(255, 255, 255, .08); }
+.btn.danger:hover { background: color-mix(in srgb, var(--danger) 26%, transparent); }
+.btn:disabled { opacity: .6; cursor: default; }
+
+/* Ownership gate: locked "Not Owned" control keeps its shape but reads inert. */
+.btn.locked {
+  background: color-mix(in srgb, var(--panel) 70%, #000 10%);
+  color: var(--muted);
+  border: 1px dashed color-mix(in srgb, var(--muted) 45%, transparent);
+  opacity: 1; cursor: not-allowed;
+  letter-spacing: .2px;
+}
+.btn.locked .ico { opacity: .8; }
+/* A game is running: the action turns into a live, glowing red STOP. */
+.btn.running {
+  background: linear-gradient(135deg, #ff5c5c, #b3121a);
+  color: #fff;
+  border: 1px solid rgba(255, 92, 92, .55);
+  box-shadow: 0 0 0 1px rgba(255, 92, 92, .5), 0 0 18px rgba(255, 46, 70, .45);
+  animation: stopPulse 1.9s var(--ease) infinite;
+}
+.btn.running .ico { filter: drop-shadow(0 0 6px rgba(255, 120, 120, .9)); }
+.btn.running:hover {
+  filter: brightness(1.1);
+  background: linear-gradient(135deg, #ff6b6b, #c8161f);
+  box-shadow: 0 0 0 1px rgba(255, 92, 92, .85), 0 0 30px rgba(255, 46, 70, .8);
+}
+@keyframes stopPulse {
+  0%, 100% { box-shadow: 0 0 0 1px rgba(255, 92, 92, .45), 0 0 14px rgba(255, 46, 70, .3); }
+  50% { box-shadow: 0 0 0 1px rgba(255, 92, 92, .9), 0 0 30px rgba(255, 46, 70, .75); }
+}
+
+.icon-btn {
+  position: relative; width: 38px; height: 38px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 8px; color: var(--muted);
+  transition: background .15s, color .15s;
+}
+.icon-btn:hover { background: var(--hover); color: var(--accent); }
+.icon-btn.sm { width: 26px; height: 26px; border-radius: 6px; }
+
+.badge {
+  display: none; position: absolute; top: 3px; right: 2px;
+  min-width: 16px; height: 16px; padding: 0 4px; border-radius: 8px;
+  background: var(--accent); color: #04121c;
+  font-size: 10px; font-style: normal; font-weight: 700;
+  align-items: center; justify-content: center;
+}
+
+/* --- actions / progress -------------------------------------------------- */
+.actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.bar { height: 6px; background: var(--hover); border-radius: 4px; overflow: hidden; }
+.bar.big { height: 9px; }
+.bar div { height: 100%; width: 0; background: linear-gradient(90deg, var(--accent), #6a3de8); box-shadow: 0 0 10px var(--accent); transition: width .3s linear; }
+small { color: var(--muted); }
+
+.dl-inline { width: 100%; display: flex; flex-direction: column; gap: 6px; min-width: 170px; }
+.dl-inline-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.mini-actions { display: flex; gap: 2px; }
+
+/* --- dropdown menus ------------------------------------------------------ */
+.dropdown { position: relative; }
+.menu {
+  display: none; position: absolute; right: 0; top: calc(100% + 6px); z-index: 200;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 9px;
+  min-width: 178px; overflow: hidden;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, .66);
+}
+.menu.open { display: block; animation: fade .15s ease; }
+.menu a { display: flex; align-items: center; gap: 10px; padding: 10px 14px; font-size: 13px; cursor: pointer; transition: background .15s; }
+.menu a:hover { background: var(--hover); }
+.menu a.sel { color: var(--accent); font-weight: 600; }
+.menu a.danger { color: var(--danger); }
+
+.profile-menu { width: 232px; }
+.profile-head { display: flex; align-items: center; gap: 12px; padding: 14px; border-bottom: 1px solid var(--border); }
+.profile-head strong { display: block; font-size: 13px; }
+.profile-head small { font-size: 11px; }
+.avatar {
+  width: 38px; height: 38px; border-radius: 10px; flex-shrink: 0;
+  background: linear-gradient(135deg, var(--accent), #6a3de8); color: #fff;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+
+/* --- artwork -------------------------------------------------------------
+   `.art`, `.art img` and the generated fallback card live in banner.css   */
+
+/* --- tags / meta --------------------------------------------------------- */
+.tags { display: flex; flex-wrap: wrap; gap: 5px; }
+.tags span {
+  font-size: 10px; padding: 3px 8px; border-radius: 5px; letter-spacing: .2px;
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: color-mix(in srgb, var(--accent) 80%, #fff);
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, transparent);
+}
+.meta-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 11px; color: var(--muted);
+  padding: 4px 9px; border-radius: 6px;
+  background: color-mix(in srgb, var(--text) 7%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text) 10%, transparent);
+}
+.meta-chip .ico { color: var(--accent); }
+
+.src-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  padding: 3px 8px; border-radius: 6px;
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--ok) 40%, transparent);
+}
+
+/* --- platform source badges ----------------------------------------------
+   Which storefront a title comes from. Apex reads this off the game itself (a
+   Steam AppID, an Epic app name, an itch.io record), so it is a fact and not a
+   guess; it is kept separate from `.src-tag` above, which describes how an
+   installed game is launched.                                                */
+.plat {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px; border-radius: 6px;
+  font-size: 10.5px; font-weight: 750; letter-spacing: .2px;
+  white-space: nowrap;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+}
+.plat .ico { flex-shrink: 0; }
+.plat-steam {
+  color: #a9c7e8;
+  background: color-mix(in srgb, #1b2838 55%, transparent);
+  border-color: color-mix(in srgb, #66c0f4 34%, transparent);
+}
+.plat-steam .ico { color: #66c0f4; }
+.plat-itch {
+  color: #ffb3b3;
+  background: color-mix(in srgb, #fa5c5c 22%, transparent);
+  border-color: color-mix(in srgb, #fa5c5c 55%, transparent);
+}
+.plat-itch .ico { color: #ff6b6b; }
+.plat-epic {
+  color: #e6e8ec;
+  background: color-mix(in srgb, #ffffff 12%, transparent);
+  border-color: color-mix(in srgb, #ffffff 26%, transparent);
+}
+.plat-epic .ico { color: #ffffff; }
+.plat-gog {
+  color: #d5bcff;
+  background: color-mix(in srgb, #7d4bd6 24%, transparent);
+  border-color: color-mix(in srgb, #7d4bd6 54%, transparent);
+}
+.plat-gog .ico { color: #a97dff; }
+.plat-xbox {
+  color: #96e69a;
+  background: color-mix(in srgb, #107c10 24%, transparent);
+  border-color: color-mix(in srgb, #107c10 54%, transparent);
+}
+.plat-xbox .ico { color: #37b83c; }
+.plat-local, .plat-apex {
+  color: #cfd6e2;
+  background: color-mix(in srgb, var(--text) 9%, transparent);
+  border-color: color-mix(in srgb, var(--text) 16%, transparent);
+}
+.scard-title .plat, .dt-chips .plat { flex: 0 0 auto; }
+
+/* --- console availability badges -----------------------------------------
+   Which current-gen platforms a title is on. The data is hand-curated (see
+   CONSOLES in data.js); no badge is drawn when the console release is not a
+   matter of public record. Brand-ish tints, each with its name in text.      */
+.c-badges { display: flex; flex-wrap: wrap; gap: 6px; }
+.cpill {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 9px; border-radius: 6px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: .2px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--text) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text) 14%, transparent);
+}
+.cpill .ico { flex-shrink: 0; }
+.cpill.ps5 {
+  color: #8cc0ff;
+  background: color-mix(in srgb, #0070d1 22%, transparent);
+  border-color: color-mix(in srgb, #0070d1 52%, transparent);
+}
+.cpill.ps5 .ico { color: #4d9dff; }
+.cpill.xbox {
+  color: #96e69a;
+  background: color-mix(in srgb, #107c10 24%, transparent);
+  border-color: color-mix(in srgb, #107c10 54%, transparent);
+}
+.cpill.xbox .ico { color: #37b83c; }
+
+/* --- release countdown ---------------------------------------------------- */
+.cd {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 4px 10px; border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #ffd479;
+  background: color-mix(in srgb, var(--warn) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 42%, transparent);
+}
+.cd .ico { color: var(--warn); }
+.cd b { font-weight: 800; letter-spacing: .4px; }
+.cd.big { font-size: 12.5px; padding: 6px 13px; }
+.cd.out {
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+  border-color: color-mix(in srgb, var(--ok) 44%, transparent);
+}
+.cd.out .ico { color: var(--ok); }
+
+/* --- status pills -------------------------------------------------------- */
+.pill {
+  position: absolute; left: 10px; bottom: 10px; z-index: 2;
+  padding: 4px 11px; border-radius: 20px; font-size: 11px; font-weight: 700;
+  backdrop-filter: blur(6px); background: rgba(0, 0, 0, .62);
+  white-space: nowrap;
+}
+.pill.play { color: var(--ok); border: 1px solid rgba(46, 204, 113, .5); }
+.pill.update { color: var(--warn); border: 1px solid rgba(245, 166, 35, .6); }
+.pill.downloading { color: var(--accent); border: 1px solid var(--accent); }
+.pill.notinstalled { color: var(--muted); border: 1px solid #3a4052; }
+.pill.unowned { color: #c9a4ff; border: 1px solid rgba(160, 120, 255, .55); }
+.pill.running { color: var(--accent); border: 1px solid var(--accent); }
+
+/* --- switch -------------------------------------------------------------- */
+.switch { position: relative; width: 46px; height: 25px; flex-shrink: 0; }
+.switch input { display: none; }
+.slider { position: absolute; inset: 0; background: #2a2f3d; border-radius: 25px; cursor: pointer; transition: background .2s, box-shadow .2s; }
+.slider::before { content: ''; position: absolute; width: 19px; height: 19px; left: 3px; top: 3px; background: #fff; border-radius: 50%; transition: transform .2s; }
+.switch input:checked + .slider { background: var(--accent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 70%, transparent); }
+.switch input:checked + .slider::before { transform: translateX(21px); }
+
+input[type=color] { width: 48px; height: 34px; border: none; background: none; cursor: pointer; }
+.select {
+  background: var(--bg); color: var(--text);
+  border: 1px solid var(--border); border-radius: 8px;
+  padding: 9px 12px; font-size: 13px; font-family: inherit; cursor: pointer;
+  min-width: 150px;
+}
+.select:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 10px color-mix(in srgb, var(--accent) 40%, transparent); }
+
+/* --- empty state --------------------------------------------------------- */
+.empty { display: none; flex-direction: column; align-items: center; gap: 12px; padding: 56px 24px; color: var(--muted); text-align: center; }
+.empty.show { display: flex; }
+.empty .ico { color: var(--muted); opacity: .7; }
+
+/* full-page onboarding empty state */
+.empty.big {
+  gap: 14px; padding: 64px 28px;
+  background: radial-gradient(120% 120% at 50% 0%, color-mix(in srgb, var(--accent) 8%, transparent), transparent 70%), var(--panel);
+  border: 1px dashed var(--border); border-radius: 16px;
+}
+.empty.big .ico { color: var(--accent); opacity: .85; filter: drop-shadow(0 0 14px color-mix(in srgb, var(--accent) 55%, transparent)); }
+.empty h3 { font-size: 19px; color: var(--text); }
+.empty p { max-width: 460px; font-size: 13.5px; line-height: 1.6; }
+.empty-actions { display: flex; flex-wrap: wrap; gap: 10px; justify-content: center; margin-top: 8px; }
+
+/* short descriptive line under a page title */
+.page-intro { margin: 0 0 18px; }
+.page-title + .page-intro { margin-top: -8px; }
+.page-intro p { font-size: 13px; color: var(--muted); }
+.section-note { font-size: 12px; color: var(--muted); }

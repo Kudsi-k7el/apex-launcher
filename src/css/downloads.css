@@ -1,0 +1,178 @@
+/* =========================================================================
+   Download manager: bottom drawer + Downloads page
+   ========================================================================= */
+
+/* --- bottom drawer ------------------------------------------------------- */
+.drawer {
+  position: fixed; left: var(--sidebar-w); right: 0; bottom: 0; z-index: 700;
+  display: flex; flex-direction: column;
+  background: color-mix(in srgb, var(--panel) 96%, #000);
+  border-top: 1px solid var(--border);
+  box-shadow: 0 -16px 44px rgba(0, 0, 0, .62);
+  transition: transform .38s var(--ease);
+}
+.drawer.hidden { transform: translateY(112%); }
+.drawer.collapsed .drawer-list { max-height: 0; opacity: 0; }
+.drawer-list { max-height: 330px; overflow-y: auto; transition: max-height .32s var(--ease), opacity .22s; }
+
+.drawer-head { display: flex; align-items: center; gap: 14px; padding: 11px 16px; cursor: pointer; user-select: none; }
+.drawer-head .d-ico { color: var(--accent); filter: drop-shadow(0 0 6px var(--accent)); }
+.d-head-info { min-width: 200px; }
+.d-head-info strong { display: block; font-size: 13px; }
+.d-head-info small { font-size: 11px; }
+.d-agg { flex: 1; max-width: 460px; }
+.d-count { font-size: 12px; font-weight: 700; color: var(--accent); }
+
+/* --- download row -------------------------------------------------------- */
+.dl-row { display: flex; gap: 14px; padding: 12px 16px; border-bottom: 1px solid var(--border); }
+.dl-row:last-child { border-bottom: none; }
+.dl-thumb { width: 96px; height: 48px; border-radius: 6px; overflow: hidden; flex-shrink: 0; }
+.dl-body { flex: 1; display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.dl-row-top { display: flex; align-items: center; gap: 10px; }
+.dl-row-top strong { font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.dl-kind {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+  color: var(--accent); background: color-mix(in srgb, var(--accent) 14%, transparent);
+  padding: 3px 8px; border-radius: 5px; flex-shrink: 0;
+}
+.dl-row-actions { margin-left: auto; display: flex; gap: 2px; }
+.dl-row-meta { display: flex; justify-content: space-between; gap: 10px; font-size: 11px; flex-wrap: wrap; }
+
+/* --- Downloads page ------------------------------------------------------ */
+.dl-summary { display: flex; flex-direction: column; gap: 14px; }
+.dl-summary-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 14px; }
+.dl-summary-stats > div { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.dl-summary-stats small { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; }
+.dl-summary-stats strong { font-size: 20px; }
+.dl-summary-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+.dl-page-list { display: flex; flex-direction: column; gap: 10px; }
+.dl-page-list .dl-row {
+  background: var(--panel); border: 1px solid var(--border); border-radius: 11px;
+  padding: 14px 18px;
+}
+.dl-page-list .dl-thumb { width: 130px; height: 62px; }
+
+.history-list { display: flex; flex-direction: column; gap: 8px; }
+.hist-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 12px 16px; border-radius: 10px;
+  background: var(--panel); border: 1px solid var(--border);
+}
+.hist-ico { color: var(--ok); display: inline-flex; }
+.hist-info { flex: 1; min-width: 0; }
+.hist-info strong { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.hist-info small { font-size: 11.5px; }
+.hist-row .pill { position: static; }
+
+/* Reserve space so the drawer never hides the end of a page */
+body.has-drawer #content { padding-bottom: 132px; }
+body.has-drawer.drawer-open #content { padding-bottom: 384px; }
+
+/* =========================================================================
+   Download Manager modal
+   ========================================================================= */
+.dlm-backdrop {
+  position: fixed; inset: 0; z-index: 950;
+  display: flex; align-items: center; justify-content: center;
+  padding: 32px;
+  background: rgba(4, 6, 11, .62);
+  backdrop-filter: blur(6px);
+  opacity: 0; pointer-events: none;
+  transition: opacity .2s ease;
+}
+.dlm-backdrop.show { opacity: 1; pointer-events: auto; }
+
+.dlm {
+  width: min(620px, 100%);
+  max-height: 88vh;
+  display: flex; flex-direction: column;
+  background: color-mix(in srgb, var(--panel) 97%, #000);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 28px 76px rgba(0, 0, 0, .74), 0 0 0 1px color-mix(in srgb, var(--accent) 20%, transparent);
+  transform: translateY(16px) scale(.985);
+  transition: transform .24s var(--ease);
+}
+.dlm-backdrop.show .dlm { transform: none; }
+
+.dlm-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 15px 18px; border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent);
+}
+.dlm-ico { color: var(--accent); display: inline-flex; filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 70%, transparent)); }
+.dlm-head-text { flex: 1; min-width: 0; }
+.dlm-head-text h3 { font-size: 15px; }
+.dlm-head-text small { font-size: 11.5px; }
+
+.dlm-body { padding: 18px; overflow-y: auto; }
+
+/* --- hero ---------------------------------------------------------------- */
+.dlm-hero { position: relative; height: 168px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); }
+.dlm-hero-shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(5, 7, 12, .95) 8%, rgba(5, 7, 12, .42) 55%, transparent); }
+.dlm-hero-text { position: absolute; left: 20px; bottom: 16px; right: 20px; }
+.dlm-hero-text h2 { font-size: 24px; letter-spacing: -.4px; text-shadow: 0 3px 16px rgba(0, 0, 0, .8); }
+.dlm-hero-text small { font-size: 12px; color: rgba(255, 255, 255, .74); }
+.dlm-kind {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 10.5px; font-weight: 800; letter-spacing: 1.4px; text-transform: uppercase;
+  color: #fff; padding: 4px 9px; border-radius: 6px; margin-bottom: 9px;
+  background: color-mix(in srgb, var(--accent) 82%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+
+/* --- progress ------------------------------------------------------------ */
+.dlm-progress { margin-top: 18px; }
+.dlm-progress-row { display: flex; align-items: baseline; justify-content: space-between; margin-top: 10px; }
+.dlm-pct { font-size: 24px; font-weight: 800; color: var(--accent); }
+.dlm-nums { font-size: 12px; color: var(--muted); }
+
+.dlm-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 14px; }
+.dlm-stats > div { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; min-width: 0; }
+.dlm-stats small { display: block; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+.dlm-stats strong { font-size: 14px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.dlm-actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+.dlm-note {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin-top: 16px; font-size: 12px; color: var(--muted);
+  background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px;
+}
+.dlm-note .ico { color: var(--accent); flex-shrink: 0; margin-top: 1px; }
+
+.dlm-sub-title {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1.6px;
+  color: var(--muted); margin: 22px 0 10px;
+}
+.dlm-sub-title .ico { color: var(--accent); }
+.dlm-queue { border: 1px solid var(--border); border-radius: 12px; overflow: hidden; background: var(--bg); }
+.dlm-queue .dl-row { background: transparent; }
+
+/* --- finished / cancelled ------------------------------------------------ */
+.dlm-done { text-align: center; padding: 8px 0 4px; }
+.dlm-done-ico {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 68px; height: 68px; border-radius: 50%; margin-bottom: 14px;
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 14%, transparent);
+  box-shadow: 0 0 30px color-mix(in srgb, var(--ok) 45%, transparent);
+}
+.dlm-done-ico.warn { color: var(--warn); background: color-mix(in srgb, var(--warn) 14%, transparent); box-shadow: 0 0 30px color-mix(in srgb, var(--warn) 40%, transparent); }
+.dlm-done h2 { font-size: 21px; }
+.dlm-done p { color: var(--muted); font-size: 13px; margin-top: 6px; }
+.dlm-done-art { height: 150px; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); margin-top: 18px; }
+.dlm-done .dlm-actions { justify-content: center; }
+
+.dlm-empty { text-align: center; padding: 34px 12px; color: var(--muted); }
+.dlm-empty h2 { font-size: 18px; color: var(--text); margin-top: 12px; }
+.dlm-empty p { font-size: 13px; margin-top: 6px; }
+.dlm-empty .ico { color: var(--ok); }
+
+@media (max-width: 560px) {
+  .dlm-stats { grid-template-columns: 1fr; }
+  .dlm-hero { height: 140px; }
+}

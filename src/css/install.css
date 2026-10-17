@@ -1,0 +1,194 @@
+/* =========================================================================
+   Installer — drive picker, platform handoff, store-download notices
+   ========================================================================= */
+
+/* --- header ---------------------------------------------------------------
+   The wide art + store/size chips at the top of the install dialog. */
+.ip-art {
+  position: relative;
+  height: 128px; margin-bottom: 14px;
+  border-radius: 11px; overflow: hidden;
+  border: 1px solid var(--border);
+  background: var(--bg);
+}
+.ip-art .art { border-radius: 0; }
+
+.ip-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.ip-badge, .ip-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 5px 10px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 600;
+  background: var(--bg); border: 1px solid var(--border); color: var(--muted);
+}
+.ip-badge {
+  color: color-mix(in srgb, var(--accent) 82%, #fff);
+  border-color: color-mix(in srgb, var(--accent) 34%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+}
+.ip-badge .ico, .ip-chip .ico { color: currentColor; opacity: .9; }
+
+/* --- drive list ----------------------------------------------------------- */
+.drive-list { display: flex; flex-direction: column; gap: 7px; }
+.drive-list.static { margin-top: 4px; }
+
+.drive-row {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%; text-align: left;
+  padding: 11px 13px;
+  border: 1px solid var(--border); border-radius: 10px;
+  background: var(--hover);
+  transition: border-color .18s, background .18s, box-shadow .18s;
+}
+.drive-row:hover { border-color: color-mix(in srgb, var(--accent) 45%, transparent); }
+.drive-row.on {
+  border-color: color-mix(in srgb, var(--accent) 70%, transparent);
+  background: color-mix(in srgb, var(--accent) 11%, var(--hover));
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 30%, transparent),
+              0 0 18px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.drive-row.tight { border-color: color-mix(in srgb, var(--warn) 40%, var(--border)); }
+
+.drive-radio {
+  flex-shrink: 0; width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid color-mix(in srgb, var(--muted) 70%, transparent);
+  transition: border-color .18s, box-shadow .18s;
+  position: relative;
+}
+.drive-row.on .drive-radio {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 3.5px var(--accent);
+}
+
+.drive-main { flex: 1; min-width: 0; }
+.drive-main strong { display: block; font-size: 13.5px; }
+.drive-name { font-weight: 400; color: var(--muted); }
+.drive-main small { display: block; font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+.drive-tags { display: flex; align-items: center; gap: 6px; flex-shrink: 0; }
+.d-tag {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 3px 8px; border-radius: 999px;
+  font-size: 10.5px; font-weight: 600; letter-spacing: .2px;
+  border: 1px solid var(--border); background: var(--bg); color: var(--muted);
+}
+.d-tag.lib {
+  color: color-mix(in srgb, var(--accent) 85%, #fff);
+  border-color: color-mix(in srgb, var(--accent) 38%, transparent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.d-tag.bad {
+  color: var(--warn);
+  border-color: color-mix(in srgb, var(--warn) 42%, transparent);
+  background: color-mix(in srgb, var(--warn) 13%, transparent);
+}
+
+/* --- destination ---------------------------------------------------------- */
+.ip-dest {
+  display: flex; align-items: center; gap: 10px;
+  margin-top: 10px; padding: 9px 12px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 9px;
+}
+.ip-dest small {
+  flex-shrink: 0; font-size: 10px; text-transform: uppercase; letter-spacing: 1.1px;
+  color: var(--muted);
+}
+.ip-dest code {
+  flex: 1; min-width: 0; font-size: 12px;
+  color: color-mix(in srgb, var(--accent) 78%, #fff);
+  word-break: break-all;
+}
+
+/* --- notices -------------------------------------------------------------- */
+.ip-note {
+  display: flex; align-items: flex-start; gap: 9px;
+  margin-top: 10px; padding: 10px 12px;
+  font-size: 12px; line-height: 1.55; color: var(--muted);
+  border: 1px solid var(--border); border-radius: 9px; background: var(--bg);
+}
+.ip-note .ico { margin-top: 1px; color: var(--accent); }
+.ip-note b { color: var(--text); }
+.ip-note.small { padding: 8px 11px; font-size: 11.5px; margin-top: 8px; }
+.ip-note.col { flex-direction: column; align-items: stretch; }
+.ip-note.col > .ico { display: none; }
+.ip-note.col .btn { align-self: flex-start; margin-top: 4px; }
+.ip-note.ok { border-color: color-mix(in srgb, var(--ok) 30%, var(--border)); }
+.ip-note.ok .ico { color: var(--ok); }
+.ip-note.warn { border-color: color-mix(in srgb, var(--warn) 34%, var(--border)); background: color-mix(in srgb, var(--warn) 7%, var(--bg)); }
+.ip-note.warn .ico { color: var(--warn); }
+
+.ip-legal {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin-top: 18px; padding-top: 13px;
+  border-top: 1px solid var(--border);
+  font-size: 11px; line-height: 1.55; color: var(--muted);
+}
+.ip-legal .ico { margin-top: 1px; color: color-mix(in srgb, var(--accent) 60%, var(--muted)); }
+
+.set-custom-btn { align-self: flex-start; }
+
+/* --- "downloading in your store" list on the Downloads page --------------- */.handoff-list { display: flex; flex-direction: column; gap: 8px; }
+.handoff-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
+  border-radius: 11px; background: var(--hover);
+}
+.handoff-ico {
+  flex-shrink: 0; width: 34px; height: 34px; border-radius: 9px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+}
+.handoff-info { flex: 1; min-width: 0; }
+.handoff-info strong { display: block; font-size: 13.5px; }
+.handoff-info small {
+  display: block; font-size: 11px; color: var(--muted); margin-top: 2px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.handoff-note {
+  display: flex; align-items: flex-start; gap: 8px;
+  margin-top: 4px; font-size: 11.5px; line-height: 1.55; color: var(--muted);
+}
+.handoff-note .ico { margin-top: 1px; color: var(--accent); flex-shrink: 0; }
+
+/* --- the same handoff inside the bottom drawer ---------------------------- */
+.handoff-thumb {
+  display: flex; align-items: center; justify-content: center;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+  border-radius: 8px;
+}
+.handoff-row-sm .handoff-path {
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  max-width: 100%; display: block;
+}
+
+/* Unknown-duration transfer: a bar that sweeps instead of filling. */
+.bar.indeterminate { position: relative; overflow: hidden; }
+.bar.indeterminate > div {
+  position: absolute; inset: 0 auto 0 0; width: 38%;
+  border-radius: inherit;
+  background: linear-gradient(90deg,
+    transparent,
+    color-mix(in srgb, var(--accent) 85%, transparent),
+    transparent);
+  animation: bar-sweep 1.5s var(--ease) infinite;
+}
+@keyframes bar-sweep {
+  0%   { transform: translateX(-105%); }
+  100% { transform: translateX(290%); }
+}
+
+/* --- real progress a store publishes (Steam's own byte counters) ----------
+   Used on the Downloads page, where the row is taller and has room for a bar. */
+.bar.sm { height: 5px; }
+.handoff-info .bar {
+  margin: 8px 0 7px;
+  background: color-mix(in srgb, var(--accent) 13%, var(--hover));
+}
+.handoff-info .bar.indeterminate > div { border-radius: inherit; }
+
+/* The drawer's status line is the live one, so give it a touch more weight. */
+.handoff-row-sm .dl-row-meta small[data-hline] {
+  color: color-mix(in srgb, var(--accent) 72%, var(--muted));
+}

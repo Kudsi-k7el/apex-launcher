@@ -1,0 +1,138 @@
+/* =========================================================================
+   Modal dialogs (scan results, add custom game, properties)
+   ========================================================================= */
+
+.modal-backdrop {
+  position: fixed; inset: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: center;
+  padding: 32px;
+  background: rgba(4, 6, 11, .62);
+  backdrop-filter: blur(5px);
+  opacity: 0; transition: opacity .18s ease;
+}
+.modal-backdrop.show { opacity: 1; }
+
+.modal {
+  width: min(680px, 100%);
+  max-height: 86vh;
+  display: flex; flex-direction: column;
+  background: color-mix(in srgb, var(--panel) 97%, #000);
+  border: 1px solid var(--border);
+  border-radius: 15px;
+  box-shadow: 0 26px 70px rgba(0, 0, 0, .72), 0 0 0 1px color-mix(in srgb, var(--accent) 18%, transparent);
+  transform: translateY(14px) scale(.985);
+  transition: transform .2s var(--ease);
+  overflow: hidden;
+}
+.modal-backdrop.show .modal { transform: none; }
+
+.modal-head {
+  display: flex; align-items: center; gap: 12px;
+  padding: 16px 18px; border-bottom: 1px solid var(--border);
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent);
+}
+.modal-ico { color: var(--accent); display: inline-flex; }
+.modal-head h3 { flex: 1; font-size: 16px; }
+
+.modal-body { padding: 18px; overflow-y: auto; }
+.modal-foot {
+  display: flex; justify-content: flex-end; gap: 10px;
+  padding: 14px 18px; border-top: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg) 60%, transparent);
+}
+
+.modal-sub {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 11px; text-transform: uppercase; letter-spacing: 1.6px;
+  color: var(--muted); margin: 20px 0 10px;
+}
+.modal-sub .ico { color: var(--accent); }
+.modal-hint { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); margin-top: 14px; }
+.modal-hint .ico { color: var(--accent); }
+
+/* --- scan summary -------------------------------------------------------- */
+.scan-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 12px; }
+.scan-stat { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 14px; }
+.scan-stat small { display: block; font-size: 10.5px; text-transform: uppercase; letter-spacing: 1px; }
+.scan-stat strong { font-size: 20px; }
+
+.scan-roots { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.scan-roots > div { display: flex; align-items: center; gap: 9px; }
+.sr-ico { color: var(--accent); display: inline-flex; }
+.scan-roots code {
+  flex: 1; font-size: 11.5px; color: #b7c0d0; background: var(--bg);
+  border: 1px solid var(--border); border-radius: 6px; padding: 7px 9px;
+  word-break: break-all; user-select: text;
+}
+
+/* --- detected list ------------------------------------------------------- */
+.detected-list { display: flex; flex-direction: column; gap: 8px; }
+.detected-row {
+  display: flex; align-items: center; gap: 12px;
+  padding: 9px 12px; border-radius: 10px;
+  background: var(--bg); border: 1px solid var(--border);
+}
+.detected-art { width: 88px; height: 44px; border-radius: 6px; overflow: hidden; flex-shrink: 0; }
+.detected-info { flex: 1; min-width: 0; }
+.detected-info strong { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.detected-info small { font-size: 11px; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.empty.sm { padding: 26px; font-size: 12.5px; }
+
+/* --- forms --------------------------------------------------------------- */
+.form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.field { display: flex; flex-direction: column; gap: 6px; }
+.field.wide { grid-column: 1 / -1; }
+.field > span { font-size: 11.5px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+.field input {
+  background: var(--bg); border: 1px solid var(--border); border-radius: 8px;
+  padding: 10px 12px; font-size: 13px; color: var(--text); font-family: inherit;
+  outline: none; user-select: text;
+  transition: border-color .2s, box-shadow .2s;
+}
+.field input:focus { border-color: var(--accent); box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 35%, transparent); }
+.field input[readonly] { color: var(--muted); }
+.field-row { display: flex; gap: 8px; }
+.field-row input { flex: 1; }
+
+.banner-preview { margin-top: 16px; display: flex; flex-direction: column; gap: 10px; }
+.bp-frame {
+  aspect-ratio: 16 / 7; border-radius: 12px; overflow: hidden;
+  border: 1px solid var(--border);
+}
+.bp-note { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted); }
+.bp-note .ico { color: var(--accent); }
+
+/* --- properties ---------------------------------------------------------- */
+.prop-art { aspect-ratio: 16 / 6; border-radius: 12px; overflow: hidden; border: 1px solid var(--border); margin-bottom: 16px; }
+.prop-rows { display: flex; flex-direction: column; gap: 2px; }
+.prop-row {
+  display: flex; align-items: flex-start; gap: 14px;
+  padding: 9px 2px; border-bottom: 1px solid var(--border);
+}
+.prop-row:last-child { border-bottom: none; }
+.prop-row > span { width: 130px; flex-shrink: 0; font-size: 12px; color: var(--muted); }
+.prop-row code {
+  flex: 1; font-size: 12px; color: #ccd4e2; word-break: break-all; user-select: text;
+}
+
+/* --- custom artwork ------------------------------------------------------ */
+.art-note { font-size: 12px; color: var(--muted); margin: -2px 0 10px; }
+.art-set { display: flex; flex-direction: column; gap: 9px; }
+.art-set-row { display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+.art-input {
+  flex: 1; min-width: 200px;
+  background: var(--bg); border: 1px solid var(--border); border-radius: 9px;
+  color: var(--text); padding: 9px 12px; font-size: 12px; outline: none;
+  font-family: inherit; user-select: text;
+  transition: border-color .2s, box-shadow .2s;
+}
+.art-input:focus {
+  border-color: color-mix(in srgb, var(--accent) 60%, transparent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+.art-input::placeholder { color: var(--muted); }
+
+@media (max-width: 620px) {
+  .form-grid { grid-template-columns: 1fr; }
+}

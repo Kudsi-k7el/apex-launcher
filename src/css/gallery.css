@@ -1,0 +1,216 @@
+/* =========================================================================
+   Gallery (src/js/gallery.js): achievements shelf, screenshot grid, and the
+   Steam-style achievement toast that fires from anywhere in the app.
+   ========================================================================= */
+
+/* --- title bar version chip ---------------------------------------------- */
+.version-chip {
+  font-size: 10.5px; font-weight: 650; letter-spacing: .6px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 4px 9px;
+  cursor: pointer;
+  transition: color .18s, border-color .18s, background .18s;
+}
+.version-chip:hover { color: var(--text); border-color: color-mix(in srgb, var(--accent) 50%, var(--border)); }
+.version-chip:empty { display: none; }
+
+/* --- segmented tabs ------------------------------------------------------- */
+.gl-tabs { display: flex; gap: 8px; margin: 4px 0 16px; }
+.gl-tab {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 9px 15px; border-radius: 999px;
+  background: var(--panel); border: 1px solid var(--border);
+  color: var(--muted); font-size: 12.5px; font-weight: 600; cursor: pointer;
+  transition: color .18s, border-color .18s, background .18s;
+}
+.gl-tab:hover { color: var(--text); }
+.gl-tab.on {
+  color: #04121c; background: var(--accent);
+  border-color: var(--accent);
+}
+.gl-tab em {
+  font-style: normal; font-size: 11px; font-weight: 700;
+  background: color-mix(in srgb, currentColor 18%, transparent);
+  border-radius: 999px; padding: 1px 7px;
+}
+
+/* --- panels --------------------------------------------------------------- */
+.gl-body { display: flex; flex-direction: column; gap: 16px; }
+.gl-panel {
+  background: color-mix(in srgb, var(--panel) 88%, transparent);
+  border: 1px solid var(--border); border-radius: 14px;
+  padding: 16px;
+}
+.gl-panel-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  margin-bottom: 13px;
+}
+.gl-panel-head h3 { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+.gl-panel-head h3 .ico { color: var(--accent); }
+.gl-note { font-size: 11.5px; color: var(--muted); margin-left: auto; }
+.btn.sm { padding: 6px 11px; font-size: 11.5px; }
+
+/* --- screenshot grid ------------------------------------------------------ */
+.gl-shots {
+  display: grid; gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+}
+.gl-shot {
+  margin: 0; display: flex; flex-direction: column;
+  background: var(--bg); border: 1px solid var(--border);
+  border-radius: 11px; overflow: hidden;
+  transition: border-color .18s, transform .18s var(--ease);
+}
+.gl-shot:hover { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); transform: translateY(-2px); }
+.gl-shot-art {
+  aspect-ratio: 16 / 9; background: color-mix(in srgb, var(--hover) 60%, transparent);
+  display: flex; align-items: center; justify-content: center; overflow: hidden;
+}
+.gl-shot-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.gl-shot-spin { color: var(--muted); opacity: .5; display: inline-flex; }
+.gl-shot figcaption {
+  position: relative; padding: 9px 10px 10px;
+  display: flex; flex-direction: column; gap: 2px;
+}
+.gl-shot figcaption strong {
+  font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.gl-shot figcaption small { font-size: 11px; color: var(--muted); }
+.gl-shot-acts {
+  position: absolute; top: 7px; right: 8px;
+  display: flex; gap: 4px;
+  opacity: 0; transition: opacity .16s;
+}
+.gl-shot:hover .gl-shot-acts, .gl-shot:focus-within .gl-shot-acts { opacity: 1; }
+.icon-btn.sm.danger { color: var(--danger); }
+
+.gl-more { font-size: 12px; color: var(--muted); margin-top: 12px; }
+.gl-more a { color: var(--accent); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+
+.gl-shots + .empty.show.sm, .gl-panel .empty.show.sm {
+  display: flex; flex-direction: column; align-items: center; gap: 8px;
+  text-align: center; padding: 34px 20px;
+}
+.gl-panel .empty.show.sm small { font-size: 12px; color: var(--muted); max-width: 460px; line-height: 1.6; }
+.gl-panel .empty.show.sm kbd {
+  font-family: Consolas, monospace; font-size: 11px;
+  background: var(--hover); border: 1px solid var(--border);
+  border-radius: 5px; padding: 1px 6px;
+}
+
+/* --- Steam shelf ---------------------------------------------------------- */
+.gl-steam {
+  display: flex; align-items: flex-start; gap: 10px;
+  font-size: 12.5px; color: var(--muted); line-height: 1.55;
+}
+.gl-steam .ico { color: var(--accent); flex-shrink: 0; margin-top: 2px; }
+.gl-steam.off { align-items: flex-start; }
+.gl-steam strong { display: block; color: var(--text); font-size: 12.5px; }
+.gl-steam p { margin-top: 2px; }
+.gl-steam a { color: var(--accent); cursor: pointer; }
+.gl-steam-list { flex-direction: column; gap: 10px; }
+.gl-steam-row {
+  width: 100%; display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 10px;
+  background: var(--bg); border: 1px solid var(--border);
+}
+.gl-steam-text { flex: 1; min-width: 0; }
+.gl-steam-text strong { font-size: 12.5px; display: block; margin-bottom: 5px; }
+.gl-steam-text small { font-size: 11px; color: var(--muted); }
+.gl-bar {
+  height: 6px; border-radius: 4px; overflow: hidden;
+  background: color-mix(in srgb, var(--hover) 70%, transparent); margin-bottom: 5px;
+}
+.gl-fill { height: 100%; background: var(--accent); border-radius: 4px; transition: width .4s var(--ease); }
+.gl-open {
+  font-size: 11.5px; color: var(--accent); cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px; flex-shrink: 0;
+}
+
+/* =========================================================================
+   Achievement toast: a Steam-style slide-in from the top right, queued so a
+   run of unlocks never stacks on top of itself.
+   ========================================================================= */
+#ach-host {
+  position: fixed; top: 52px; right: 16px; z-index: 1200;
+  display: flex; flex-direction: column; gap: 10px;
+  pointer-events: none;
+}
+
+.ach-toast {
+  position: relative;
+  display: flex; align-items: center; gap: 12px;
+  width: 330px; padding: 12px 14px;
+  border-radius: 12px;
+  background: linear-gradient(150deg, #1b2130, #12151d);
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .62), 0 0 0 1px rgba(255, 255, 255, .03);
+  overflow: hidden;
+  transform: translateX(calc(100% + 24px)) scale(.96);
+  opacity: 0;
+  transition: transform .42s var(--ease), opacity .3s ease;
+}
+.ach-toast.show { transform: none; opacity: 1; }
+
+.ach-toast-glow {
+  position: absolute; inset: 0;
+  background: radial-gradient(120% 90% at 100% 0%, color-mix(in srgb, var(--accent) 30%, transparent), transparent 62%);
+  opacity: .5; pointer-events: none;
+}
+.ach-toast-art {
+  position: relative;
+  width: 46px; height: 46px; flex-shrink: 0;
+  border-radius: 9px; object-fit: cover;
+  background: #0b0d12; border: 1px solid rgba(255, 255, 255, .07);
+}
+.ach-toast-art-fallback {
+  display: inline-flex; align-items: center; justify-content: center;
+  color: var(--accent);
+}
+.ach-toast-text { position: relative; flex: 1; min-width: 0; }
+.ach-toast-text small {
+  display: block; font-size: 10px; font-weight: 700;
+  letter-spacing: 1.6px; text-transform: uppercase; color: var(--accent);
+}
+.ach-toast-text strong {
+  display: block; font-size: 13.5px; margin: 2px 0 1px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ach-toast-text span {
+  display: block; font-size: 11.5px; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ach-toast-mark { position: relative; color: var(--accent); opacity: .8; flex-shrink: 0; }
+
+@media (max-width: 640px) {
+  #ach-host { right: 10px; left: 10px; }
+  .ach-toast { width: auto; }
+}
+
+/* =========================================================================
+   Settings helpers used by the overlay / capture / achievements panels
+   (src/js/settings.js).
+   ========================================================================= */
+.set-inline { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.set-input {
+  flex: 1; min-width: 220px;
+  padding: 9px 12px; border-radius: 9px;
+  background: var(--bg); border: 1px solid var(--border);
+  color: var(--text); font-size: 12.5px;
+  font-family: inherit;
+  transition: border-color .18s;
+}
+.set-input:focus { outline: none; border-color: color-mix(in srgb, var(--accent) 60%, var(--border)); }
+.set-input::placeholder { color: var(--muted); opacity: .8; }
+.set-range { display: flex; flex-direction: column; gap: 6px; width: 100%; }
+.set-range > span { font-size: 12px; color: var(--muted); }
+.set-range > span b { color: var(--text); }
+.set-range input[type="range"] { width: 100%; accent-color: var(--accent); }
+.set-status { font-size: 12px; color: var(--muted); margin-top: 7px; }
+.set-status[data-tone="ok"] { color: var(--ok, #6ee7a8); }
+.set-status[data-tone="warn"] { color: var(--warn, #f0b45e); }
+.set-status[data-tone="info"] { color: var(--text); }
+.set-link { color: var(--accent); }

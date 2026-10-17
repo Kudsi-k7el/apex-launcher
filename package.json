@@ -1,0 +1,94 @@
+{
+  "name": "apex-launcher",
+  "productName": "Apex Launcher",
+  "version": "2.7.0",
+  "description": "Apex Launcher - your games, one place. A modern, frameless desktop game launcher.",
+  "author": "Apex Launcher",
+  "license": "MIT",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "serve": "node server/server.js",
+    "serve:net": "node server/server.js --host 0.0.0.0",
+    "test:server": "node _server-test.js",
+    "icon": "electron _icon.js",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder --win nsis",
+    "release": "electron-builder --win nsis --publish always",
+    "release:dry": "electron-builder --win nsis --publish never",
+    "test:update": "electron _update-test.js"
+  },
+  "devDependencies": {
+    "electron": "^31.0.0",
+    "electron-builder": "^26.15.3"
+  },
+  "build": {
+    "appId": "com.apex.launcher",
+    "productName": "Apex Launcher",
+    "copyright": "Copyright (c) 2026 Apex Launcher",
+    "asar": true,
+    "npmRebuild": false,
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "*.js",
+      "!_*.js",
+      "download-manifest*.json",
+      "net/**/*",
+      "data/**/*",
+      "overlay/**/*",
+      "src/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "server",
+        "to": "server",
+        "filter": [
+          "**/*.js",
+          "!data/**"
+        ]
+      },
+      {
+        "from": "website",
+        "to": "website"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.png",
+      "artifactName": "Apex-Launcher-Setup-${version}.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Apex Launcher",
+      "deleteAppDataOnUninstall": false
+    },
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "Kudsi-k7el",
+        "repo": "apex-launcher",
+        "releaseType": "release"
+      }
+    ]
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.9",
+    "webtorrent": "^3.0.21"
+  }
+}

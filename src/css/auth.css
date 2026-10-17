@@ -1,0 +1,256 @@
+/* =========================================================================
+   The sign-in gate
+   -------------------------------------------------------------------------
+   The launcher is unusable until the backend vouches for a session (see
+   auth.js in the main process for the rule, src/js/auth.js for the view). This
+   panel is opaque and covers the whole window on purpose: a "you are not signed
+   in" banner over a working launcher would be a suggestion, not a gate.
+   ========================================================================= */
+
+#auth-gate {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  display: grid;
+  place-items: center;
+  padding: 34px;
+  overflow: auto;
+  background:
+    radial-gradient(1100px 620px at 50% -12%, color-mix(in srgb, var(--accent) 15%, transparent), transparent 70%),
+    linear-gradient(180deg, var(--bg2), var(--bg));
+}
+
+#auth-gate[hidden] { display: none; }
+
+body.auth-locked { overflow: hidden; }
+
+.ag-card {
+  width: min(452px, 100%);
+  padding: 28px 30px 20px;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--panel) 94%, #000);
+  box-shadow: 0 30px 80px -34px #000, 0 0 0 1px color-mix(in srgb, var(--accent) 12%, transparent);
+  animation: agRise .34s var(--ease);
+}
+
+@keyframes agRise {
+  from { opacity: 0; transform: translateY(16px) scale(.985); }
+  to { opacity: 1; transform: none; }
+}
+
+.ag-brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  margin-bottom: 20px;
+  font-size: 12px;
+  letter-spacing: 2.4px;
+  color: var(--muted);
+  text-transform: uppercase;
+}
+
+.ag-brand b { color: var(--text); }
+
+.ag-logo {
+  display: grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  color: var(--accent);
+}
+
+#auth-gate h1 {
+  margin: 0 0 6px;
+  font-size: 23px;
+  font-weight: 700;
+  letter-spacing: -.2px;
+}
+
+.ag-sub {
+  margin: 0 0 18px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+
+.ag-status {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--hover) 70%, transparent);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--text);
+}
+
+.ag-status[hidden] { display: none; }
+.ag-status.is-warn { border-color: color-mix(in srgb, var(--warn) 45%, transparent); color: color-mix(in srgb, var(--warn) 88%, #fff); }
+.ag-status.is-info { border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+
+.ag-tabs {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  margin-bottom: 16px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg2) 70%, transparent);
+}
+
+.ag-tab {
+  padding: 9px 12px;
+  border: 0;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background .16s var(--ease), color .16s var(--ease);
+}
+
+.ag-tab:hover { color: var(--text); }
+.ag-tab.is-on { background: var(--hover); color: var(--text); }
+
+.ag-form { display: grid; gap: 12px; }
+.ag-form[hidden] { display: none; }
+
+/* The gate reuses the app's own .field styling so it does not look bolted on. */
+#auth-gate .field > span { font-size: 11px; letter-spacing: 1.4px; }
+#auth-gate .field input {
+  padding: 11px 13px;
+  border-radius: 10px;
+  background: var(--bg2);
+  font-size: 13.5px;
+}
+
+.ag-form .btn { width: 100%; justify-content: center; margin-top: 2px; }
+
+.ag-msg {
+  min-height: 17px;
+  margin: 12px 0 0;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.ag-msg.is-err { color: var(--danger); }
+.ag-msg.is-ok { color: var(--ok); }
+.ag-msg.is-info { color: var(--muted); }
+
+.ag-server {
+  margin-top: 16px;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+  font-size: 12.5px;
+}
+
+.ag-server > summary {
+  color: var(--muted);
+  cursor: pointer;
+  list-style: none;
+  user-select: none;
+}
+
+.ag-server > summary::-webkit-details-marker { display: none; }
+.ag-server > summary::before { content: '\25B8'; margin-right: 7px; color: var(--accent); }
+.ag-server[open] > summary::before { content: '\25BE'; }
+.ag-server > summary:hover { color: var(--text); }
+
+.ag-server-body { padding-top: 12px; display: grid; gap: 10px; }
+
+.ag-row { display: flex; flex-wrap: wrap; gap: 8px; }
+.ag-row .btn { flex: 1 1 auto; justify-content: center; }
+
+.ag-hint { margin: 0; font-size: 11.5px; line-height: 1.55; color: var(--muted); }
+.ag-hint code {
+  padding: 1px 5px;
+  border-radius: 5px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  font-size: 11px;
+}
+
+.ag-foot {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.ag-skip,
+.ag-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--muted);
+  font: inherit;
+  font-size: 11.5px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.ag-skip:hover,
+.ag-link:hover { color: var(--text); }
+
+#auth-gate .ag-version { font-size: 11px; color: var(--muted); letter-spacing: .4px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .ag-card { animation: none; }
+}
+
+/* --- settings > account --------------------------------------------------- */
+.acct-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin: 0 0 10px;
+  font-size: 13px;
+}
+
+.acct-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--muted);
+  flex: 0 0 auto;
+}
+
+.acct-dot.is-on { background: var(--ok); box-shadow: 0 0 8px color-mix(in srgb, var(--ok) 70%, transparent); }
+.acct-dot.is-warn { background: var(--warn); }
+.acct-dot.is-err { background: var(--danger); }
+
+.acct-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.acct-grid .btn { justify-content: center; }
+
+.acct-note {
+  margin: 10px 0 0;
+  font-size: 12px;
+  line-height: 1.6;
+  color: var(--muted);
+}
+
+/* Settings opened by a deep link: a pulse to show which panel was asked for. */
+@keyframes setFlash {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 55%, transparent); }
+  100% { box-shadow: 0 0 0 16px transparent; }
+}
+
+.set-flash { animation: setFlash .85s var(--ease) 2; }

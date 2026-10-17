@@ -1,0 +1,47 @@
+/* ==========================================================================
+   Unified search: the title-bar box and the combined results page.
+   The result sections themselves reuse the Store's `.store-section` /
+   `.grid` / `.live-grid` classes, so only the box needs new styling here.
+   ========================================================================== */
+
+/* --- the box in the title bar ------------------------------------------- */
+.title-search {
+  -webkit-app-region: no-drag;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: 1 1 auto;
+  max-width: 520px;
+  margin: 0 18px;
+  height: 28px;
+  padding: 0 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  color: var(--muted);
+  transition: border-color .2s, box-shadow .2s, color .2s;
+}
+.title-search:focus-within {
+  border-color: var(--accent);
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent);
+}
+
+.title-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: none;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  color: var(--text);
+  font-size: 12.5px;
+  user-select: text;
+}
+.title-search input::placeholder { color: var(--muted); }
+.title-search input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+/* The Store's hero hides itself when its own search is active; the unified
+   page has no hero, so nothing else is needed here. */
+#uni-results .store-section:first-child { margin-top: 4px; }

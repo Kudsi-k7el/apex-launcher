@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:; script-src 'self'">
+  <meta name="application-name" content="Apex Launcher">
+  <meta name="description" content="Apex Launcher - your games, one place.">
+  <meta name="color-scheme" content="dark">
+  <title>Apex Launcher</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/banner.css">
+  <link rel="stylesheet" href="css/art-theme.css">
+  <link rel="stylesheet" href="css/pages.css">
+  <link rel="stylesheet" href="css/library.css">
+  <link rel="stylesheet" href="css/import.css">
+  <link rel="stylesheet" href="css/install.css">
+  <link rel="stylesheet" href="css/settings.css">
+  <link rel="stylesheet" href="css/downloads.css">
+  <link rel="stylesheet" href="css/detail.css">
+  <link rel="stylesheet" href="css/catalog.css">
+  <link rel="stylesheet" href="css/news.css">
+  <link rel="stylesheet" href="css/profile.css">
+  <link rel="stylesheet" href="css/modal.css">
+  <link rel="stylesheet" href="css/uninstall.css">
+  <link rel="stylesheet" href="css/vkeyboard.css">
+  <link rel="stylesheet" href="css/itch.css">
+<link rel="stylesheet" href="css/steamrip.css">
+  <link rel="stylesheet" href="css/lightning.css">
+  <link rel="stylesheet" href="css/fixes.css">
+  <link rel="stylesheet" href="css/search.css">
+  <link rel="stylesheet" href="css/dock.css">
+  <link rel="stylesheet" href="css/bigpicture.css">
+  <link rel="stylesheet" href="css/gallery.css">
+  <link rel="stylesheet" href="css/changelog.css">
+  <link rel="stylesheet" href="css/auth.css">
+</head>
+<body>
+  <!-- custom wallpaper layer (settings > Background) -->
+  <div id="bg-layer" aria-hidden="true"></div>
+  <div id="bg-scrim" aria-hidden="true"></div>
+
+  <!-- glowing accent border overlay -->
+  <div id="frame" aria-hidden="true"></div>
+
+  <!-- =====================================================================
+       The sign-in gate (src/js/auth.js + auth.js in the main process)
+
+       Covers everything until the backend vouches for a session. Deliberately
+       has no close button and no Escape handler: the launcher is meant to be
+       unusable without an account, so the only ways out are signing in, aiming
+       at a different server, or the explicit escape hatch at the bottom.
+       ===================================================================== -->
+  <div id="auth-gate" hidden>
+    <div class="ag-card">
+      <div class="ag-brand">
+        <span class="ag-logo" data-icon="flame" data-size="18"></span>
+        <span><b>Apex</b> Launcher</span>
+      </div>
+
+      <h1>Sign in to play</h1>
+      <p class="ag-sub" id="ag-sub">Your library, achievements and saves live on your Apex account, so they follow you to any PC you sign in on.</p>
+
+      <div class="ag-status" id="ag-status" hidden></div>
+
+      <div class="ag-tabs" role="tablist" aria-label="Account">
+        <button class="ag-tab is-on" type="button" role="tab" data-ag-tab="in" aria-selected="true">Sign in</button>
+        <button class="ag-tab" type="button" role="tab" data-ag-tab="up" aria-selected="false">Create account</button>
+      </div>
+
+      <form class="ag-form" id="ag-form-in" data-ag-form="in">
+        <label class="field"><span>Email</span>
+          <input id="ag-in-email" type="email" autocomplete="email" spellcheck="false" placeholder="you@example.com">
+        </label>
+        <label class="field"><span>Password</span>
+          <input id="ag-in-pass" type="password" autocomplete="current-password" placeholder="Your password">
+        </label>
+        <button class="btn primary" type="submit">Sign in</button>
+      </form>
+
+      <form class="ag-form" id="ag-form-up" data-ag-form="up" hidden>
+        <label class="field"><span>Username</span>
+          <input id="ag-up-user" type="text" autocomplete="username" spellcheck="false" maxlength="24" placeholder="player_one">
+        </label>
+        <label class="field"><span>Email</span>
+          <input id="ag-up-email" type="email" autocomplete="email" spellcheck="false" placeholder="you@example.com">
+        </label>
+        <label class="field"><span>Password</span>
+          <input id="ag-up-pass" type="password" autocomplete="new-password" placeholder="At least 8 characters">
+        </label>
+        <label class="field"><span>Confirm password</span>
+          <input id="ag-up-pass2" type="password" autocomplete="new-password" placeholder="Type it again">
+        </label>
+        <button class="btn primary" type="submit">Create account</button>
+      </form>
+
+      <p class="ag-msg" id="ag-msg" role="status" aria-live="polite"></p>
+
+      <details class="ag-server" id="ag-server">
+        <summary>Server</summary>
+        <div class="ag-server-body">
+          <label class="field"><span>Address</span>
+            <input id="ag-url" type="text" spellcheck="false" placeholder="http://127.0.0.1:8787">
+          </label>
+          <div class="ag-row">
+            <button class="btn secondary sm" type="button" id="ag-save-url">Save &amp; retry</button>
+            <button class="btn secondary sm" type="button" id="ag-start-server">Start server</button>
+            <button class="btn secondary sm" type="button" id="ag-site">Open website</button>
+          </div>
+          <p class="ag-hint">Where your account lives. The bundled backend is started with
+            <code>npm run serve</code> in the Apex folder &mdash; or point this at any Apex server.</p>
+        </div>
+      </details>
+
+      <div class="ag-foot">
+        <button class="ag-skip" id="ag-skip" type="button">Continue without signing in</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- custom frameless title bar -->
+  <header id="titlebar">
+    <div class="brand">
+      <span class="logo" data-icon="flame" data-size="17"></span>
+      <span class="brand-text"><b>APEX</b> LAUNCHER</span>
+    </div>
+
+    <!-- unified search: filters the Store, itch.io and the library at once -->
+    <div class="title-search">
+      <span data-icon="search" data-size="15"></span>
+      <input id="global-search" type="search" placeholder="Search Steam, itch.io and your library…"
+        spellcheck="false" autocomplete="off" aria-label="Search all stores">
+    </div>
+
+    <div class="title-right">
+      <div class="dropdown" id="profile-wrap">
+        <button id="btn-profile" class="icon-btn" title="Profile">
+          <span class="avatar avatar-btn" id="title-avatar"><span data-icon="user" data-size="17"></span></span>
+        </button>
+        <div class="menu profile-menu">
+          <div class="profile-head" id="profile-head">
+            <span class="avatar" id="menu-avatar"><span data-icon="user" data-size="18"></span></span>
+            <div><strong id="menu-name">Not signed in</strong><small id="menu-sub">Set up your profile</small></div>
+          </div>
+          <a data-act="open-profile"><span data-icon="user" data-size="15"></span> View profile</a>
+          <a data-act="edit-profile"><span data-icon="edit" data-size="15"></span> Edit profile &amp; picture</a>
+          <a data-act="account"><span data-icon="userCheck" data-size="15"></span> Apex account</a>
+          <a data-act="open-settings"><span data-icon="settings" data-size="15"></span> Settings</a>
+        </div>
+      </div>
+
+      <span id="pad-status" title="No controller detected"></span>
+
+      <button id="btn-version" class="version-chip" title="What's new in this build"></button>
+
+      <button id="btn-vkbd" class="icon-btn" title="On-screen keyboard">
+        <span data-icon="keyboard" data-size="17"></span>
+      </button>
+
+      <button id="btn-overlay" class="icon-btn" title="Performance overlay (F8)">
+        <span data-icon="activity" data-size="17"></span>
+      </button>
+
+      <button id="btn-bp" class="icon-btn" title="Big Picture mode — a controller-friendly, full-screen layout">
+        <span data-icon="tv" data-size="17"></span>
+      </button>
+
+      <button id="btn-dl" class="icon-btn" title="Downloads">
+        <span data-icon="download" data-size="17"></span>
+        <em id="dl-badge" class="badge"></em>
+      </button>
+
+      <div class="win-controls">
+        <button id="btn-min" title="Minimize"><span data-icon="min" data-size="16"></span></button>
+        <button id="btn-max" title="Maximize / Restore"><span id="max-ico" data-icon="max" data-size="14"></span></button>
+        <button id="btn-close" class="close" title="Close"><span data-icon="close" data-size="16"></span></button>
+      </div>
+    </div>
+  </header>
+
+  <div id="layout">
+    <nav id="sidebar">
+      <div class="side-brand">
+        <span class="logo-lg" data-icon="flame" data-size="22"></span>
+        <div><strong>Apex Launcher</strong><small>Your games, one place</small></div>
+      </div>
+
+      <span class="side-label">Browse</span>
+      <button class="tab active" data-view="store"><span data-icon="store"></span><span>Store</span></button>
+      <button class="tab" data-view="library"><span data-icon="library"></span><span>Library</span></button>
+      <button class="tab" data-view="itch"><span data-icon="flame"></span><span>itch.io</span></button>
+      <button class="tab" data-view="lightning"><span data-icon="zap"></span><span>Nexus</span></button>
+
+      <button class="tab" data-view="news"><span data-icon="news"></span><span>News</span></button>
+      <span class="side-label">Downloads</span>
+      <button class="tab" data-view="downloads"><span data-icon="download"></span><span>Downloads</span><em class="tab-badge" id="nav-dl-badge"></em></button>
+      <button class="tab" data-view="tools"><span data-icon="shield"></span><span>Tools</span></button>
+
+      <span class="side-label">You</span>
+      <button class="tab" data-view="profile"><span data-icon="user"></span><span>Profile</span></button>
+      <button class="tab" data-view="gallery"><span data-icon="camera"></span><span>Gallery</span></button>
+
+      <div class="spacer"></div>
+
+      <button class="tab bp-side" data-act="bigpicture" title="A controller-friendly, full-screen layout">
+        <span data-icon="tv"></span><span>Big Picture</span>
+      </button>
+
+      <div class="side-foot">
+        <span data-icon="cpu" data-size="14"></span>
+        <div><strong>Apex Engine</strong><small>Ready</small></div>
+      </div>
+      <button class="tab" data-view="settings"><span data-icon="settings"></span><span>Settings</span></button>
+    </nav>
+
+    <main id="content"></main>
+  </div>
+
+  <!-- bottom download drawer -->
+  <section id="drawer" class="drawer hidden collapsed" aria-live="polite">
+    <div class="drawer-head" id="drawer-head">
+      <span class="d-ico" data-icon="download" data-size="17"></span>
+      <div class="d-head-info">
+        <strong id="d-title">Downloads</strong>
+        <small id="d-sub">Idle</small>
+      </div>
+      <div class="d-agg"><div class="bar"><div id="d-agg-bar"></div></div></div>
+      <span class="d-count" id="d-count"></span>
+      <button class="icon-btn sm" id="drawer-manage" title="Open download manager">
+        <span data-icon="arrowUpRight" data-size="15"></span>
+      </button>
+      <button class="icon-btn sm" id="drawer-toggle" title="Expand / collapse">
+        <span data-icon="chevron" data-size="18"></span>
+      </button>
+      <button class="icon-btn sm" id="drawer-close" title="Hide">
+        <span data-icon="close" data-size="16"></span>
+      </button>
+    </div>
+    <div class="drawer-list" id="drawer-list"></div>
+  </section>
+
+  <!-- download manager modal -->
+  <div id="dl-modal" class="dlm-backdrop" aria-hidden="true">
+    <div class="dlm" role="dialog" aria-modal="true">
+      <header class="dlm-head">
+        <span class="dlm-ico" data-icon="download" data-size="18"></span>
+        <div class="dlm-head-text">
+          <h3>Download Manager</h3>
+          <small id="dlm-sub">Idle</small>
+        </div>
+        <button class="icon-btn" id="dlm-close" title="Close"></button>
+      </header>
+      <div class="dlm-body" id="dlm-body"></div>
+    </div>
+  </div>
+
+  <div id="modal-root"></div>
+  <div id="toast"></div>
+
+  <!-- controller connection notice (see controller.js) -->
+  <div id="pad-toast" aria-live="polite"></div>
+
+  <!-- full-screen hint, shown for a few seconds after F11 and on demand -->
+  <div id="fs-hint">
+    <kbd>F11</kbd><span>Exit full screen</span>
+    <span class="fs-actions">
+      <button id="fs-close" class="close" title="Back to windowed">
+        <span data-icon="fullscreenExit" data-size="16"></span>
+      </button>
+    </span>
+  </div>
+
+  <!-- =====================================================================
+       Big Picture mode. Rendered by bigpicture.js: the section bar, the hero
+       panel for the selected title, the shelf of tiles and the key legend are
+       all filled in at runtime.
+       ===================================================================== -->
+  <div id="bigpic" class="hidden" aria-hidden="true">
+    <div class="bp-glow" aria-hidden="true"></div>
+    <div id="bp-curtain" aria-hidden="true"></div>
+
+    <header class="bp-top">
+      <div class="bp-brand">
+        <span class="bp-logo" data-icon="flame" data-size="22"></span>
+        <b>APEX</b><span>BIG PICTURE</span>
+      </div>
+      <nav class="bp-tabs" id="bp-tabs"></nav>
+      <div class="bp-status">
+        <span class="bp-clock" id="bp-clock">--:--</span>
+        <span id="bp-pad"></span>
+        <button class="bp-icon" id="bp-sound" title="UI sounds"></button>
+        <button class="bp-icon" id="bp-fs" title="Full screen (F11)"></button>
+        <button class="bp-icon bp-power-btn" id="bp-power" title="Menu"></button>
+      </div>
+    </header>
+
+    <section class="bp-hero" id="bp-hero"></section>
+
+    <section class="bp-shelfwrap">
+      <div class="bp-shelf-head">
+        <h2 id="bp-shelf-title">Library</h2>
+        <span id="bp-shelf-count"></span>
+        <div class="bp-search">
+          <span class="bp-search-ico" data-icon="search" data-size="16"></span>
+          <input id="bp-search-input" type="search" placeholder="Search this section…" spellcheck="false" autocomplete="off">
+        </div>
+      </div>
+      <div class="bp-shelf" id="bp-shelf"></div>
+    </section>
+
+    <footer class="bp-foot" id="bp-foot"></footer>
+
+    <div class="bp-power hidden" id="bp-power-menu"></div>
+    <div class="bp-power hidden" id="bp-settings"></div>
+  </div>
+
+  <script src="js/icons.js"></script>
+  <script src="js/sfx.js"></script>
+  <script src="js/banner.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/presence.js"></script>
+  <script src="js/views.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/downloads.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/library.js"></script>
+  <script src="js/import.js"></script>
+  <script src="js/install.js"></script>
+  <script src="js/detail.js"></script>
+  <script src="js/news.js"></script>
+  <script src="js/profile.js"></script>
+  <script src="js/achieve.js"></script>
+  <script src="js/gallery.js"></script>
+  <script src="js/changelog.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/vkeyboard.js"></script>
+  <script src="js/modal.js"></script>
+  <script src="js/uninstall.js"></script>
+  <script src="js/itch.js"></script>
+  <script src="js/lightning.js"></script>
+  <script src="js/fixes.js"></script>
+
+  <script src="js/search.js"></script>
+  <script src="js/bigpicture.js"></script>
+  <script src="js/controller.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

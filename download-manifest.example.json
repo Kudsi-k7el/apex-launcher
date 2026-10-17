@@ -1,0 +1,25 @@
+{
+  "version": 1,
+  "items": [
+    {
+      "id": "example:openarena",
+      "title": "OpenArena",
+      "developer": "OpenArena Team",
+      "url": "https://your-mirror.example.org/openarena-0.8.8.zip",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "size": 412000000,
+      "filename": "openarena-0.8.8.zip",
+      "extract": true,
+      "dest": "OpenArena",
+      "cover": "https://your-mirror.example.org/openarena-cover.jpg"
+    },
+    {
+      "id": "example:local-build",
+      "title": "My Internal Build",
+      "url": "file:///D:/builds/my-game-1.2.3.zip",
+      "sha256": "0000000000000000000000000000000000000000000000000000000000000000",
+      "extract": true,
+      "dest": "My Internal Build"
+    }
+  ]
+}

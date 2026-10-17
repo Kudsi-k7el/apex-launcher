@@ -1,0 +1,75 @@
+/* =========================================================================
+   Hand-drawn hero art for Fortnite.
+   This title has no artwork on the Steam CDN, so instead of a plain
+   typographic card it gets a bespoke, resolution-independent scene drawn
+   entirely with gradients + clip-paths. No network, no image files.
+   ========================================================================= */
+
+.art-theme {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.art-theme i { position: absolute; display: block; }
+
+/* ------------------------------------------------------------------------
+   Fortnite - storm-lit island with a llama
+   ------------------------------------------------------------------------ */
+.art-theme.art-fortnite {
+  background: linear-gradient(180deg,
+    #1b1145 0%, #3a1f8a 30%, #6a3df0 52%, #b06cf0 68%, #3d2a7a 84%, #241a52 100%);
+}
+
+.art-fortnite .t-storm {
+  top: -18%; left: 50%; width: 120%; aspect-ratio: 1;
+  transform: translateX(-50%);
+  background: radial-gradient(circle, rgba(200, 150, 255, .55) 0%, rgba(140, 80, 255, .22) 40%, transparent 68%);
+}
+
+.art-fortnite .t-bolt {
+  background: #d9f2ff;
+  filter: drop-shadow(0 0 10px #8ad9ff);
+  clip-path: polygon(48% 0, 78% 0, 58% 40%, 84% 40%, 30% 100%, 44% 52%, 20% 52%);
+}
+.art-fortnite .t-bolt.b1 { top: 8%; left: 24%; width: 9%; height: 46%; }
+.art-fortnite .t-bolt.b2 { top: 20%; right: 20%; width: 6%; height: 34%; opacity: .8; }
+
+.art-fortnite .t-hill { bottom: 0; border-radius: 50% 50% 0 0 / 70% 70% 0 0; }
+.art-fortnite .t-hill.h1 { left: -12%; right: 34%; height: 30%; background: linear-gradient(180deg, #356b46, #1d4630); }
+.art-fortnite .t-hill.h2 { left: 40%; right: -12%; height: 38%; background: linear-gradient(180deg, #2c7a4f, #16401f); }
+
+.art-fortnite .t-lama {
+  bottom: 16%; right: 22%; width: 11%; aspect-ratio: 1 / 1.5;
+  background: linear-gradient(180deg, #f0e2ff, #c9a4ff);
+  border-radius: 46% 46% 42% 42% / 34% 34% 62% 62%;
+  box-shadow: 0 12px 24px rgba(0, 0, 0, .45);
+  transform: rotate(-6deg);
+}
+.art-fortnite .t-lama::before {
+  content: ''; position: absolute; top: -26%; left: 22%; width: 24%; height: 30%;
+  background: #c9a4ff; border-radius: 40% 40% 20% 20%;
+  box-shadow: 14px 2px 0 -2px #d7bcff;
+}
+.art-fortnite .t-lama::after {
+  content: ''; position: absolute; bottom: -22%; left: 8%; right: 8%; height: 26%;
+  background: linear-gradient(90deg, #b892f5 0 22%, transparent 22% 78%, #b892f5 78% 100%);
+}
+
+.art-fortnite::after {
+  content: ''; position: absolute; inset: 0;
+  background: radial-gradient(120% 90% at 50% 30%, transparent 40%, rgba(10, 4, 30, .55) 100%);
+}
+
+/* ------------------------------------------------------------------------
+   Stylised wordmarks on the details hero
+   ------------------------------------------------------------------------ */
+.dt-logo-wrap[data-theme="fortnite"] .dt-logo-text {
+  letter-spacing: -0.5px;
+  background: linear-gradient(180deg, #ffffff, #cbb4ff 60%, #8f6bff);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  filter: drop-shadow(0 6px 22px rgba(120, 60, 240, .75));
+}

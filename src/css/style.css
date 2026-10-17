@@ -1,0 +1,296 @@
+/* =========================================================================
+   Apex Launcher - core theme, window chrome, sidebar
+   ========================================================================= */
+
+:root {
+  --accent: #00a8ff;
+  --bg: #0e1015;
+  --bg2: #0b0d12;
+  --panel: #171a21;
+  --side: #12141a;
+  --text: #eef1f6;
+  --muted: #8b93a3;
+  --hover: #232733;
+  --border: #232733;
+  --warn: #f5a623;
+  --ok: #2ecc71;
+  --danger: #ff5c5c;
+  --radius: 12px;
+  --ease: cubic-bezier(.2, .7, .2, 1);
+  --sidebar-w: 236px;
+}
+
+[data-theme="oled"] {
+  --bg: #000;
+  --bg2: #000;
+  --panel: #0a0a0c;
+  --side: #000;
+  --hover: #17181d;
+  --border: #16171b;
+}
+
+[data-theme="neon"] {
+  --bg: #0a0616;
+  --bg2: #07040f;
+  --panel: #150e2b;
+  --side: #0c0820;
+  --hover: #241744;
+  --border: #2b1c52;
+  --text: #f3ecff;
+  --muted: #9d8fc4;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { height: 100%; overflow: hidden; }
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  display: flex;
+  flex-direction: column;
+  transition: background .3s, color .3s;
+  user-select: none;
+}
+
+button { font-family: inherit; cursor: pointer; border: none; color: inherit; background: none; }
+a { color: inherit; text-decoration: none; }
+.ico { display: block; flex-shrink: 0; }
+[data-icon] { display: inline-flex; }
+code { font-family: 'Cascadia Code', Consolas, monospace; }
+
+/* --- glowing accent frame ------------------------------------------------ */
+#frame {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 900;
+  border: 1px solid color-mix(in srgb, var(--accent) 42%, transparent);
+  box-shadow:
+    inset 0 0 26px color-mix(in srgb, var(--accent) 15%, transparent),
+    inset 0 0 2px color-mix(in srgb, var(--accent) 50%, transparent);
+  transition: border-color .35s, box-shadow .35s;
+}
+
+/* --- custom title bar ---------------------------------------------------- */
+#titlebar {
+  height: 40px;
+  background: linear-gradient(180deg, var(--side), color-mix(in srgb, var(--side) 88%, #000));
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  -webkit-app-region: drag;
+  border-bottom: 1px solid var(--border);
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 22%, transparent);
+  flex-shrink: 0;
+  position: relative;
+  z-index: 60;
+}
+
+.brand { padding-left: 14px; display: flex; align-items: center; gap: 9px; }
+.brand-text { font-size: 12px; letter-spacing: 2.6px; color: var(--muted); }
+.brand-text b { color: var(--accent); }
+.logo { color: var(--accent); filter: drop-shadow(0 0 7px var(--accent)); }
+
+.title-right { display: flex; height: 100%; align-items: center; -webkit-app-region: no-drag; }
+
+.win-controls { display: flex; height: 100%; margin-left: 4px; }
+.win-controls button {
+  width: 46px; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted);
+  transition: background .15s, color .15s;
+}
+.win-controls button:hover { background: var(--hover); color: var(--text); }
+.win-controls .close:hover { background: #e81123; color: #fff; }
+
+/* --- layout -------------------------------------------------------------- */
+#layout { flex: 1; display: flex; min-height: 0; }
+
+#sidebar {
+  width: var(--sidebar-w);
+  background: var(--side);
+  padding: 18px 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-right: 1px solid var(--border);
+  flex-shrink: 0;
+}
+
+/*
+ * Frosted sidebar (Settings > Appearance > Frosted sidebar).
+ * The sidebar is translucent and blurs whatever is painted behind it, so the
+ * custom wallpaper - or the app's own gradient - shows straight through it.
+ */
+.glass-side #sidebar {
+  background: color-mix(in srgb, var(--side) 58%, transparent);
+  backdrop-filter: blur(24px) saturate(1.4);
+  -webkit-backdrop-filter: blur(24px) saturate(1.4);
+  border-right-color: color-mix(in srgb, var(--border) 55%, transparent);
+}
+/* A hairline of light along the seam keeps the edge crisp over busy artwork. */
+.glass-side #sidebar::after {
+  content: ""; position: absolute; top: 0; bottom: 0; right: 0; width: 1px;
+  background: linear-gradient(180deg,
+    transparent,
+    color-mix(in srgb, var(--accent) 45%, transparent) 30%,
+    transparent 70%);
+  pointer-events: none;
+}
+.glass-side #layout,
+.glass-side #sidebar { position: relative; }
+
+/* The brand block and nav pills get a touch of translucency of their own. */
+.glass-side .side-brand,
+.glass-side .tab.active,
+.glass-side .tab:hover {
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+
+.side-brand { display: flex; align-items: center; gap: 12px; padding: 4px 8px 16px; }
+.logo-lg {
+  width: 40px; height: 40px; border-radius: 11px;
+  background: linear-gradient(135deg, var(--accent), #6a3de8);
+  color: #fff; display: inline-flex; align-items: center; justify-content: center;
+  box-shadow: 0 0 18px color-mix(in srgb, var(--accent) 55%, transparent);
+  flex-shrink: 0;
+}
+.side-brand strong { display: block; font-size: 15px; }
+.side-brand small { color: var(--muted); font-size: 11px; }
+
+.side-label {
+  font-size: 10px; text-transform: uppercase; letter-spacing: 1.6px;
+  color: var(--muted); padding: 12px 12px 4px; opacity: .8;
+}
+
+.spacer { flex: 1; }
+
+.tab {
+  display: flex; align-items: center; gap: 13px;
+  padding: 11px 14px; border-radius: 9px;
+  font-size: 14px; color: var(--muted);
+  position: relative; text-align: left;
+  transition: background .2s, color .2s, transform .2s;
+}
+.tab:hover { background: var(--hover); color: var(--text); transform: translateX(3px); }
+.tab.active {
+  background: linear-gradient(90deg, color-mix(in srgb, var(--accent) 24%, transparent), transparent);
+  color: #fff; font-weight: 600;
+}
+.tab.active .ico { color: var(--accent); filter: drop-shadow(0 0 5px var(--accent)); }
+.tab.active::before {
+  content: ''; position: absolute; left: -12px; top: 8px; bottom: 8px; width: 4px;
+  border-radius: 0 4px 4px 0; background: var(--accent); box-shadow: 0 0 12px var(--accent);
+}
+.tab-badge {
+  display: none; margin-left: auto; min-width: 20px; height: 20px; padding: 0 6px;
+  border-radius: 10px; background: var(--accent); color: #04121c;
+  font-size: 11px; font-style: normal; font-weight: 700;
+  align-items: center; justify-content: center;
+}
+
+.side-foot {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 14px; margin-bottom: 4px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 10px;
+  color: var(--muted);
+}
+.side-foot .ico { color: var(--ok); }
+.side-foot strong { display: block; font-size: 12px; color: var(--text); }
+.side-foot small { font-size: 10px; }
+
+/* --- content ------------------------------------------------------------- */
+#content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 26px 34px 30px;
+  position: relative;
+}
+#content.fade { animation: fade .35s var(--ease); }
+@keyframes fade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+.page-title { font-size: 29px; margin-bottom: 18px; letter-spacing: -.5px; }
+.section-title { font-size: 19px; display: flex; align-items: center; gap: 10px; }
+.section-title .ico { color: var(--accent); }
+
+/* --- toast --------------------------------------------------------------- */
+#toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 950;
+  background: var(--panel); border: 1px solid var(--border); border-left: 4px solid var(--accent);
+  padding: 12px 18px; border-radius: 9px;
+  box-shadow: 0 12px 34px rgba(0, 0, 0, .6);
+  opacity: 0; transform: translateY(20px); pointer-events: none;
+  transition: opacity .25s, transform .25s;
+  font-size: 13px; display: flex; gap: 10px; align-items: center; max-width: 460px;
+}
+#toast .ico { color: var(--accent); }
+#toast.show { opacity: 1; transform: none; }
+#toast[data-type="warn"] { border-left-color: var(--warn); }
+#toast[data-type="warn"] .ico { color: var(--warn); }
+#toast[data-type="check"] { border-left-color: var(--ok); }
+#toast[data-type="check"] .ico { color: var(--ok); }
+#toast[data-type="download"] { border-left-color: var(--accent); }
+
+/* --- scrollbars ---------------------------------------------------------- */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--hover); border-radius: 6px; }
+::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--accent) 45%, var(--hover)); }
+
+/* --- reduced motion ------------------------------------------------------ */
+.reduce-motion *,
+.reduce-motion *::before,
+.reduce-motion *::after {
+  animation-duration: .001ms !important;
+  transition-duration: .001ms !important;
+}
+
+/* --- view transitions ---------------------------------------------------- */
+#content { scroll-behavior: smooth; }
+#content.view-swap { animation: viewSwap .34s var(--ease); }
+@keyframes viewSwap {
+  from { opacity: 0; transform: translateY(14px) scale(.997); filter: blur(2px); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+.reduce-motion #content.view-swap { animation: none; }
+
+/* --- custom background picture (Settings > Background) ------------------- */
+#bg-layer,
+#bg-scrim { position: fixed; inset: 0; pointer-events: none; display: none; }
+
+#bg-layer {
+  z-index: -1;
+  background-image: var(--bg-image, none);
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  opacity: var(--bg-image-opacity, .45);
+  filter: blur(var(--bg-image-blur, 0px));
+  transform: scale(1.06);
+  transition: opacity .35s, filter .35s;
+}
+
+#bg-scrim {
+  z-index: -1;
+  background:
+    radial-gradient(120% 120% at 18% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 58%),
+    linear-gradient(180deg, color-mix(in srgb, var(--bg) 62%, transparent), color-mix(in srgb, var(--bg) 84%, transparent));
+}
+
+.has-bg #bg-layer,
+.has-bg #bg-scrim { display: block; }
+.has-bg body { background: var(--bg2); }
+
+/* Let the wallpaper read through the big surfaces without hurting contrast. */
+.has-bg .panel,
+.has-bg .card,
+.has-bg .scard,
+.has-bg .dt-panel,
+.has-bg .dt-barbar,
+.has-bg .store-row .scard,
+.has-bg .dl-summary {
+  background-color: color-mix(in srgb, var(--panel) 84%, transparent);
+  backdrop-filter: blur(3px);
+}

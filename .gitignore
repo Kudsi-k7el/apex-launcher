@@ -1,0 +1,22 @@
+# Dependencies are installed, never committed.
+node_modules/
+
+# Build output: installers, blockmaps and latest.yml live in GitHub Releases,
+# which is also where the launcher's updater reads them from.
+dist/
+
+# The companion server's database and logs (accounts are local data).
+server/data/
+
+# Local update-feed override used by the updater's own test harness.
+dev-app-update.yml
+
+# Scratch space the download engine wrote into during testing - user data, not
+# source, and never something to publish.
+Downloads/
+
+# Electron/OS noise.
+*.log
+Thumbs.db
+desktop.ini
+.DS_Store

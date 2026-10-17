@@ -1,0 +1,216 @@
+/* =========================================================================
+   Library page: toolbar, filters, rich game cards
+   ========================================================================= */
+
+.toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+.toolbar-right { margin-left: auto; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.toolbar-right .search-box { margin-left: 0; }
+.card-source { display: flex; gap: 6px; }
+
+.chip {
+  display: inline-flex; align-items: center; gap: 7px;
+  padding: 8px 16px; border-radius: 20px;
+  background: var(--panel); border: 1px solid var(--border);
+  font-size: 13px; color: var(--muted);
+  transition: background .2s, color .2s, box-shadow .2s, border-color .2s;
+}
+.chip:hover { background: var(--hover); color: var(--text); box-shadow: 0 0 12px rgba(255, 255, 255, .07); }
+.chip.active {
+  background: var(--accent); color: #04121c; border-color: var(--accent); font-weight: 600;
+  box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 60%, transparent);
+}
+
+.search-box {
+  margin-left: auto; display: flex; align-items: center; gap: 8px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 9px;
+  padding: 0 12px; width: 300px; color: var(--muted);
+  transition: border-color .2s, box-shadow .2s, color .2s;
+}
+.search-box:focus-within { border-color: var(--accent); box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 40%, transparent); color: var(--accent); }
+/* One rule styles every search field in the app (library, store, news), so a
+   new one can never fall back to the browser's default grey chrome again.
+   `type="search"` inputs also need their native appearance cleared. */
+.search-box input {
+  flex: 1; min-width: 0;
+  background: transparent; border: none; outline: none;
+  appearance: none; -webkit-appearance: none;
+  color: var(--text); padding: 10px 0; font-size: 13px; user-select: text;
+}
+.search-box input::placeholder { color: var(--muted); }
+.search-box input::-webkit-search-cancel-button { -webkit-appearance: none; }
+
+.count { color: var(--muted); font-size: 12px; margin-bottom: 16px; }
+
+/* --- grid + cards -------------------------------------------------------- */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); gap: 22px; }
+
+.card {
+  background: var(--panel); border-radius: 13px; overflow: hidden;
+  border: 1px solid var(--border);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .4);
+  display: flex; flex-direction: column;
+  transition: transform .3s var(--ease), box-shadow .3s, border-color .3s;
+}
+.card:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, .66), 0 0 24px color-mix(in srgb, var(--accent) 22%, transparent);
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+}
+.card:hover .art img { transform: scale(1.12); }
+
+.card-art { position: relative; aspect-ratio: 2 / 3; overflow: hidden; }
+.card-art::after {
+  content: ''; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(0deg, rgba(0, 0, 0, .82), transparent 42%);
+}
+
+.fav {
+  position: absolute; top: 10px; right: 10px; z-index: 3;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(0, 0, 0, .55); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s, transform .2s, color .2s;
+}
+.fav:hover { background: rgba(0, 0, 0, .82); transform: scale(1.12); }
+.fav.on { color: #ff4d6d; filter: drop-shadow(0 0 6px #ff4d6d); }
+.fav.on .ico { fill: #ff4d6d; }
+
+.release-tag {
+  position: absolute; top: 10px; left: 10px; z-index: 3;
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10px; font-weight: 700; color: #fff;
+  background: rgba(0, 0, 0, .55); padding: 4px 8px; border-radius: 6px;
+  backdrop-filter: blur(6px); border: 1px solid rgba(255, 255, 255, .14);
+}
+
+.card-info { padding: 14px; display: flex; flex-direction: column; gap: 9px; flex: 1; }
+.card-info h4 { font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* The imported executable's own icon, inline ahead of the title. */
+.card-ico {
+  width: 18px; height: 18px; border-radius: 4px; object-fit: contain;
+  vertical-align: -3px; margin-right: 7px;
+  background: color-mix(in srgb, var(--panel) 60%, transparent);
+}
+.card-dev { font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: -4px; }
+
+.card-meta { display: flex; flex-wrap: wrap; gap: 10px; font-size: 11px; color: var(--muted); }
+.card-meta span { display: inline-flex; align-items: center; gap: 5px; }
+.card-meta .ico { color: color-mix(in srgb, var(--accent) 80%, var(--muted)); }
+
+.card-info .actions { margin-top: auto; }
+.card-info .actions .btn { flex: 1; }
+.card-info .actions .dropdown { flex-shrink: 0; }
+
+/* --- pre-ordered & upcoming row ------------------------------------------
+   Pre-ordered titles sit in the Library with the installed ones, but in their
+   own row: nothing is playable yet, so the card leads with the countdown. Their
+   art is the same widescreen key visual the Store row uses, so the header is
+   16:9 here too rather than a tall thumbnail. */
+.po-section { margin: 4px 0 28px; }
+.po-grid { grid-template-columns: repeat(auto-fill, minmax(232px, 1fr)); }
+.cd-row { display: flex; }
+.po-card { border-color: color-mix(in srgb, #6a3de8 36%, var(--border)); }
+.po-card:hover { border-color: color-mix(in srgb, #6a3de8 62%, transparent); }
+.po-card .card-art { aspect-ratio: 16 / 9; }
+.po-card .card-art::after {
+  background: linear-gradient(0deg, rgba(8, 6, 16, .72), transparent 52%);
+}
+.po-card .up-flag.on {
+  top: 10px; left: 10px; right: auto;
+  padding: 4px 9px; border-radius: 6px;
+  font-size: 10px; justify-content: flex-start;
+}
+
+#empty { margin-top: 20px; }
+
+/* --- collections ---------------------------------------------------------
+   A collection chip is a normal filter chip, so it needs no new geometry: the
+   row simply sits under the toolbar. */
+.col-bar {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin: -4px 0 16px;
+}
+.col-label {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-size: 11.5px; color: var(--muted);
+  text-transform: uppercase; letter-spacing: .07em; margin-right: 2px;
+}
+.chip.ghost { background: transparent; border-style: dashed; }
+.chip.ghost:hover {
+  border-color: color-mix(in srgb, var(--accent) 55%, transparent);
+  color: var(--accent);
+}
+
+/* Sits under the heart so both card actions share the same corner. */
+.col-btn {
+  position: absolute; top: 50px; right: 10px; z-index: 3;
+  width: 32px; height: 32px; border-radius: 50%;
+  background: rgba(0, 0, 0, .55); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  transition: background .2s, transform .2s, color .2s;
+}
+.col-btn:hover { background: rgba(0, 0, 0, .82); transform: scale(1.12); }
+.col-btn.on {
+  color: var(--accent);
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--accent) 70%, transparent));
+}
+
+/* --- layout toggle -------------------------------------------------------
+   Purely a class on the grid, so flipping layouts never rebuilds a card and
+   the artwork stays decoded. */
+.view-toggle {
+  display: inline-flex; gap: 3px; padding: 3px;
+  background: var(--panel); border: 1px solid var(--border); border-radius: 9px;
+}
+.view-toggle button {
+  width: 32px; height: 30px; border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  color: var(--muted);
+  transition: background .2s, color .2s;
+}
+.view-toggle button:hover { background: var(--hover); color: var(--text); }
+.view-toggle button.on { background: var(--accent); color: #04121c; }
+
+/* --- list layout --------------------------------------------------------- */
+.grid.list { grid-template-columns: 1fr; gap: 10px; }
+.grid.list .card { flex-direction: row; }
+.grid.list .card:hover { transform: translateY(-2px); }
+.grid.list .card-art { flex: 0 0 76px; aspect-ratio: auto; }
+.grid.list .card-art::after {
+  background: linear-gradient(90deg, transparent 40%, rgba(0, 0, 0, .55));
+}
+.grid.list .card-info {
+  flex-direction: row; flex-wrap: wrap; align-items: center;
+  gap: 8px 18px; padding: 12px 16px;
+}
+.grid.list .card-info h4 { flex: 1 1 160px; font-size: 14px; }
+.grid.list .card-info .actions { margin-top: 0; }
+.grid.list .card-info .actions .btn { flex: 0 0 auto; }
+
+/* --- collection dialog --------------------------------------------------- */
+.col-list {
+  display: flex; flex-direction: column; gap: 6px;
+  max-height: 46vh; overflow-y: auto;
+}
+.col-row {
+  display: flex; align-items: center; gap: 10px; width: 100%;
+  padding: 10px 12px; border-radius: 9px; text-align: left;
+  background: var(--panel); border: 1px solid var(--border);
+  color: var(--text);
+  transition: background .2s, border-color .2s;
+}
+.col-row:hover { background: var(--hover); }
+.col-row.on { border-color: color-mix(in srgb, var(--accent) 60%, transparent); }
+.col-tick {
+  width: 20px; height: 20px; flex: 0 0 20px; border-radius: 5px;
+  display: flex; align-items: center; justify-content: center;
+  border: 1px solid var(--border); color: transparent;
+}
+.col-row.on .col-tick { background: var(--accent); border-color: var(--accent); color: #04121c; }
+.col-row-name { flex: 1; min-width: 0; font-size: 13.5px; }
+.col-row-count { font-size: 11.5px; color: var(--muted); }
+.col-new-row { margin-top: 12px; }
+.modal-note {
+  display: flex; align-items: center; gap: 8px;
+  font-size: 12px; color: var(--muted); margin-top: 10px;
+}

@@ -1,0 +1,51 @@
+{
+  "entries": [
+    {
+      "version": "2.7.0",
+      "date": "2026-10-17",
+      "title": "Overlay, achievements and a proper goodbye",
+      "summary": "Performance overlay on F8, screenshots on F2, achievements you can actually earn, and an uninstall that deletes the files instead of hiding them.",
+      "sections": [
+        {
+          "title": "New",
+          "items": [
+            "Uninstall or remove: deleting a game now really deletes it, and says exactly which folders and how much space first.",
+            "Performance overlay: F8 floats a click-through panel over any game with real CPU, GPU and RAM readings.",
+            "Screenshots: F2 grabs the screen, saves a PNG and files it in a gallery you can browse and prune.",
+            "Achievements: Apex awards its own from what you actually do, with a Steam-style toast, and can pull your real Steam achievements with your own Web API key.",
+            "What's new: a changelog bundled with the app, shown once each time it updates."
+          ]
+        },
+        {
+          "title": "Improved",
+          "items": [
+            "The controller on-screen keyboard opens for every search box and has a button of its own.",
+            "Archive extraction reports a live percentage, so a long unrar no longer looks frozen."
+          ]
+        },
+        {
+          "title": "Notes",
+          "items": [
+            "The overlay measures what it can honestly measure. A true in-game frame rate needs a graphics hook, so the panel labels its frame timing as the desktop's present rate and never claims to be the game's own."
+          ]
+        }
+      ]
+    },
+    {
+      "version": "2.6.0",
+      "date": "2026-10-12",
+      "title": "Nexus and the download engine",
+      "summary": "A new catalogue alongside a real multi-provider download pipeline.",
+      "sections": [
+        {
+          "title": "New",
+          "items": [
+            "Nexus: search a second catalogue, with mirrors resolved per provider and automatic failover.",
+            "Tools: the Bypass, OnlineFix and SteamLess panels, with their catalogues refreshed from GitHub.",
+            "Downloads that start from the launcher with no window, no tab and no site to click through."
+          ]
+        }
+      ]
+    }
+  ]
+}
