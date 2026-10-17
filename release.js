@@ -11,17 +11,16 @@
  *
  *   1. A GH_TOKEN. Yours is taken from the GitHub CLI you are already logged in
  *      with, so there is no token to paste anywhere.
- *   2. The git tag. GitHub refuses to create a *published* release that points
- *      at a tag which does not exist yet ("Published releases must have a valid
- *      tag"), so the tag is created and pushed first.
+ *   2. The git tag. A published release has to point at a tag that exists, so
+ *      the tag is created and pushed before the upload starts.
  *
  * Usage:
  *   npm version patch --no-git-tag-version   # or edit "version" by hand
  *   npm run release
  *
- * Note that the version in package.json is the single source of truth for what
- * clients see: electron-updater compares it against its own and only updates
- * when the feed's is newer. Bump it, or nothing happens.
+ * The version in package.json is the single source of truth for what clients
+ * see: electron-updater compares it against its own and only updates when the
+ * feed's is newer. Bump it, or nothing happens.
  */
 
 const { spawnSync } = require('child_process');
@@ -33,7 +32,10 @@ const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'))
 const version = String(pkg.version || '').trim();
 const tag = `v${version}`;
 
-const isWin = process.platform === 'win32';
+// Spawned directly rather than through a shell: a shell would join the argument
+// list into one string, and `git tag -a v1.0.0 -m Apex Launcher 1.0.0` turns
+// into four arguments ("too many arguments"). Node's own quoting is correct.
+const BUILDER_CLI = path.join(root, 'node_modules', 'electron-builder', 'out', 'cli', 'cli.js');
 
 function say(msg) {
   process.stdout.write(`${msg}\n`);
@@ -46,18 +48,13 @@ function die(msg) {
 
 /** Runs a command with the terminal attached, so build output stays live. */
 function run(cmd, args, opts = {}) {
-  const res = spawnSync(cmd, args, {
-    cwd: root,
-    stdio: 'inherit',
-    shell: isWin,
-    ...opts
-  });
+  const res = spawnSync(cmd, args, { cwd: root, stdio: 'inherit', ...opts });
   return res.status == null ? 1 : res.status;
 }
 
 /** Runs a command and captures its trimmed stdout. */
 function capture(cmd, args) {
-  const res = spawnSync(cmd, args, { cwd: root, encoding: 'utf8', shell: isWin });
+  const res = spawnSync(cmd, args, { cwd: root, encoding: 'utf8' });
   return {
     code: res.status == null ? 1 : res.status,
     out: String(res.stdout || '').trim(),
@@ -80,53 +77,49 @@ if (!token) {
 }
 say('  ok  GitHub token ready (from the gh CLI)');
 
-// --- 2. refuse to publish a version that is already out ---------------------
-const existing = capture('gh', ['release', 'view', tag, '--json', 'tagName']);
-if (existing.code === 0) {
+// --- 2. say so if this version is already out -------------------------------
+// Re-running is legitimate (it is how a half-finished upload is repaired), so
+// this only ever warns.
+if (capture('gh', ['release', 'view', tag, '--json', 'tagName']).code === 0) {
   say(`  !!  release ${tag} already exists - its assets will be replaced.`);
   say('      Bump "version" in package.json if you meant to ship something new.');
 }
 
-// --- 3. commit and tag, because a published release needs a real tag --------
-const dirty = capture('git', ['status', '--porcelain']);
-if (dirty.out) {
+// --- 3. the tag, which a published release cannot do without ----------------
+const dirty = capture('git', ['status', '--porcelain']).out;
+if (dirty) {
   say('  !!  uncommitted changes are in the working tree:');
-  for (const line of dirty.out.split('\n')) say(`        ${line}`);
+  for (const line of dirty.split('\n')) say(`        ${line}`);
 }
 
 const branch = capture('git', ['rev-parse', '--abbrev-ref', 'HEAD']).out || 'HEAD';
-const push = run('git', ['push', 'origin', `HEAD:${branch}`]);
-if (push !== 0) die('Could not push the branch to origin.');
+if (run('git', ['push', 'origin', `HEAD:${branch}`]) !== 0) die('Could not push the branch to origin.');
 say(`  ok  pushed ${branch}`);
 
-if (!capture('git', ['tag', '--list', tag]).out) {
-  if (run('git', ['tag', '-a', tag, '-m', `Apex Launcher ${version}`]) !== 0) {
-    die(`Could not create tag ${tag}.`);
+if (capture('git', ['ls-remote', '--tags', 'origin', `refs/tags/${tag}`]).out) {
+  // Already on the remote: the release it points at is what we re-upload to.
+  say(`  ok  tag ${tag} already on origin`);
+} else {
+  if (!capture('git', ['tag', '--list', tag]).out) {
+    if (run('git', ['tag', '-a', tag, '-m', `Apex Launcher ${version}`]) !== 0) {
+      die(`Could not create tag ${tag}.`);
+    }
   }
-  say(`  ok  tagged ${tag}`);
-} else {
-  say(`  ok  tag ${tag} already exists`);
-}
-
-if (!capture('git', ['ls-remote', '--tags', 'origin', `refs/tags/${tag}`]).out) {
   if (run('git', ['push', 'origin', tag]) !== 0) die(`Could not push tag ${tag}.`);
-  say(`  ok  pushed tag ${tag}`);
-} else {
-  // The tag exists on the remote, but it may not point at what we are about to
-  // build - worth knowing rather than silently shipping something else.
-  const local = capture('git', ['rev-list', '-n', '1', tag]).out;
-  const remote = capture('git', ['rev-parse', `origin/${branch}`]).out;
-  say(`  ok  tag ${tag} already on origin${local && remote && local !== remote ? ' (note: not the current branch tip)' : ''}`);
+  say(`  ok  tagged and pushed ${tag}`);
 }
 
 // --- 4. build + publish -----------------------------------------------------
+if (!fs.existsSync(BUILDER_CLI)) die(`electron-builder is missing at ${BUILDER_CLI}. Run npm install.`);
+
 say('\nBuilding and publishing...\n');
-const code = run('npx', ['electron-builder', '--win', 'nsis', '--publish', 'always'], {
+const code = run(process.execPath, [BUILDER_CLI, '--win', 'nsis', '--publish', 'always'], {
   env: { ...process.env, GH_TOKEN: token }
 });
 
 if (code !== 0) die('\nRelease failed. The build output above says why.');
 
-say(`\nDone. https://github.com/${pkg.build.publish[0].owner}/${pkg.build.publish[0].repo}/releases/tag/${tag}`);
+const pub = pkg.build.publish[0];
+say(`\nDone. https://github.com/${pub.owner}/${pub.repo}/releases/tag/${tag}`);
 say('Every installed copy picks this up on its own within a few hours (or on next launch).\n');
 process.exit(0);
