@@ -841,6 +841,29 @@ async function run() {
     check('the changelog ships with the app and parses into structured entries',
       cl.ok && cl.entries >= 2 && cl.sections > 0 && !!cl.newest, JSON.stringify(cl));
 
+    // --- 26e. contact page + build stamp ------------------------------------
+    const contact = await js(`
+      gotoView('contact');
+      await new Promise(r => setTimeout(r, 400));
+      const handles = [...document.querySelectorAll('#content .cc-handle')].map((h) => h.textContent.trim());
+      const cards = document.querySelectorAll('#content .cc-card').length;
+      const marks = document.querySelectorAll('#content .cc-ico svg path').length;
+      const copy = document.querySelectorAll('#content [data-copy]').length;
+      const open = document.querySelectorAll('#content [data-open]').length;
+      const stamp = ((document.getElementById('build-stamp') || {}).textContent || '').trim();
+      const sign = ((document.querySelector('#sidebar .side-sign') || {}).textContent || '').trim();
+      const nav = !!document.querySelector('#sidebar .tab[data-view="contact"]');
+      gotoView('store');
+      return { handles, cards, marks, copy, open, stamp, sign, nav };`);
+    check('the Contact page shows both handles, each with a copy and an open button',
+      contact.cards === 2 && contact.handles.includes('z1.f') && contact.handles.includes('@kudsoo')
+      && contact.marks === 2 && contact.copy === 2 && contact.open === 2 && contact.nav,
+      JSON.stringify(contact));
+    check('the sidebar build stamp names the exact build and carries the maker mark',
+      /^apexlauncher developer build \d+\.\d+\.\d+$/.test(contact.stamp)
+      && /kudasai/i.test(contact.sign) && contact.sign.includes('@kudsoo'),
+      JSON.stringify({ stamp: contact.stamp, sign: contact.sign }));
+
     // --- 27. unified search (Steam catalogue + itch.io, real time) ----------
     const uni = await js(`
       const input = document.getElementById('global-search');

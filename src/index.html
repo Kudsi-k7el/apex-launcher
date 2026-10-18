@@ -33,6 +33,7 @@
   <link rel="stylesheet" href="css/bigpicture.css">
   <link rel="stylesheet" href="css/gallery.css">
   <link rel="stylesheet" href="css/changelog.css">
+  <link rel="stylesheet" href="css/contact.css">
   <link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
@@ -193,12 +194,19 @@
       <span class="side-label">You</span>
       <button class="tab" data-view="profile"><span data-icon="user"></span><span>Profile</span></button>
       <button class="tab" data-view="gallery"><span data-icon="camera"></span><span>Gallery</span></button>
+      <button class="tab" data-view="contact"><span data-icon="messageSquare"></span><span>Contact</span></button>
 
       <div class="spacer"></div>
 
       <button class="tab bp-side" data-act="bigpicture" title="A controller-friendly, full-screen layout">
         <span data-icon="tv"></span><span>Big Picture</span>
       </button>
+
+      <!-- kudasai / @kudsoo is the maker's mark and the build stamp says exactly
+           which build is running; app.js refreshes the stamp from appInfo() so it
+           can never drift from the real version. -->
+      <div class="side-stamp" id="build-stamp" title="This build">apexlauncher developer build 2.8.0</div>
+      <div class="side-sign" title="Made by">kudasai <b>@kudsoo</b></div>
 
       <div class="side-foot">
         <span data-icon="cpu" data-size="14"></span>
@@ -326,6 +334,7 @@
   <script src="js/achieve.js"></script>
   <script src="js/gallery.js"></script>
   <script src="js/changelog.js"></script>
+  <script src="js/contact.js"></script>
   <script src="js/api.js"></script>
   <script src="js/vkeyboard.js"></script>
   <script src="js/modal.js"></script>

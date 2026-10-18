@@ -972,6 +972,25 @@ ipcMain.handle('steam:achievements', async (_e, appId, opts) => {
 });
 
 // --- changelog (see data/changelog.json) -------------------------------------
+/**
+ * The Apex build version.
+ *
+ * `app.getVersion()` is only the app's own version inside a packaged build.
+ * Started straight from a script (`electron main.js`, or any of the test
+ * harnesses) it reports Electron's version instead, which would mislabel every
+ * "which build is this" surface in the UI - the title bar chip, the sidebar
+ * build stamp and Settings > About. Unpackaged, the honest answer is the one in
+ * package.json.
+ */
+function appVersion() {
+  if (app.isPackaged) return app.getVersion();
+  try {
+    const pkg = JSON.parse(fs.readFileSync(path.join(projectDir(), 'package.json'), 'utf8'));
+    if (pkg && pkg.version) return String(pkg.version);
+  } catch { /* fall through to Electron's own version */ }
+  return app.getVersion();
+}
+
 // Bundled with the app rather than fetched, so "What's new" always works offline
 // and can never be swapped out from under the user.
 ipcMain.handle('changelog:list', () => {
@@ -979,9 +998,9 @@ ipcMain.handle('changelog:list', () => {
     const file = path.join(projectDir(), 'data', 'changelog.json');
     const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
     const entries = Array.isArray(raw) ? raw : (raw.entries || []);
-    return { ok: true, version: app.getVersion(), entries };
+    return { ok: true, version: appVersion(), entries };
   } catch (err) {
-    return { ok: true, version: app.getVersion(), entries: [], error: (err && err.message) || 'No changelog bundled' };
+    return { ok: true, version: appVersion(), entries: [], error: (err && err.message) || 'No changelog bundled' };
   }
 });
 
@@ -1162,7 +1181,7 @@ ipcMain.handle('shell:openPath', async (_e, target) => {
 
 ipcMain.handle('app:info', () => ({
   name: APP_NAME,
-  version: app.getVersion(),
+  version: appVersion(),
   electron: process.versions.electron,
   chrome: process.versions.chrome,
   node: process.versions.node,

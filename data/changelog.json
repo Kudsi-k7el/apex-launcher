@@ -1,6 +1,43 @@
 {
   "entries": [
     {
+      "version": "2.8.0",
+      "date": "2026-10-18",
+      "title": "A locked door, EA games, and a way to reach me",
+      "summary": "Sign-in now talks to the real Apex account server and cannot be pointed anywhere else, your EA App games are finally detected, the Store stopped stuttering while you type, and there is a Contact page.",
+      "sections": [
+        {
+          "title": "New",
+          "items": [
+            "Contact page: my Discord and Telegram, one click to copy or open.",
+            "A live clock in the top right corner.",
+            "EA App, Ubisoft Connect and Battle.net titles now carry their own store badge.",
+            "A build stamp in the sidebar, so you always know exactly which build you are running."
+          ]
+        },
+        {
+          "title": "Fixed",
+          "items": [
+            "EA App and Origin games are detected properly. The old probe only read registry keys the modern EA App never writes, so those titles were invisible to Apex.",
+            "Game names from the registry keep their real characters. The trademark sign in a title was being silently rewritten to a letter T."
+          ]
+        },
+        {
+          "title": "Improved",
+          "items": [
+            "The Store no longer rebuilds every card on every keystroke, which is where the stutter while searching came from.",
+            "The controller on-screen keyboard and the live search keep working exactly as before; only the wasted work is gone."
+          ]
+        },
+        {
+          "title": "Changed",
+          "items": [
+            "The account server is compiled into the build. The sign-in screen has no server field and Settings shows the address read-only, so nobody can point the launcher at a different backend."
+          ]
+        }
+      ]
+    },
+    {
       "version": "2.7.0",
       "date": "2026-10-17",
       "title": "Overlay, achievements and a proper goodbye",

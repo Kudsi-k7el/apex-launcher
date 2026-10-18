@@ -773,3 +773,119 @@ html.auth-open, html.auth-open body { overflow: hidden; }
 @media (prefers-reduced-motion: reduce) {
   .auth-card, .auth-backdrop, .auth-menu.is-open { animation: none; }
 }
+
+/* =====================================================================
+   Watermark — the same maker's mark the launcher wears, so the app and
+   the page read as one product. Pinned, tiled, deliberately faint, and
+   it must never intercept a pointer.
+   ===================================================================== */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: .05;
+  background-repeat: repeat;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='340'%20height='240'%3E%3Ctext%20x='0'%20y='140'%20transform='rotate(-24%200%20140)'%20font-family='Segoe%20UI,Helvetica,sans-serif'%20font-size='36'%20font-weight='700'%20letter-spacing='2'%20fill='%238b93a3'%3Ekudasai%3C/text%3E%3Ctext%20x='0'%20y='190'%20transform='rotate(-24%200%20190)'%20font-family='Segoe%20UI,Helvetica,sans-serif'%20font-size='17'%20font-weight='600'%20letter-spacing='4'%20fill='%238b93a3'%3E%40kudsoo%3C/text%3E%3C/svg%3E");
+}
+
+/* =====================================================================
+   Contact — two handles, and everything that makes them easy to grab
+   ===================================================================== */
+.contact-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 22px;
+}
+
+.contact-card {
+  position: relative;
+  overflow: hidden;
+  padding: 26px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--panel);
+  transition: transform .3s var(--ease), border-color .3s var(--ease), box-shadow .3s var(--ease);
+}
+.contact-card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--cc-accent) 55%, var(--border));
+  box-shadow: 0 22px 48px -26px color-mix(in srgb, var(--cc-accent) 65%, transparent);
+}
+
+.contact-discord  { --cc-accent: #5865f2; }
+.contact-telegram { --cc-accent: #29a9eb; }
+
+.contact-glow {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 110px;
+  pointer-events: none;
+  background: radial-gradient(90% 130% at 10% 0%, color-mix(in srgb, var(--cc-accent) 34%, transparent), transparent 70%);
+}
+
+.contact-head { position: relative; display: flex; align-items: center; gap: 13px; }
+.contact-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  flex-shrink: 0;
+  border-radius: 12px;
+  color: #fff;
+  background: color-mix(in srgb, var(--cc-accent) 34%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cc-accent) 62%, transparent);
+  box-shadow: 0 0 20px color-mix(in srgb, var(--cc-accent) 30%, transparent);
+}
+/* The brand marks are filled paths, so they must not pick up the outlined
+   default the buttons use. */
+.contact-ico svg { width: 22px; height: 22px; fill: currentColor; stroke: none; }
+
+.contact-head strong { display: block; font-size: 16px; }
+.contact-head small { display: block; font-size: 12.5px; color: var(--muted); }
+
+/* The whole reason the section exists. Big, monospace, and selectable. */
+.contact-handle {
+  position: relative;
+  margin: 20px 0 12px;
+  font-family: 'Cascadia Code', Consolas, ui-monospace, monospace;
+  font-size: 27px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--text);
+  word-break: break-all;
+  user-select: all;
+}
+.contact-note { margin: 0; color: var(--muted); font-size: 14px; min-height: 44px; }
+
+.contact-actions { position: relative; display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.contact-actions .btn.is-copied {
+  border-color: var(--ok);
+  color: var(--ok);
+  background: color-mix(in srgb, var(--ok) 12%, transparent);
+}
+
+.contact-tip {
+  margin: 26px 0 0;
+  font-size: 13.5px;
+  color: var(--muted);
+  max-width: 70ch;
+}
+
+/* =====================================================================
+   Footer additions — the maker's mark and the exact build
+   ===================================================================== */
+.foot-made { font-size: 13px; color: var(--muted); }
+.foot-made b { color: var(--text); font-weight: 650; }
+.foot-made a { color: var(--accent); font-weight: 600; }
+.foot-made a:hover { text-decoration: underline; }
+.foot-sep { opacity: .5; margin-inline: 4px; }
+
+.foot-build {
+  font-family: 'Cascadia Code', Consolas, ui-monospace, monospace;
+  font-size: 12px;
+  letter-spacing: .2px;
+}
+

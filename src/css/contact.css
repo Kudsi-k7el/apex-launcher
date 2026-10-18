@@ -1,0 +1,183 @@
+/* =========================================================================
+   Contact - reaching the person who builds Apex
+   -------------------------------------------------------------------------
+   Two brand-tinted cards, a hero with the maker's mark behind the copy, and a
+   signature line. Everything here is decoration on top of two strings, so the
+   strings themselves get the space and the monospace.
+   ========================================================================= */
+
+.cc-hero {
+  position: relative;
+  overflow: hidden;
+  margin-bottom: 22px;
+  padding: 26px 28px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 26%, var(--border));
+  background:
+    radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 62%),
+    linear-gradient(140deg, color-mix(in srgb, var(--panel) 92%, #000), var(--panel));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, .38);
+}
+
+/* The broad translucent wordmark behind the copy. Decorative, so it must not
+   sit in the text's way or take a click. */
+.cc-hero-mark {
+  position: absolute;
+  right: -14px;
+  top: 50%;
+  transform: translateY(-50%) rotate(-6deg);
+  font-size: 92px;
+  font-weight: 800;
+  letter-spacing: 4px;
+  line-height: 1;
+  color: color-mix(in srgb, var(--accent) 15%, transparent);
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
+.cc-hero-body { position: relative; max-width: 640px; }
+.cc-hero h2 {
+  font-size: 23px;
+  line-height: 1.25;
+  margin-bottom: 10px;
+  letter-spacing: -.2px;
+}
+.cc-hero p { color: var(--muted); font-size: 13.5px; line-height: 1.6; }
+
+.cc-hero-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+.cc-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  font-weight: 650;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.cc-chip .ico { color: var(--accent); }
+
+/* --- the two channels ---------------------------------------------------- */
+.cc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 18px;
+}
+
+.cc-card {
+  position: relative;
+  overflow: hidden;
+  padding: 22px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--panel);
+  transition: transform .3s var(--ease), border-color .3s, box-shadow .3s;
+}
+.cc-card:hover {
+  transform: translateY(-4px);
+  border-color: color-mix(in srgb, var(--cc-accent) 55%, transparent);
+  box-shadow: 0 16px 34px rgba(0, 0, 0, .5), 0 0 22px color-mix(in srgb, var(--cc-accent) 20%, transparent);
+}
+
+.cc-discord { --cc-accent: #5865f2; }
+.cc-telegram { --cc-accent: #29a9eb; }
+
+/* A soft wash of the brand colour along the top edge. */
+.cc-glow {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 92px;
+  pointer-events: none;
+  background: radial-gradient(90% 130% at 12% 0%, color-mix(in srgb, var(--cc-accent) 34%, transparent), transparent 70%);
+}
+
+.cc-head { position: relative; display: flex; align-items: center; gap: 12px; }
+.cc-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 11px;
+  flex-shrink: 0;
+  color: #fff;
+  background: color-mix(in srgb, var(--cc-accent) 34%, transparent);
+  border: 1px solid color-mix(in srgb, var(--cc-accent) 62%, transparent);
+  box-shadow: 0 0 18px color-mix(in srgb, var(--cc-accent) 30%, transparent);
+}
+/* Brand marks are filled paths, so they must not pick up a stroke default. */
+.cc-ico svg { width: 22px; height: 22px; fill: currentColor; stroke: none; }
+.cc-head strong { display: block; font-size: 15px; letter-spacing: .2px; }
+.cc-head small { display: block; font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+
+/* The whole reason the page exists: big, monospace and selectable by hand. */
+.cc-handle {
+  position: relative;
+  margin: 18px 0 12px;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 25px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--text);
+  -webkit-user-select: text;
+  user-select: text;
+  word-break: break-all;
+}
+.cc-blurb { color: var(--muted); font-size: 12.5px; line-height: 1.6; min-height: 40px; }
+
+.cc-actions { display: flex; gap: 10px; margin-top: 16px; }
+.cc-actions .btn { flex: 0 1 auto; }
+
+/* --- what to include ---------------------------------------------------- */
+.cc-tips {
+  margin-top: 22px;
+  padding: 20px 22px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--panel) 60%, transparent);
+}
+.cc-tips h4 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13.5px;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+.cc-tips h4 .ico { color: var(--accent); }
+.cc-tips ul { list-style: none; display: flex; flex-direction: column; gap: 9px; }
+.cc-tips li {
+  position: relative;
+  padding-left: 18px;
+  font-size: 12.5px;
+  line-height: 1.55;
+  color: var(--muted);
+}
+.cc-tips li::before {
+  content: '';
+  position: absolute;
+  left: 3px;
+  top: 7px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 8px var(--accent);
+}
+
+/* --- signature ----------------------------------------------------------- */
+.cc-sign {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  margin: 30px 0 10px;
+  font-size: 12px;
+  letter-spacing: .6px;
+  color: var(--muted);
+}
+.cc-sign .ico { color: var(--accent); }
+.cc-sign b { color: var(--text); font-weight: 650; }

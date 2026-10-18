@@ -15,7 +15,7 @@
 const REPO = 'https://github.com/Kudsi-k7el/apex-launcher';
 
 const CONFIG = {
-  version: '2.7.0',
+  version: '2.8.0',
 
   // The installer is a GitHub Release asset, and the link is built out of
   // `version` a few lines below so it can never drift from the version the page
@@ -272,7 +272,52 @@ CONFIG.downloadUrl = CONFIG.releases + '/download/v' + CONFIG.version +
   }
 
   // -------------------------------------------------------------------------
-  // 5. Scroll reveal
+  // 5. Contact: copy a handle without retyping it
+  // -------------------------------------------------------------------------
+  function wireContact() {
+    $$('[data-copy]').forEach(function (btn) {
+      const original = btn.textContent;
+
+      btn.addEventListener('click', function () {
+        const text = btn.getAttribute('data-copy');
+
+        // navigator.clipboard needs a secure context; the site is served over
+        // plain HTTP when self-hosted, so the textarea path has to exist.
+        const done = function (ok) {
+          btn.textContent = ok ? 'Copied' : 'Copy failed';
+          btn.classList.toggle('is-copied', ok);
+          setTimeout(function () {
+            btn.textContent = original;
+            btn.classList.remove('is-copied');
+          }, 1600);
+        };
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(legacy()); });
+          return;
+        }
+        done(legacy());
+
+        function legacy() {
+          try {
+            const ta = document.createElement('textarea');
+            ta.value = text;
+            ta.setAttribute('readonly', '');
+            ta.style.position = 'fixed';
+            ta.style.top = '-1000px';
+            document.body.appendChild(ta);
+            ta.select();
+            const ok = document.execCommand('copy');
+            document.body.removeChild(ta);
+            return ok;
+          } catch { return false; }
+        }
+      });
+    });
+  }
+
+  // -------------------------------------------------------------------------
+  // 6. Scroll reveal
   // -------------------------------------------------------------------------
   function wireReveal() {
     const items = $$('.reveal');
@@ -305,6 +350,7 @@ CONFIG.downloadUrl = CONFIG.releases + '/download/v' + CONFIG.version +
   wireTheme();
   wireNav();
   wireGallery();
+  wireContact();
   wireReveal();
   probeInstaller();
 })();

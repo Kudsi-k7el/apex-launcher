@@ -21,6 +21,7 @@ const VIEWS = {
   news: () => renderNews(content),
   profile: () => renderProfile(content),
   gallery: () => renderGallery(content),
+  contact: () => renderContact(content),
   settings: () => renderSettings(content)
 };
 
@@ -1148,14 +1149,18 @@ document.querySelectorAll('#profile-wrap .menu a').forEach((a) => a.addEventList
     syncOverlayButton(!!(await window.api.perfStatus()).open);
   } catch { /* the buttons still work; only the hotkeys are missing */ }
 
-  // The version chip doubles as the "What's new" door.
+  // The version chip doubles as the "What's new" door, and the sidebar build
+  // stamp spells the same version out in full. Both read one appInfo() call, so
+  // the two can never disagree about which build is running.
   const chip = document.getElementById('btn-version');
-  if (chip) {
-    try {
-      const info = await window.api.appInfo();
-      if (info && info.version) chip.textContent = `v${info.version}`;
-    } catch { /* the chip simply stays empty and hidden */ }
-  }
+  const stamp = document.getElementById('build-stamp');
+  try {
+    const info = await window.api.appInfo();
+    if (info && info.version) {
+      if (chip) chip.textContent = `v${info.version}`;
+      if (stamp) stamp.textContent = `apexlauncher developer build ${info.version}`;
+    }
+  } catch { /* the chip simply stays empty; the stamp keeps its bundled text */ }
 
   // Updates are forced, so the chip carries the whole "notice": a pulsing dot
   // while a build is coming down. Nothing is asked of the user, ever.
