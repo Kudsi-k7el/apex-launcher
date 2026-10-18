@@ -311,7 +311,7 @@ async function run() {
       };`);
     check('Big Picture opens and takes over the window',
       entered.bodyClass && entered.shown && entered.aria === 'false', JSON.stringify({ shown: entered.shown }));
-    check('six sections render, first one active', entered.tabs === 6 && entered.onTab === 1, `tabs=${entered.tabs}`);
+    check('every section renders with exactly one active', entered.tabs === 11 && entered.onTab === 1, `tabs=${entered.tabs}`);
     check('library shelf shows the two seeded games', entered.tiles === 2, `tiles=${entered.tiles}`);
     check('hero shows the selected game and its action cluster',
       /Smoke Test One/.test(entered.heroTitle) && entered.heroActions > 0,
@@ -1266,6 +1266,124 @@ async function run() {
       bpNexus.names.includes('Nexus') && bpNexus.active === 'Nexus'
       && bpNexus.tiles >= 1 && bpNexus.hero && /Nexus/i.test(bpNexus.tag),
       JSON.stringify(bpNexus));
+
+    // --- 29b2. Big Picture: the last five sections -------------------------
+    // Emulators, Gallery and Tools borrow the desktop views' data, and Profile
+    // and Contact are pages rather than shelves. All five are seeded here and
+    // every seed is put back, so the later view tests see what they expect.
+    const bpNew = await js(`
+      const keep = {
+        scan: emu.scan, systems: emu.systems, map: emu.map, exes: emu.exes,
+        shots: (typeof galleryShots !== 'undefined') ? galleryShots : undefined,
+        byp: fxBypass, onf: fxOnlinefix, folders: emu.folders
+      };
+
+      emu.folders = ['C:/roms'];
+      emu.systems = [
+        { id: 'nes', label: 'NES', full: 'Nintendo Entertainment System', group: 'Nintendo', exts: ['.nes'] },
+        { id: 'snes', label: 'SNES', full: 'Super Nintendo', group: 'Nintendo', exts: ['.sfc'] }
+      ];
+      const roms = [
+        { name: 'mario.nes', title: 'Mario', system: 'nes', path: 'C:/roms/mario.nes', dir: 'C:/roms', size: 40960 },
+        { name: 'quest.sfc', title: 'Quest', system: 'snes', path: 'C:/roms/quest.sfc', dir: 'C:/roms', size: 524288 }
+      ];
+      emu.scan = { ok: true, count: 2, roms, bySystem: { nes: [roms[0]], snes: [roms[1]] } };
+      emu.map = { nes: { emulator: 'mesen', name: 'Mesen', exe: 'C:/emu/mesen.exe' } };
+
+      galleryShots = { shots: [
+        { name: 'shot-1.png', thumb: 'C:/shots/thumbs/shot-1.png', game: 'Smoke Test One',
+          at: Date.now(), width: 1920, height: 1080, bytes: 204800 }
+      ] };
+
+      fxBypass = { ok: true, total: 1, publishers: ['Apex QA'], items: [
+        { appId: 990, name: 'Smoke Bypass', publisher: 'Apex QA', fixName: 'SmokeFix',
+          required: ['steam_api64.dll'], errors: [], image: '', launchSteam: true }
+      ] };
+      fxOnlinefix = { ok: true, total: 0, items: [] };
+
+      const fsPref = State.settings.bigPictureFullscreen;
+      State.settings.bigPictureFullscreen = false;
+      BP.tab = 'library';
+      BP.enter();
+
+      const shot = (sel) => !!document.querySelector(sel);
+      const out = {};
+
+      // Emulators
+      BP.setTab('emulators');
+      await new Promise(r => setTimeout(r, 260));
+      out.emuTiles = document.querySelectorAll('#bp-shelf .bp-tile').length;
+      out.emuTitle = ((document.querySelector('#bp-shelf .bp-tile-name') || {}).textContent || '').trim();
+      out.emuPlay = shot('#bp-hero [data-bp-rom]:not([disabled])');
+      out.emuShelfShown = !document.getElementById('bp-shelfwrap').hidden;
+      out.emuOrder = [...document.querySelectorAll('#bp-shelf .bp-tile-name')].map((n) => n.textContent.trim());
+
+      // Gallery
+      BP.setTab('gallery');
+      await new Promise(r => setTimeout(r, 200));
+      out.shotTiles = document.querySelectorAll('#bp-shelf .bp-tile.shot').length;
+      out.shotHero = shot('#bp-hero [data-act="shot-open"]');
+      out.shotSub = ((document.querySelector('#bp-shelf .bp-tile-sub') || {}).textContent || '').trim();
+
+      // Tools
+      BP.setTab('tools');
+      await new Promise(r => setTimeout(r, 200));
+      out.toolTiles = document.querySelectorAll('#bp-shelf .bp-tile').length;
+      out.toolHero = shot('#bp-hero [data-bp-tool="990"]');
+      out.toolBadge = ((document.querySelector('#bp-shelf .bp-tag') || {}).textContent || '').trim();
+
+      // Profile (a page, not a shelf)
+      BP.setTab('profile');
+      await new Promise(r => setTimeout(r, 160));
+      out.profilePage = document.getElementById('bp-hero').classList.contains('bp-hero-page');
+      out.profileShelfHidden = document.getElementById('bp-shelfwrap').hidden;
+      out.profileStats = document.querySelectorAll('#bp-hero .bp-istat').length;
+      out.profileEdit = shot('#bp-hero [data-bp-info="edit"]');
+      out.profileRing = !!(Focus.el && Focus.el.closest && Focus.el.closest('.bp-info'));
+
+      // Contact (the other page)
+      BP.setTab('contact');
+      await new Promise(r => setTimeout(r, 160));
+      out.channels = document.querySelectorAll('#bp-hero .bp-channel').length;
+      out.handles = [...document.querySelectorAll('#bp-hero .bp-channel-handle')].map((h) => h.textContent.trim());
+      out.contactCopy = shot('#bp-hero [data-bp-copy]');
+
+      // Leaving a page puts the shelf back.
+      BP.setTab('library');
+      await new Promise(r => setTimeout(r, 160));
+      out.shelfBack = !document.getElementById('bp-shelfwrap').hidden;
+      out.pageClassGone = !document.getElementById('bp-hero').classList.contains('bp-hero-page');
+
+      BP.exit();
+      State.settings.bigPictureFullscreen = fsPref;
+
+      emu.scan = keep.scan; emu.systems = keep.systems; emu.map = keep.map;
+      emu.exes = keep.exes; emu.folders = keep.folders;
+      if (keep.shots !== undefined) galleryShots = keep.shots;
+      fxBypass = keep.byp; fxOnlinefix = keep.onf;
+      return out;`);
+    check('Big Picture has an Emulators shelf built from the ROM scan',
+      bpNew.emuTiles === 2 && bpNew.emuPlay && /Mario/.test(bpNew.emuTitle) && bpNew.emuShelfShown,
+      JSON.stringify({ tiles: bpNew.emuTiles, title: bpNew.emuTitle, play: bpNew.emuPlay }));
+    check('the Emulators shelf is grouped by console, not by disk order',
+      bpNew.emuOrder[0] === 'Mario' && bpNew.emuOrder[1] === 'Quest',
+      JSON.stringify(bpNew.emuOrder));
+    check('Big Picture has a Gallery shelf whose hero opens the real screenshot',
+      bpNew.shotTiles === 1 && bpNew.shotHero && /1920/.test(bpNew.shotSub),
+      JSON.stringify({ tiles: bpNew.shotTiles, hero: bpNew.shotHero, sub: bpNew.shotSub }));
+    check('Big Picture has a Tools shelf that opens the fix dialog',
+      bpNew.toolTiles === 1 && bpNew.toolHero && /Bypass/i.test(bpNew.toolBadge),
+      JSON.stringify({ tiles: bpNew.toolTiles, hero: bpNew.toolHero, badge: bpNew.toolBadge }));
+    check('Profile is a page with real stats and a ring on its first button',
+      bpNew.profilePage && bpNew.profileShelfHidden && bpNew.profileStats === 4
+      && bpNew.profileEdit && bpNew.profileRing,
+      JSON.stringify({ stats: bpNew.profileStats, edit: bpNew.profileEdit, ring: bpNew.profileRing }));
+    check('Contact lists both channels with a copy button',
+      bpNew.channels === 2 && bpNew.handles.includes('z1.f') && bpNew.handles.includes('@kudsoo')
+      && bpNew.contactCopy,
+      JSON.stringify({ channels: bpNew.channels, handles: bpNew.handles }));
+    check('leaving a page section puts the shelf back',
+      bpNew.shelfBack && bpNew.pageClassGone, JSON.stringify({ shelf: bpNew.shelfBack, cls: bpNew.pageClassGone }));
 
     // --- 29c. Big Picture: its own settings sheet and cue palette ----------
     const bpSet = await js(`

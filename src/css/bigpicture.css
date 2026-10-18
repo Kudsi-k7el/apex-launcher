@@ -800,3 +800,168 @@ body.big-picture #frame { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) {
   #bigpic.bp-launching #bp-curtain { animation: none; opacity: 0; }
 }
+
+/* =========================================================================
+   5. The sections that are not a storefront
+
+   Emulators, Gallery and Tools arrived with the desktop views of the same
+   name, and Profile and Contact are pages rather than shelves. Everything
+   below belongs to one of those five, plus the handful of layout rules the
+   eleven-tab bar needs.
+   ========================================================================= */
+
+/* `display: flex` further up would otherwise beat the hidden attribute. */
+.bp-shelfwrap[hidden] { display: none !important; }
+
+/* --- eleven tabs --------------------------------------------------------- */
+/* The bar was built for six sections. At eleven it has to be able to scroll
+   rather than squeeze the labels out of legibility, and the scrollbar would be
+   the only visible thing in an otherwise borderless 10-foot layout. */
+.bp-tabs {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  padding-bottom: 1px;
+}
+.bp-tabs::-webkit-scrollbar { height: 0; }
+.bp-tab { padding: 9px 13px; font-size: 13.5px; gap: 8px; }
+
+/* --- pages (Profile, Contact) -------------------------------------------- */
+/* A page section has no shelf, so the hero keeps the space the shelf would
+   have taken and scrolls on its own. `margin: auto` on the page centres it in
+   the leftover room but still lets it scroll once it outgrows the window. */
+.bp-hero.bp-hero-page {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding: 26px 34px 30px;
+  display: flex;
+}
+.bp-info { max-width: 1080px; width: 100%; margin: auto; display: flex; flex-direction: column; gap: 22px; }
+.bp-info-head { display: flex; align-items: flex-start; gap: 20px; }
+.bp-info-avatar { flex: 0 0 auto; display: inline-flex; }
+.bp-info-avatar .avatar-img { border-radius: 18px; }
+.bp-info-avatar.mark {
+  width: 84px; height: 84px; border-radius: 18px;
+  align-items: center; justify-content: center;
+  color: var(--accent);
+  background: linear-gradient(150deg, color-mix(in srgb, var(--accent) 26%, transparent), transparent 72%),
+              linear-gradient(160deg, #1b2030, #12151d);
+  border: 1px solid rgba(255, 255, 255, .1);
+}
+.bp-info-head h1 { font-size: clamp(28px, 3.2vw, 44px); letter-spacing: -1px; line-height: 1.06; }
+.bp-info-sub { font-size: 14px; color: var(--muted); margin-top: 6px; }
+.bp-info-sub b { color: var(--text); }
+.bp-info-bio {
+  font-size: 14px; line-height: 1.6; margin-top: 10px; max-width: 68ch;
+  color: color-mix(in srgb, var(--text) 82%, var(--muted));
+}
+.bp-info-note {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 12.5px; color: var(--muted);
+}
+.bp-info-note b { color: var(--text); }
+.bp-info-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+
+.bp-istats { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 14px; }
+.bp-istat {
+  display: flex; align-items: center; gap: 14px;
+  padding: 15px 17px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.bp-istat-ico { color: var(--accent); display: inline-flex; }
+.bp-istat strong { display: block; font-size: 22px; letter-spacing: -.5px; font-variant-numeric: tabular-nums; }
+.bp-istat small { display: block; font-size: 11.5px; letter-spacing: .9px; text-transform: uppercase; color: var(--muted); }
+
+.bp-channels { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 14px; }
+.bp-channel {
+  display: flex; align-items: center; gap: 16px;
+  padding: 18px 20px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.bp-channel-mark {
+  width: 58px; height: 58px; flex: 0 0 auto;
+  border-radius: 15px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid rgba(255, 255, 255, .1);
+  background: linear-gradient(160deg, #1b2030, #12151d);
+}
+.bp-channel-mark svg { width: 32px; height: 32px; fill: currentColor; }
+.bp-channel-mark.discord { color: #8b9dff; }
+.bp-channel-mark.telegram { color: #6fd3f2; }
+.bp-channel-text { min-width: 0; flex: 1 1 auto; display: flex; flex-direction: column; gap: 2px; }
+.bp-channel-text strong { font-size: 14.5px; }
+.bp-channel-handle { font-size: 15px; color: var(--accent); font-family: var(--mono, monospace); }
+.bp-channel-text small { font-size: 12px; color: var(--muted); }
+.bp-channel-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+
+@media (max-width: 900px) {
+  .bp-info-head { flex-direction: column; }
+  .bp-channel { flex-wrap: wrap; }
+}
+
+/* --- plates: a tile with no artwork of its own --------------------------- */
+/* A ROM and a catalogue entry have no store art, and a grey rectangle reads as
+   a broken image. A tinted plate with the extension or the tool's mark says
+   what the thing is instead of saying nothing. */
+.bp-tile-art.plate {
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; gap: 6px;
+  padding: 12px;
+  background:
+    radial-gradient(120% 90% at 30% 12%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 70%),
+    linear-gradient(160deg, #1b2030, #12151d);
+}
+.bp-plate-ext {
+  font-size: clamp(20px, 2vw, 27px); font-weight: 800; letter-spacing: 1.6px;
+  color: color-mix(in srgb, var(--text) 88%, var(--accent));
+  text-align: center; overflow-wrap: anywhere;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.bp-plate-ext svg { width: 30px; height: 30px; }
+/* The console tag sits under the extension here, not over a cover. */
+.bp-tile-art.plate .bp-tag { position: static; align-self: center; }
+.bp-tile-art.plate > .bp-tag { margin-top: 2px; }
+.bp-tile.plate.tool .bp-tile-art {
+  background:
+    radial-gradient(120% 90% at 30% 12%, color-mix(in srgb, var(--ok) 16%, transparent), transparent 70%),
+    linear-gradient(160deg, #1b2030, #12151d);
+}
+.bp-hero-cover.plate {
+  display: flex; align-items: center; justify-content: center;
+  background:
+    radial-gradient(120% 90% at 30% 12%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 70%),
+    linear-gradient(160deg, #1b2030, #12151d);
+  font-size: clamp(22px, 2.6vw, 34px); font-weight: 800; letter-spacing: 2px;
+  color: color-mix(in srgb, var(--text) 90%, var(--accent));
+}
+
+/* --- screenshots --------------------------------------------------------- */
+/* A screenshot is wide, and letterboxing a 16:9 frame into a 2:3 slot throws
+   away most of the picture, so this one tile shape is landscape. */
+.bp-tile.shot { width: clamp(220px, min(19vw, 30vh), 330px); }
+.bp-tile-art.shot {
+  aspect-ratio: 16 / 9;
+  display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(160deg, #141824, #0e1119);
+}
+.bp-shot-mark { color: color-mix(in srgb, var(--muted) 70%, transparent); display: inline-flex; }
+.bp-tile-art.shot img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.bp-hero-bg .bp-news-bg.shot { object-position: center center; }
+
+/* --- a hint that the shelf continues ------------------------------------- */
+/* A section can overflow horizontally; the fade says there is more to the right
+   without drawing a scrollbar under a controller-only interface. It is a mask,
+   not an overlay, so it never sits between the pointer and a tile. */
+.bp-shelf {
+  mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 46px), transparent 100%);
+  -webkit-mask-image: linear-gradient(90deg, #000 0, #000 calc(100% - 46px), transparent 100%);
+}
+

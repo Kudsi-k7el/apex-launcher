@@ -25,9 +25,21 @@ const BP_TABS = [
   { key: 'store', label: 'Store', ico: 'store' },
   { key: 'itch', label: 'itch.io', ico: 'flame' },
   { key: 'nexus', label: 'Nexus', ico: 'zap' },
+  { key: 'emulators', label: 'Emulators', ico: 'gamepad' },
   { key: 'downloads', label: 'Downloads', ico: 'download' },
-  { key: 'news', label: 'News', ico: 'news' }
+  { key: 'news', label: 'News', ico: 'news' },
+  { key: 'gallery', label: 'Gallery', ico: 'camera' },
+  { key: 'tools', label: 'Tools', ico: 'shield' },
+  // The last two are not shelves: there is nothing to browse. They render as a
+  // single readable page in the hero's slot, which is why they are flagged.
+  { key: 'profile', label: 'Profile', ico: 'user', info: true },
+  { key: 'contact', label: 'Contact', ico: 'messageSquare', info: true }
 ];
+
+/** True for a section that renders a page instead of a shelf of tiles. */
+function bpIsInfo(key) {
+  return !!((BP_TABS.find((t) => t.key === (key || BP.tab)) || {}).info);
+}
 
 const BP = {
   openFlag: false,
@@ -70,6 +82,22 @@ function bpCount(n) {
   return `${n} ${n === 1 ? 'item' : 'items'}`;
 }
 
+/**
+ * The plain-text name of an entry, whatever kind it is.
+ *
+ * The shelf search, the empty states and the "section" labels all want one
+ * string out of six different shapes, and a missing case here shows up as a
+ * section that mysteriously cannot be searched.
+ */
+function bpEntryTitle(e) {
+  if (!e) return '';
+  if (e.rom) return e.rom.title || e.rom.name || '';
+  if (e.shot) return e.shot.game || e.shot.name || '';
+  if (e.tool) return e.it.name || '';
+  const g = e.game || (e.id && byId(e.id));
+  return (g && g.title) || (e.news && e.news.title) || '';
+}
+
 /** The section's contents, as a uniform list of entries every renderer understands. */
 function bpEntries(tab) {
   let out = [];
@@ -102,6 +130,26 @@ function bpEntries(tab) {
       seen.add(it.id);
       out.push({ kind: 'nexus', key: it.id, id: it.id, it, game: ltAsGame(it) });
     }
+  } else if (tab === 'emulators') {
+    // Ordered by console, not by the order the disk walk happened to find files
+    // in: a shelf that interleaves a Mega Drive and a Game Boy reads as noise.
+    const bySystem = (emu.scan && emu.scan.bySystem) || {};
+    const keys = Object.keys(bySystem).sort((a, b) => {
+      const ga = emuSystem(a).group || '';
+      const gb = emuSystem(b).group || '';
+      if (ga !== gb) return ga.localeCompare(gb);
+      return String(emuSystem(a).label).localeCompare(String(emuSystem(b).label));
+    });
+    for (const key of keys) {
+      for (const rom of bySystem[key]) out.push({ kind: 'rom', key: rom.path, id: rom.path, rom });
+    }
+  } else if (tab === 'gallery') {
+    const shots = (galleryShots && galleryShots.shots) || [];
+    for (const s of shots) out.push({ kind: 'shot', key: s.name, id: s.name, shot: s });
+  } else if (tab === 'tools') {
+    for (const it of bpToolItems()) out.push({ kind: 'tool', key: `${it.kind}:${it.appId}`, id: String(it.appId), it });
+  } else if (bpIsInfo(tab)) {
+    out = [];
   } else {
     const games = tab === 'store' ? storeGames() : [...installedGames(), ...preorderedGames()];
     const seen = new Set();
@@ -114,11 +162,7 @@ function bpEntries(tab) {
 
   const q = (BP.searchQuery || '').trim().toLowerCase();
   if (q) {
-    out = out.filter((e) => {
-      const g = e.game || (e.id && byId(e.id));
-      const title = (g && g.title) || (e.news && e.news.title) || '';
-      return String(title).toLowerCase().includes(q);
-    });
+    out = out.filter((e) => String(bpEntryTitle(e)).toLowerCase().includes(q));
   }
 
   // Live storefront matches, appended after the local ones and de-duplicated.
@@ -252,6 +296,12 @@ function bpRenderTabs() {
     return `<button class="bp-tab${on ? ' on' : ''}" data-bp="tab" data-tab="${t.key}">
       ${icon(t.ico, 17)}<span>${esc(t.label)}</span>${badge}</button>`;
   }).join('');
+  // Eleven sections do not fit under a projector, so the bar scrolls. Keep the
+  // current one in view when the section changes from a controller or a key.
+  const on = wrap.querySelector('.bp-tab.on');
+  if (on && on.scrollIntoView) {
+    try { on.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch { /* ignore */ }
+  }
 }
 
 function bpRenderStatus() {
@@ -316,7 +366,10 @@ function bpEmptyHero() {
     library: ['library', 'Nothing installed yet', 'Install something from the Store and it will appear here, ready to launch.'],
     store: ['store', 'Nothing to show', 'Every catalogue title is already in your library.'],
     downloads: ['download', 'No downloads', 'Installs and updates you start will queue up here.'],
-    news: ['news', 'No news yet', 'Head to the News page to pull the latest headlines.']
+    news: ['news', 'No news yet', 'Head to the News page to pull the latest headlines.'],
+    emulators: ['gamepad', 'No ROMs found', 'Add a folder of ROMs on the Emulators page and Apex will sort them by console here.'],
+    gallery: ['camera', 'No screenshots yet', 'Press F2 while playing anything and it lands here, in one place.'],
+    tools: ['shield', 'Nothing to show', 'The Tools catalogue could not be reached. Check your connection and try again.']
   }[BP.tab] || ['info', 'Nothing here', ''];
   return `<div class="bp-hero-empty">
     <span class="bp-empty-ico">${icon(cfg[0], 30)}</span>
@@ -515,9 +568,217 @@ function bpHeroNexus(e) {
     </div>`;
 }
 
+// ---------------------------------------------------------------------------
+// Heroes for the shelf kinds that are not a storefront listing
+// ---------------------------------------------------------------------------
+function bpHeroRom(e) {
+  const rom = e.rom;
+  const target = (typeof emuFor === 'function') ? emuFor(rom.system) : null;
+  const sys = (typeof emuSystem === 'function') ? emuSystem(rom.system) : { label: rom.system, full: rom.system, group: '' };
+  const ext = (String(rom.name || '').match(/\.[^.]+$/) || [''])[0].slice(1).toUpperCase();
+  const size = (typeof emuSize === 'function') ? emuSize(rom.size) : '';
+
+  const meta = [
+    sys.full ? `<span>${esc(sys.full)}</span>` : '',
+    size ? `<span>${icon('hardDrive', 13)} ${esc(size)}</span>` : '',
+    target ? `<span>${icon('gamepad', 13)} ${esc(target.name)}</span>` : ''
+  ].filter(Boolean).join('<i class="bp-sep"></i>');
+
+  return `
+    <div class="bp-hero-bg bp-hero-flat"></div>
+    <div class="bp-hero-veil"></div>
+    <div class="bp-hero-inner">
+      <div class="bp-hero-cover plate"><span>${esc(ext || 'ROM')}</span></div>
+      <div class="bp-hero-info">
+        <div class="bp-eyebrow">${icon('gamepad', 12)} ${esc(sys.group || 'Emulator')}${sys.label ? ` <i class="bp-sep"></i> ${esc(sys.label)}` : ''}</div>
+        <h1>${esc(rom.title || rom.name)}</h1>
+        <div class="bp-meta">${meta}</div>
+        ${rom.dir ? `<p class="bp-blurb">${esc(rom.dir)}</p>` : ''}
+        <div class="bp-actions">
+          <button class="btn primary glow" data-bp-rom="${esc(rom.system)}" data-path="${esc(rom.path)}"${target ? '' : ' disabled'}>
+            ${icon('play', 15)} ${target ? `Play in ${esc(target.name)}` : 'No emulator for this console'}
+          </button>
+          <button class="btn secondary" data-bp-reveal="${esc(rom.path)}">${icon('folder', 15)} Show the file</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function bpHeroShot(e) {
+  const s = e.shot;
+  const dims = (s.width && s.height) ? `${s.width} \u00d7 ${s.height}` : '';
+  const size = (s.bytes && typeof emuSize === 'function') ? emuSize(s.bytes) : '';
+  const meta = [
+    s.at ? `<span>${esc(bpDate(s.at))}</span>` : '',
+    dims ? `<span>${esc(dims)}</span>` : '',
+    size ? `<span>${icon('hardDrive', 13)} ${esc(size)}</span>` : ''
+  ].filter(Boolean).join('<i class="bp-sep"></i>');
+
+  return `
+    <div class="bp-hero-bg bp-hero-flat shot" data-shot-bg="${esc(s.thumb || '')}"></div>
+    <div class="bp-hero-veil"></div>
+    <div class="bp-hero-inner bp-hero-solo">
+      <div class="bp-hero-info">
+        <div class="bp-eyebrow">${icon('camera', 12)} Screenshot${s.game ? ` <i class="bp-sep"></i> ${esc(s.game)}` : ''}</div>
+        <h1 class="bp-h1-news">${esc(s.game || s.name || 'Screenshot')}</h1>
+        <div class="bp-meta">${meta}</div>
+        <div class="bp-actions">
+          <button class="btn primary glow" data-act="shot-open" data-shot="${esc(s.name)}">${icon('image', 15)} Open the full picture</button>
+          <button class="btn secondary" data-act="shot-folder">${icon('folder', 15)} Screenshot folder</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+function bpHeroTool(e) {
+  const it = e.it;
+  const bypass = it.kind === 'bypass';
+  const required = it.required || [];
+  const errors = it.errors || [];
+
+  const meta = [
+    `<span>App ${esc(it.appId)}</span>`,
+    it.publisher ? `<span>${esc(it.publisher)}</span>` : '',
+    required.length ? `<span>${icon('box', 13)} ${required.length} file${required.length === 1 ? '' : 's'} needed</span>` : ''
+  ].filter(Boolean).join('<i class="bp-sep"></i>');
+
+  return `
+    <div class="bp-hero-bg${it.image ? '' : ' bp-hero-flat'}">
+      ${it.image ? `<img class="bp-news-bg" src="${esc(it.image)}" alt="" draggable="false">` : ''}
+    </div>
+    <div class="bp-hero-veil"></div>
+    <div class="bp-hero-inner bp-hero-solo">
+      <div class="bp-hero-info">
+        <div class="bp-eyebrow">${icon(bypass ? 'shield' : 'globe', 12)} ${esc(bypass ? 'Bypass catalogue' : 'OnlineFix catalogue')}</div>
+        <h1 class="bp-h1-news">${esc(it.name)}</h1>
+        <div class="bp-meta">${meta}</div>
+        ${it.comments ? `<p class="bp-blurb">${esc(it.comments)}</p>` : ''}
+        ${errors.length ? `<p class="bp-blurb">${icon('warning', 13)} ${esc(errors[0])}${errors.length > 1 ? ` and ${errors.length - 1} more note${errors.length - 1 === 1 ? '' : 's'}` : ''}</p>` : ''}
+        <div class="bp-actions">
+          <button class="btn primary glow" data-bp-tool="${esc(it.appId)}" data-kind="${esc(it.kind)}">${icon('info', 15)} Open the fix</button>
+        </div>
+      </div>
+    </div>`;
+}
+
+// ---------------------------------------------------------------------------
+// The two page sections: Profile and Contact
+// ---------------------------------------------------------------------------
+/** A read-only stat block for the Profile page, in the Big Picture idiom. */
+function bpInfoStat(ico, label, value) {
+  return `<div class="bp-istat">
+    <span class="bp-istat-ico">${icon(ico, 18)}</span>
+    <div><strong>${esc(value)}</strong><small>${esc(label)}</small></div>
+  </div>`;
+}
+
+function bpInfoProfile() {
+  const p = State.profile || {};
+  const api = (State.settings && State.settings.api) || {};
+  const s = (typeof profileStats === 'function') ? profileStats() : null;
+  const name = String(p.name || '').trim() || 'Unnamed player';
+  const avatar = (typeof avatarMarkup === 'function')
+    ? avatarMarkup(84) : `<span class="avatar-img empty">${icon('user', 34)}</span>`;
+
+  const stats = s ? [
+    bpInfoStat('library', 'Games installed', String(s.installed)),
+    bpInfoStat('trophy', 'Achievements', String(Object.keys(State.achievements || {}).length)),
+    bpInfoStat('clock', 'Total play time', fmtPlaytime(s.totalMs)),
+    bpInfoStat('camera', 'Screenshots', String(s.screenshots))
+  ].join('') : '';
+
+  const top = s && s.top && s.top.game
+    ? `<p class="bp-info-note">${icon('trophy', 13)} Most played: <b>${esc(s.top.game.title)}</b> \u00b7 ${esc(fmtPlaytime(s.top.ms))}</p>`
+    : '';
+
+  return `
+    <div class="bp-info">
+      <header class="bp-info-head">
+        <span class="bp-info-avatar">${avatar}</span>
+        <div>
+          <h1>${esc(name)}</h1>
+          <p class="bp-info-sub">${api.signedIn && api.email
+            ? `Signed in as <b>${esc(api.email)}</b>`
+            : 'Local profile \u00b7 no account needed'}</p>
+          ${p.bio ? `<p class="bp-info-bio">${esc(p.bio)}</p>` : ''}
+        </div>
+      </header>
+      <div class="bp-istats">${stats}</div>
+      ${top}
+      <div class="bp-info-actions">
+        <button class="btn primary glow" data-bp-info="edit">${icon('edit', 15)} Edit this profile</button>
+        <button class="btn secondary" data-bp-info="gallery">${icon('camera', 15)} Screenshots</button>
+        ${api.signedIn ? `<button class="btn secondary" data-bp-info="settings">${icon('settings', 15)} Settings</button>` : ''}
+      </div>
+    </div>`;
+}
+
+function bpInfoContact() {
+  const channels = (typeof CONTACT_CHANNELS !== 'undefined' && Array.isArray(CONTACT_CHANNELS)) ? CONTACT_CHANNELS : [];
+  return `
+    <div class="bp-info">
+      <header class="bp-info-head">
+        <span class="bp-info-avatar mark">${icon('messageSquare', 30)}</span>
+        <div>
+          <h1>Contact</h1>
+          <p class="bp-info-sub">Built and maintained by <b>kudasai</b>. Two ways in, both checked.</p>
+          <p class="bp-info-bio">Bug reports, requests, a fix that will not apply, or just to say the thing you
+            came here to say. Screenshots and long messages travel better on Telegram.</p>
+        </div>
+      </header>
+      <div class="bp-channels">
+        ${channels.map((c) => `
+          <article class="bp-channel">
+            <span class="bp-channel-mark${c.id === 'discord' ? ' discord' : ' telegram'}">
+              <svg viewBox="0 0 24 24" aria-hidden="true">${(typeof CONTACT_MARKS !== 'undefined' && CONTACT_MARKS[c.id]) || ''}</svg>
+            </span>
+            <div class="bp-channel-text">
+              <strong>${esc(c.label)}</strong>
+              <span class="bp-channel-handle">${esc(c.handle)}</span>
+              <small>${esc(c.blurb || c.hint || '')}</small>
+            </div>
+            <div class="bp-channel-actions">
+              <button class="btn primary" data-bp-copy="${esc(c.handle)}">${icon('link', 15)} Copy</button>
+              <button class="btn secondary" data-bp-open="${esc(c.url)}">${icon('external', 15)} Open</button>
+            </div>
+          </article>`).join('')}
+      </div>
+      <p class="bp-info-note">${icon('info', 13)} Apex keeps no analytics and no telemetry. The only things it ever
+        sends are your account and, if you turn it on, your settings backup.</p>
+    </div>`;
+}
+
+function bpRenderInfo() {
+  const hero = document.getElementById('bp-hero');
+  if (!hero) return;
+  hero.innerHTML = BP.tab === 'contact' ? bpInfoContact() : bpInfoProfile();
+}
+
+/** Reads the hero's screenshot at full thumb size, once the panel is on screen. */
+function bpHydrateHeroShot(e) {
+  const bg = document.querySelector('#bp-hero .bp-hero-bg[data-shot-bg]');
+  if (!bg || typeof window.api.readImage !== 'function') return;
+  const file = bg.dataset.shotBg;
+  if (!file) return;
+  Promise.resolve(window.api.readImage(file)).then((url) => {
+    if (!url || !bg.isConnected) return;
+    bg.innerHTML = `<img class="bp-news-bg shot" src="${esc(url)}" alt="" draggable="false">`;
+  }).catch(() => { /* the flat gradient stays */ });
+}
+
 function bpRenderHero() {
   const hero = document.getElementById('bp-hero');
   if (!hero) return;
+
+  // Profile and Contact take the hero's slot whole: there is nothing to browse
+  // under them, so the hero is allowed to grow into the freed space.
+  if (bpIsInfo(BP.tab)) {
+    hero.classList.add('bp-hero-page');
+    bpRenderInfo();
+    return;
+  }
+  hero.classList.remove('bp-hero-page');
+
   const e = BP.entries[BP.index];
   if (!e) { hero.innerHTML = bpEmptyHero(); return; }
   let g = null;
@@ -525,6 +786,9 @@ function bpRenderHero() {
   else if (e.kind === 'steam') { hero.innerHTML = bpHeroSteam(e); g = e.game; }
   else if (e.kind === 'itch') { hero.innerHTML = bpHeroItch(e); g = e.game; }
   else if (e.kind === 'nexus') { hero.innerHTML = bpHeroNexus(e); g = e.game; }
+  else if (e.kind === 'rom') { hero.innerHTML = bpHeroRom(e); }
+  else if (e.kind === 'shot') { hero.innerHTML = bpHeroShot(e); bpHydrateHeroShot(e); }
+  else if (e.kind === 'tool') { hero.innerHTML = bpHeroTool(e); }
   else if (e.kind === 'news') { hero.innerHTML = bpHeroNews(e.news); }
   else { hero.innerHTML = bpHeroDownload(e); g = byId(e.id); }
   bpResolveLogos(hero, g);
@@ -593,6 +857,48 @@ function bpTileHtml(e, i) {
     return `<button class="bp-tile${sel}" data-bp="tile" data-idx="${i}" title="${esc(g.title)}">
       <span class="bp-tile-art">${art(g, 'cover')}<em class="bp-tag ${installed ? 'ok' : 'dim'}">${icon(installed ? 'checkCircle' : 'zap', 11)} Nexus</em></span>
       <span class="bp-tile-name">${esc(g.title)}</span>
+      <span class="bp-tile-sub">${esc(sub)}</span>
+    </button>`;
+  }
+
+  if (e.kind === 'rom') {
+    const rom = e.rom;
+    const target = (typeof emuFor === 'function') ? emuFor(rom.system) : null;
+    const sys = (typeof emuSystem === 'function') ? emuSystem(rom.system) : { label: rom.system };
+    const ext = (String(rom.name || '').match(/\.[^.]+$/) || [''])[0].slice(1).toUpperCase();
+    return `<button class="bp-tile plate${sel}" data-bp="tile" data-idx="${i}" title="${esc(rom.title || rom.name)}">
+      <span class="bp-tile-art plate">
+        <span class="bp-plate-ext">${esc(ext || 'ROM')}</span>
+        <em class="bp-tag ${target ? 'ok' : 'dim'}">${icon(target ? 'gamepad' : 'warning', 11)} ${esc(sys.label || 'Unknown')}</em>
+      </span>
+      <span class="bp-tile-name">${esc(rom.title || rom.name)}</span>
+      <span class="bp-tile-sub">${esc(target ? target.name : 'No emulator set')}</span>
+    </button>`;
+  }
+
+  if (e.kind === 'shot') {
+    const s = e.shot;
+    const dims = (s.width && s.height) ? `${s.width}\u00d7${s.height}` : '';
+    return `<button class="bp-tile shot${sel}" data-bp="tile" data-idx="${i}" data-thumb="${esc(s.thumb || '')}" title="${esc(bpEntryTitle(e))}">
+      <span class="bp-tile-art shot"><span class="bp-shot-mark">${icon('image', 24)}</span></span>
+      <span class="bp-tile-name">${esc(s.game || s.name || 'Screenshot')}</span>
+      <span class="bp-tile-sub">${esc(bpDate(s.at))}${dims ? ` \u00b7 ${esc(dims)}` : ''}</span>
+    </button>`;
+  }
+
+  if (e.kind === 'tool') {
+    const it = e.it;
+    const bypass = it.kind === 'bypass';
+    const req = (it.required || []).length;
+    const sub = bypass
+      ? [it.publisher || '', req ? `${req} file${req === 1 ? '' : 's'}` : ''].filter(Boolean).join(' \u00b7 ') || `App ${it.appId}`
+      : `App ${it.appId}`;
+    return `<button class="bp-tile plate tool${sel}" data-bp="tile" data-idx="${i}" title="${esc(it.name)}">
+      <span class="bp-tile-art plate">
+        <span class="bp-plate-ext">${icon(bypass ? 'shield' : 'globe', 26)}</span>
+        <em class="bp-tag ${bypass ? 'ok' : 'dim'}">${bypass ? 'Bypass' : 'OnlineFix'}</em>
+      </span>
+      <span class="bp-tile-name">${esc(it.name)}</span>
       <span class="bp-tile-sub">${esc(sub)}</span>
     </button>`;
   }
@@ -670,6 +976,11 @@ BP.followFocus = function (el) {
 
 /** Puts the ring on the tile that is currently selected (or the first one). */
 BP.focusTile = function () {
+  if (bpIsInfo(BP.tab)) {
+    const first = document.querySelector('#bp-hero .bp-info-actions .btn, #bp-hero .bp-channel-actions .btn');
+    if (first) Focus.set(first, { src: 'bp' });
+    return;
+  }
   const tiles = document.querySelectorAll('#bp-shelf .bp-tile');
   if (!tiles.length) return;
   const el = tiles[BP.index] || tiles[0];
@@ -689,8 +1000,15 @@ function bpBuild() {
   bpRenderTabs();
   bpRenderShelf();
   bpRenderHero();
+  bpApplySectionShape();
   bpRenderStatus();
   bpRenderFoot();
+}
+
+/** Page sections have no shelf, so the shelf block is taken out of the layout. */
+function bpApplySectionShape() {
+  const wrap = document.getElementById('bp-shelfwrap');
+  if (wrap) wrap.hidden = bpIsInfo(BP.tab);
 }
 
 /** Re-renders without disturbing the ring — used for live progress updates. */
@@ -702,6 +1020,7 @@ BP.refresh = function () {
   bpRenderTabs();
   bpRenderShelf();
   bpRenderHero();
+  bpApplySectionShape();
   bpRenderStatus();
   if (hadRing) BP.focusTile();
 };
@@ -749,6 +1068,94 @@ function bpEnsureNexus() {
   }).catch(() => { /* the shelf explains there is nothing to show */ });
 }
 
+/**
+ * The Tools catalogue as shelf entries.
+ *
+ * Bypass and OnlineFix are two halves of one catalogue and a title can be in
+ * both, so they are flattened with the bypass entry winning: it is the one that
+ * carries the compatibility notes and the required pieces. Nothing is fetched
+ * here - the shelf calls bpEnsureTools() the first time the section is opened.
+ */
+function bpToolItems() {
+  const out = [];
+  const seen = new Set();
+  const push = (kind, bag) => {
+    for (const it of (bag && bag.items) || []) {
+      const id = String((it && it.appId) || '');
+      if (!id || seen.has(id)) continue;
+      seen.add(id);
+      out.push({ ...it, kind });
+    }
+  };
+  if (typeof fxBypass !== 'undefined') push('bypass', fxBypass);
+  if (typeof fxOnlinefix !== 'undefined') push('onlinefix', fxOnlinefix);
+  return out;
+}
+
+/**
+ * Big Picture's Emulators shelf is the ROM scan the Emulators view already knows
+ * how to run. Nothing is rescanned once a scan exists, so moving between
+ * sections never walks the disk again; the view's own refresh button is still
+ * the way to ask for a fresh look.
+ */
+function bpEnsureEmulators() {
+  if (BP.tab !== 'emulators') return;
+  if (typeof emu === 'undefined' || typeof emuRefresh !== 'function') return;
+  if (emu.scan && emu.systems && emu.map) return;
+  emuLoadState();
+  Promise.resolve(emuRefresh(null, { detect: true })).then(() => {
+    if (BP.isOpen() && BP.tab === 'emulators') { bpBuild(); BP.focusTile(); }
+  }).catch(() => { /* the shelf explains there is nothing to show */ });
+}
+
+/**
+ * Big Picture's Gallery shelf reads the same screenshot list the Gallery view
+ * keeps in `galleryShots`, and writes it back, so visiting either one warms the
+ * other.
+ */
+function bpEnsureGallery() {
+  if (BP.tab !== 'gallery') return;
+  if (typeof galleryShots !== 'undefined' && galleryShots) { bpHydrateShotTiles(); return; }
+  Promise.resolve(window.api.shotsList()).then((res) => {
+    galleryShots = res || { shots: [] };
+    if (BP.isOpen() && BP.tab === 'gallery') { bpBuild(); BP.focusTile(); bpHydrateShotTiles(); }
+  }).catch(() => {
+    galleryShots = { shots: [] };
+    if (BP.isOpen() && BP.tab === 'gallery') { bpBuild(); BP.focusTile(); }
+  });
+}
+
+/** Big Picture's Tools shelf reads the catalogue the Tools view loads. */
+function bpEnsureTools() {
+  if (BP.tab !== 'tools') return;
+  if (typeof fxLoadCatalog !== 'function') return;
+  if (fxBypass && fxOnlinefix) return;
+  Promise.resolve()
+    .then(() => fxLoadCatalog('bypass'))
+    .then(() => fxLoadCatalog('onlinefix'))
+    .then(() => {
+      if (BP.isOpen() && BP.tab === 'tools') { bpBuild(); BP.focusTile(); }
+    })
+    .catch(() => { /* the shelf explains there is nothing to show */ });
+}
+
+/** Reads the first screenful of screenshot thumbnails, one file at a time. */
+function bpHydrateShotTiles() {
+  const tiles = document.querySelectorAll('#bp-shelf .bp-tile.shot');
+  if (!tiles.length || typeof window.api.readImage !== 'function') return;
+  const first = Math.min(tiles.length, 12);
+  for (let i = 0; i < first; i += 1) {
+    const tile = tiles[i];
+    const file = tile.dataset.thumb;
+    if (!file) continue;
+    const slot = tile.querySelector('.bp-tile-art');
+    Promise.resolve(window.api.readImage(file)).then((url) => {
+      if (!url || !slot || !slot.isConnected) return;
+      slot.innerHTML = `<img src="${esc(url)}" alt="" draggable="false">`;
+    }).catch(() => { /* the placeholder mark stays */ });
+  }
+}
+
 BP.setTab = function (key) {
   if (!key || key === BP.tab) return;
   BP.tab = key;
@@ -763,6 +1170,9 @@ BP.setTab = function (key) {
   bpEnsureNews();
   bpEnsureItch();
   bpEnsureNexus();
+  bpEnsureEmulators();
+  bpEnsureGallery();
+  bpEnsureTools();
 };
 
 BP.cycleTab = function (delta) {
@@ -1061,6 +1471,9 @@ BP.enter = function () {
   bpEnsureNews();
   bpEnsureItch();
   bpEnsureNexus();
+  bpEnsureEmulators();
+  bpEnsureGallery();
+  bpEnsureTools();
 
   // Wire the shelf search box (once) so every section can be searched.
   const bpSearch = document.getElementById('bp-search-input');
@@ -1187,6 +1600,51 @@ BP.toggle = function () {
       return;
     }
 
+    // A ROM: the same launch the Emulators view performs, with the same manual
+    // overrides, so the two surfaces can never disagree about which binary a
+    // console belongs to.
+    const rom = e.target.closest('[data-bp-rom]');
+    if (rom) { SFX.play('select'); bpLaunchRom(rom.dataset.bpRom, rom.dataset.path); return; }
+
+    const reveal = e.target.closest('[data-bp-reveal]');
+    if (reveal) {
+      SFX.play('select');
+      try { window.api.openPath(reveal.dataset.bpReveal); } catch { /* nothing to do */ }
+      return;
+    }
+
+    // The Tools hero opens the same info dialog the Tools page does, which is
+    // the only place that knows where the fix files come from.
+    const tool = e.target.closest('[data-bp-tool]');
+    if (tool) {
+      SFX.play('select');
+      const it = bpToolItems().find((x) =>
+        String(x.appId) === String(tool.dataset.bpTool) && x.kind === tool.dataset.kind);
+      if (it && typeof fxOpenInfo === 'function') fxOpenInfo(it, it.kind);
+      else toast('That entry is not in the catalogue any more', 'warn');
+      return;
+    }
+
+    const infoAct = e.target.closest('[data-bp-info]');
+    if (infoAct) { bpInfoAct(infoAct.dataset.bpInfo); return; }
+
+    const copy = e.target.closest('[data-bp-copy]');
+    if (copy) {
+      SFX.play('select');
+      const text = copy.dataset.bpCopy;
+      Promise.resolve(copyHandle(text)).then((ok) => {
+        toast(ok ? `${text} copied` : `Copy it by hand: ${text}`, ok ? 'check' : 'warn');
+      }).catch(() => toast(`Copy it by hand: ${text}`, 'warn'));
+      return;
+    }
+
+    const open = e.target.closest('[data-bp-open]');
+    if (open) {
+      SFX.play('select');
+      try { window.api.openExternal(open.dataset.bpOpen); } catch { /* nothing to do */ }
+      return;
+    }
+
     // The in-Big-Picture settings sheet: every control is a button, so a click
     // and a d-pad press take exactly the same path.
     const setBtn = e.target.closest('[data-bpset]');
@@ -1245,6 +1703,44 @@ function bpLaunchFx() {
   bpLaunchTimer = setTimeout(() => root.classList.remove('bp-launching'), 700);
 }
 
+/** Launches a ROM in its emulator, exactly as the Emulators page does. */
+async function bpLaunchRom(system, path) {
+  if (!system || !path) return;
+  if (typeof emu === 'undefined' || typeof window.api.emuLaunch !== 'function') return;
+  bpLaunchFx();
+  const res = await window.api.emuLaunch(system, path, { overrides: emu.exes });
+  if (!res || !res.ok) {
+    toast((res && res.error) || 'The emulator would not start.', 'warn');
+    return;
+  }
+  toast(`${res.title} \u2192 ${res.emulator}`, 'check');
+}
+
+/** The buttons on the Profile and Contact pages. */
+function bpInfoAct(what) {
+  SFX.play('select');
+  if (what === 'edit') {
+    if (typeof openProfileEditor === 'function') openProfileEditor();
+    return;
+  }
+  if (what === 'gallery') { BP.setTab('gallery'); return; }
+  if (what === 'settings') {
+    // Settings is a full page, not an overlay, so leave Big Picture the way the
+    // Resume button does.
+    BP.exit();
+    if (typeof gotoView === 'function') gotoView('settings');
+    return;
+  }
+}
+
+/** Opens one screenshot in the OS viewer, the same path the Gallery uses. */
+async function bpOpenShot(name) {
+  if (!name || typeof shotFullPath !== 'function') return;
+  const full = await shotFullPath(name);
+  if (!full) { toast('That screenshot is no longer on disk', 'warn'); return; }
+  try { await window.api.openPath(full); } catch { /* nothing to do */ }
+}
+
 /** Performs the primary action of one shelf entry (used by double-click). */
 function bpActivateIndex(i) {
   const e = BP.entries[i];
@@ -1252,6 +1748,12 @@ function bpActivateIndex(i) {
   if (e.kind === 'steam') { openStorePreview(e.it.appId); return; }
   if (e.kind === 'itch') { itchOpenDialog(e.it); return; }
   if (e.kind === 'nexus') { ltOpenDialog(e.it); return; }
+  if (e.kind === 'rom') { bpLaunchRom(e.rom.system, e.rom.path); return; }
+  if (e.kind === 'tool') {
+    if (typeof fxOpenInfo === 'function') fxOpenInfo(e.it, e.it.kind);
+    return;
+  }
+  if (e.kind === 'shot') { bpOpenShot(e.shot.name); return; }
   if (e.kind === 'game') {
     const st = statusOf(e.id);
     if (st === 'play' || st === 'running') { bpLaunchFx(); launchGame(e.id); }

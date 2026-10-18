@@ -15,6 +15,87 @@ fs.mkdirSync(out, { recursive: true });
 require(path.join(__dirname, 'main.js'));
 const newsMod = require(path.join(__dirname, 'news'));
 const itchMod = require(path.join(__dirname, 'net', 'itch'));
+const emuMod = require(path.join(__dirname, 'emulators'));
+
+/**
+ * A make-believe emulator install and ROM folder, so the Emulators view and the
+ * Big Picture Emulators shelf have something on them. The titles are all
+ * freeware or homebrew on purpose - a marketing screenshot is not the place to
+ * advertise a commercial ROM shelf.
+ */
+const EMU_FOUND = ['mesen', 'mgba', 'project64', 'blastem', 'retroarch'];
+const EMU_EXE = (id) => `C:\\Emulators\\${id}\\${id}.exe`;
+const emuDetected = () => {
+  const emulators = EMU_FOUND.map((id) => ({
+    id,
+    name: emuMod.EMULATORS[id].name,
+    exe: EMU_EXE(id),
+    systems: emuMod.EMULATORS[id].systems.slice(),
+    via: 'folder'
+  }));
+  // The same rule the main process uses: the first installed emulator on a
+  // console's preference list wins it.
+  const systems = {};
+  for (const [key, sys] of Object.entries(emuMod.SYSTEMS)) {
+    const pick = sys.via.find((id) => EMU_FOUND.includes(id));
+    systems[key] = pick
+      ? { emulator: pick, name: emuMod.EMULATORS[pick].name, exe: EMU_EXE(pick) }
+      : null;
+  }
+  return { ok: true, emulators, systems };
+};
+
+const ROM_ROWS = [
+  ['Alter Ego', 'nes', '.nes', 40960],
+  ['Streemerz', 'nes', '.nes', 65536],
+  ['Super Boss Gaiden', 'snes', '.sfc', 524288],
+  ['Miniplanets', 'genesis', '.md', 1048576],
+  ['uCity', 'gb', '.gb', 65536],
+  ['Anguna', 'gba', '.gba', 4194304],
+  ['Portal 64', 'n64', '.z64', 8388608]
+];
+const ROMS = ROM_ROWS.map(([title, system, ext, size]) => ({
+  name: `${title}${ext}`,
+  title,
+  system,
+  path: `C:\\ROMs\\${system}\\${title}${ext}`,
+  dir: `C:\\ROMs\\${system}`,
+  size
+}));
+const ROM_SHELVES = ROMS.reduce((acc, r) => {
+  (acc[r.system] = acc[r.system] || []).push(r);
+  return acc;
+}, {});
+const ROM_SCAN = {
+  ok: true, roms: ROMS, bySystem: ROM_SHELVES, count: ROMS.length,
+  capped: false, folders: ['C:\\ROMs'], skippedTracks: 0
+};
+
+/** Screenshots for the Gallery view and the Big Picture Gallery shelf. */
+const SHOT_ROWS = [
+  ['Celeste', 'shot-0001.png', '1920x1080', 1843200],
+  ['Hollow Knight', 'shot-0002.png', '2560x1440', 3211264],
+  ['Stardew Valley', 'shot-0003.png', '1920x1080', 1572864],
+  ['Fall Guys', 'shot-0004.png', '1920x1080', 2097152],
+  ['Minecraft for Windows', 'shot-0005.png', '2560x1440', 2883584],
+  ['Cyberpunk 2077', 'shot-0006.png', '3440x1440', 4718592]
+];
+const shotArt = (label, hue) => 'data:image/svg+xml;utf8,' + encodeURIComponent(
+  `<svg xmlns="http://www.w3.org/2000/svg" width="480" height="270">
+     <defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+       <stop offset="0" stop-color="hsl(${hue} 70% 42%)"/>
+       <stop offset="1" stop-color="hsl(${(hue + 48) % 360} 72% 18%)"/>
+     </linearGradient></defs>
+     <rect width="480" height="270" fill="url(#g)"/>
+     <circle cx="368" cy="90" r="54" fill="rgba(255,255,255,.22)"/>
+     <path d="M0 214 L118 150 L228 208 L332 158 L480 224 L480 270 L0 270 Z" fill="rgba(0,0,0,.34)"/>
+     <text x="26" y="252" font-family="Segoe UI, sans-serif" font-size="24" font-weight="700"
+       fill="rgba(255,255,255,.92)">${label}</text>
+   </svg>`);
+const SHOTS = SHOT_ROWS.map(([game, name, dims, bytes], i) => {
+  const [w, h] = dims.split('x').map(Number);
+  return { name, thumb: name, game, at: Date.now() - i * 86400000, width: w, height: h, bytes };
+});
 
 /** A stand-in for the PNG `app.getFileIcon` returns, for the import screenshot. */
 const svgIco = (color) => 'data:image/svg+xml;utf8,' + encodeURIComponent(
@@ -45,6 +126,54 @@ const STUBS = {
   ] }),
   'dialog:folder': () => 'C:\\Games\\Imports',
   'shell:openExternal': () => true, 'shell:openPath': () => true,
+  // --- emulators & ROM shelving ---------------------------------------------
+  'emu:detect': () => emuDetected(),
+  'emu:scan': () => ROM_SCAN,
+  'emu:launch': (_e, system, romPath) => ({
+    ok: true, emulator: 'RetroArch', exe: 'C:\\Emulators\\retroarch\\retroarch.exe',
+    system, title: (romPath || '').replace(/^.*\\/, '').replace(/\.[^.]+$/, '')
+  }),
+  // --- screenshots ----------------------------------------------------------
+  'shots:list': () => ({ shots: SHOTS.map((s) => ({
+    ...s, path: `C:\\Shots\\${s.name}`, thumb: `C:\\Shots\\thumbs\\${s.name}`
+  })), bytes: SHOTS.reduce((n, s) => n + s.bytes, 0) }),
+  'shots:capture': () => null,
+  'shots:open': () => true,
+  'shots:remove': () => ({ ok: true }),
+  'file:dataUrl': (_e, p) => {
+    const name = String(p || '').replace(/^.*\\/, '');
+    const i = Math.max(0, SHOTS.findIndex((s) => s.name === name));
+    const s = SHOTS[i] || SHOTS[0];
+    return shotArt(s.game || 'Screenshot', 200 + i * 32);
+  },
+  // --- the Bypass / OnlineFix catalogues ------------------------------------
+  'pl:bypass': () => ({ ok: true, publishers: ['Rockstar Games', 'Ubisoft', 'EA'], total: 6, items: [
+    { kind: 'bypass', appId: '271590', publisher: 'Rockstar Games', name: 'Grand Theft Auto V',
+      fixName: 'GTA V - bypass', comments: 'Needs the online bypass.', required: ['Steam', 'WinRAR'],
+      errors: ['Cannot connect to Rockstar services.', 'Rockstar launcher loops on startup.'],
+      launchSteam: true, launchExe: false, exclusion: false, image: '' },
+    { kind: 'bypass', appId: '1174180', publisher: 'Rockstar Games', name: 'Red Dead Redemption 2',
+      fixName: 'RDR2 - bypass', comments: '', required: ['Steam'], errors: [],
+      launchSteam: true, launchExe: false, exclusion: false, image: '' },
+    { kind: 'bypass', appId: '2208920', publisher: 'Ubisoft', name: 'Assassin\u2019s Creed Mirage',
+      fixName: 'Mirage - bypass', comments: '', required: ['Ubisoft Connect'], errors: ['Ubisoft Connect must be closed first.'],
+      launchSteam: true, launchExe: false, exclusion: false, image: '' },
+    { kind: 'bypass', appId: '1517290', publisher: 'EA', name: 'Battlefield 2042',
+      fixName: 'BF2042 - bypass', comments: '', required: ['EA App'], errors: [],
+      launchSteam: false, launchExe: true, exclusion: false, image: '' },
+    { kind: 'bypass', appId: '582160', publisher: 'Ubisoft', name: 'Assassin\u2019s Creed Origins',
+      fixName: 'Origins - bypass', comments: '', required: [], errors: [],
+      launchSteam: true, launchExe: false, exclusion: false, image: '' },
+    { kind: 'bypass', appId: '1237970', publisher: 'EA', name: 'Titanfall 2',
+      fixName: 'Titanfall 2 - bypass', comments: '', required: [], errors: [],
+      launchSteam: true, launchExe: false, exclusion: false, image: '' }
+  ] }),
+  'pl:onlinefix': () => ({ ok: true, total: 4, items: [
+    { kind: 'onlinefix', appId: '1091500', name: 'Cyberpunk 2077', fixName: 'Cyberpunk - fix', image: '' },
+    { kind: 'onlinefix', appId: '1245620', name: 'ELDEN RING', fixName: 'Elden Ring - fix', image: '' },
+    { kind: 'onlinefix', appId: '1174180', name: 'Red Dead Redemption 2', fixName: 'RDR2 - fix', image: '' },
+    { kind: 'onlinefix', appId: '292030', name: 'The Witcher 3: Wild Hunt', fixName: 'Witcher 3 - fix', image: '' }
+  ] }),
   // --- itch.io: the real public feeds, so the shots show genuine titles -------
   'itch:feeds': () => itchMod.feeds(),
   // itch.io throttles bursty clients with a 429 every so often. A marketing
@@ -101,7 +230,7 @@ async function run() {
   const js = (code) => win.webContents.executeJavaScript(`(async () => { ${code} })()`);
 
   // Hard watchdog: a flaky CDN must never leave the harness hanging forever.
-  setTimeout(() => { console.log('WATCHDOG exit'); setTimeout(() => app.exit(0), 60); }, 300000);
+  setTimeout(() => { console.log('WATCHDOG exit'); setTimeout(() => app.exit(0), 60); }, 900000);
 
   for (let i = 0; i < 40; i++) {
     if (await js('return typeof BP !== "undefined" && !!document.querySelector("#content").children.length;')) break;
@@ -116,6 +245,10 @@ async function run() {
       gpConnected = (pad) => { if (window.__allowPad) window.__gpReal.on(pad); };
       gpDisconnected = (i) => { if (window.__allowPad) window.__gpReal.off(i); };
     }
+    // The "What's new" sheet opens by itself the first time a build runs, which
+    // would cover every capture below. Marketing shots are not the place for it.
+    maybeShowChangelog = async () => false;
+    try { closeModal(); } catch (e) { /* nothing open */ }
     GP.pads.clear();
     GP.enabled = () => false;
     refreshPadHints();
@@ -139,6 +272,23 @@ async function run() {
     if (tes) State.preorders[tes.id] = { at: Date.now(), releaseDate: '2027-01-01', url: 'https://example.com' };
     const first = Object.keys(State.installed)[0];
     if (first) DL[first] = { id: first, kind: 'install', pct: 46, paused: false, speed: 18.4, started: Date.now() };
+    // A named profile and a signed-in account, so the Profile page and the
+    // account panel show a person rather than an empty placeholder.
+    State.profile = {
+      ...(State.profile || {}),
+      name: 'kudasai',
+      bio: 'Building Apex in the open - mostly here for the emulators.'
+    };
+    State.stats = { ...(State.stats || {}), playtime: {}, launches: 128, screenshots: 6 };
+    Object.keys(State.installed).forEach((id, i) => {
+      if (State.installed[id]) State.stats.playtime[id] = (i + 2) * 5400000;
+    });
+    State.settings.api = {
+      ...(State.settings.api || {}),
+      // A documentation address, not a real inbox: these captures end up as
+      // marketing images on a public page.
+      signedIn: true, email: 'kudasai@example.com', name: 'kudasai'
+    };
     // Keep every Big Picture shot windowed so the whole set shares one size.
     State.settings.bigPictureFullscreen = false;
     // Marketing shots all use the Neon Accent theme, so the site imagery
@@ -374,6 +524,116 @@ async function run() {
     return true;`);
   await wait(900);
   await shoot(win, '23-import-icons');
+
+  // -------------------------------------------------------------------------
+  // The 2.8.0 sections: emulators, screenshots, the fix catalogue, and the two
+  // Big Picture pages that are not shelves at all.
+  // -------------------------------------------------------------------------
+
+  // 24. Big Picture: the Emulators shelf, built from the (stubbed) ROM scan
+  await js(`
+    closeModal();
+    State.emulators = { folders: ['C:\\\\ROMs'], exes: {} };
+    emu.loaded = false;
+    emuLoadState();
+    State.settings.bigPictureFullscreen = false;
+    BP.tab = 'emulators';
+    BP.enter();
+    BP.setTab('library');
+    BP.setTab('emulators');
+    await new Promise((r) => setTimeout(r, 1400));
+    return document.querySelectorAll('#bp-shelf .bp-tile').length;`);
+  await wait(1400);
+  await shoot(win, '24-bigpicture-emulators');
+
+  // 25. the Emulators view itself: consoles, ROM shelves, the free sources
+  await js(`
+    BP.exit();
+    gotoView('emulators');
+    await new Promise((r) => setTimeout(r, 1400));
+    document.getElementById('content').scrollTop = 0;
+    return document.querySelectorAll('#emu-grid-host .eshelf').length;`);
+  await wait(1800);
+  await shoot(win, '25-emulators');
+
+  // 26. the console table further down the same page
+  await js(`
+    const s = document.querySelector('#emu-grid-host .esources');
+    if (s) s.scrollIntoView({ block: 'center' });
+    return !!s;`);
+  await wait(900);
+  await shoot(win, '26-emulators-sources');
+
+  // 27. Big Picture: the Gallery shelf
+  await js(`
+    State.settings.bigPictureFullscreen = false;
+    BP.tab = 'library';
+    BP.enter();
+    BP.setTab('gallery');
+    await new Promise((r) => setTimeout(r, 1200));
+    return document.querySelectorAll('#bp-shelf .bp-tile').length;`);
+  await wait(1400);
+  await shoot(win, '27-bigpicture-gallery');
+
+  // 28. the Gallery view with real (stubbed) captures
+  await js(`
+    BP.exit();
+    gotoView('gallery');
+    await new Promise((r) => setTimeout(r, 1600));
+    document.getElementById('content').scrollTop = 0;
+    return document.querySelectorAll('#content .gl-shot').length;`);
+  await wait(1800);
+  await shoot(win, '28-gallery');
+
+  // 29. Big Picture: the Tools shelf
+  await js(`
+    State.settings.bigPictureFullscreen = false;
+    BP.tab = 'library';
+    BP.enter();
+    BP.setTab('tools');
+    await new Promise((r) => setTimeout(r, 1400));
+    return document.querySelectorAll('#bp-shelf .bp-tile').length;`);
+  await wait(1400);
+  await shoot(win, '29-bigpicture-tools');
+
+  // 30. the Tools view: the three catalogues side by side
+  await js(`
+    BP.exit();
+    gotoView('tools');
+    await new Promise((r) => setTimeout(r, 1600));
+    document.getElementById('content').scrollTop = 0;
+    return true;`);
+  await wait(1800);
+  await shoot(win, '30-tools');
+
+  // 31. Big Picture: the Profile page (no shelf at all)
+  await js(`
+    State.settings.bigPictureFullscreen = false;
+    BP.tab = 'library';
+    BP.enter();
+    BP.setTab('profile');
+    await new Promise((r) => setTimeout(r, 900));
+    return document.querySelectorAll('#bp-hero .bp-istat').length;`);
+  await wait(1000);
+  await shoot(win, '31-bigpicture-profile');
+
+  // 32. Big Picture: the Contact page
+  await js(`
+    BP.setTab('contact');
+    await new Promise((r) => setTimeout(r, 700));
+    return document.querySelectorAll('#bp-hero .bp-channel').length;`);
+  await wait(900);
+  await shoot(win, '32-bigpicture-contact');
+
+  // 33. the Contact page in the normal window
+  await js(`
+    BP.exit();
+    gotoView('contact');
+    await new Promise((r) => setTimeout(r, 900));
+    document.getElementById('content').scrollTop = 0;
+    return true;`);
+  await wait(1000);
+  await shoot(win, '33-contact');
 
   console.log(`\nshots in ${out}`);
   console.log('EXIT 0');

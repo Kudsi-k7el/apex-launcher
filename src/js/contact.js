@@ -108,7 +108,7 @@ function renderContact(el) {
     <section class="cc-tips">
       <h4>${icon('info', 15)} Worth including</h4>
       <ul>
-        <li>The exact build you are running &mdash; it is printed at the bottom of the sidebar.</li>
+        <li>The exact build you are running &mdash; it is printed at the bottom right of the window.</li>
         <li>What you expected to happen, and what actually happened.</li>
         <li>For a game Apex did not detect: which store it came from, and where it is installed.</li>
         <li>A screenshot, if the launcher itself looks wrong. F2 takes one.</li>

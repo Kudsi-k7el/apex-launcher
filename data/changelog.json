@@ -4,13 +4,14 @@
       "version": "2.8.0",
       "date": "2026-10-18",
       "title": "A locked door, EA games, emulators, and a way to reach me",
-      "summary": "Sign-in now talks to the real Apex account server and cannot be pointed anywhere else, your EA App games are finally detected, there is a whole Emulators view, the Store stopped stuttering while you type, and there is a Contact page.",
+      "summary": "Sign-in now talks to the real Apex account server and cannot be pointed anywhere else, your EA App games are finally detected, there is a whole Emulators view, Big Picture finally covers every section, the Store stopped stuttering while you type, and there is a Contact page.",
       "sections": [
         {
           "title": "New",
           "items": [
             "An Emulators view. Apex finds the emulators you already have installed, walks your ROM folders, sorts what it finds onto a shelf per console and launches a title straight into the right emulator.",
             "A panel of genuinely free ROM sources - archive.org public-domain sets, itch.io freeware, homebrew hubs, ScummVM and OpenTTD - so the shelf only ever points at things that are free to get.",
+            "Big Picture now reaches everything: Emulators, Gallery and Tools are browsable shelves, and Profile and Contact open as full pages, so no section of the launcher needs a mouse.",
             "Contact page: my Discord and Telegram, one click to copy or open.",
             "A live clock in the top right corner.",
             "EA App, Ubisoft Connect and Battle.net titles now carry their own store badge.",
@@ -28,6 +29,7 @@
           "title": "Improved",
           "items": [
             "The Store no longer rebuilds every card on every keystroke, which is where the stutter while searching came from.",
+            "Big Picture fits eleven sections without squeezing the labels, and the shelf fades where there is more of it to the right.",
             "The controller on-screen keyboard and the live search keep working exactly as before; only the wasted work is gone."
           ]
         },

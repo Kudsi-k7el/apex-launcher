@@ -52,6 +52,7 @@
     <nav class="nav-links" id="nav-links" aria-label="Main">
       <a href="#features">Features</a>
       <a href="#screens">Screenshots</a>
+      <a href="#emulators">Emulators</a>
       <a href="#download">Download</a>
       <a href="#faq">FAQ</a>
       <a href="#contact">Contact</a>
@@ -279,6 +280,25 @@
           <p>Your profile shows &ldquo;Browsing Apex Launcher&rdquo; or the game you are playing,
           with a live timer. Local-only &mdash; it never touches a server of ours.</p>
         </article>
+
+        <article class="card reveal">
+          <span class="card-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><path d="M6 12h4M8 10v4M15.5 11h.01M18 13.5h.01"/><rect x="2" y="6" width="20" height="12" rx="5"/></svg>
+          </span>
+          <h3>Emulators and ROMs</h3>
+          <p>Apex finds the emulators you already have, shelves your ROM folder by console
+          &mdash; NES through Switch, arcade and DOS &mdash; and launches the right engine
+          for each one. Its Games panel links out to public-domain and homebrew sources only.</p>
+        </article>
+
+        <article class="card reveal">
+          <span class="card-ico" aria-hidden="true">
+            <svg viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="12" cy="12" r="3.4"/><path d="M8 5.5 9.4 3.4h5.2L16 5.5"/></svg>
+          </span>
+          <h3>Screenshot wall</h3>
+          <p>Press <kbd>F2</kbd> in any game and the frame lands in the Gallery, filed under
+          the title it came from. Thumbnails, full-size originals, and no cloud upload.</p>
+        </article>
       </div>
     </div>
   </section>
@@ -314,6 +334,15 @@
           <button role="tab" class="shot-tab" aria-selected="false" tabindex="-1"
                   data-src="assets/img/shot-profile.webp"
                   data-caption="Profile: playtime, achievements and your local account.">Profile</button>
+          <button role="tab" class="shot-tab" aria-selected="false" tabindex="-1"
+                  data-src="assets/img/shot-emulators.webp"
+                  data-caption="Emulators: every console Apex knows, the ROMs it found, and which engine runs them.">Emulators</button>
+          <button role="tab" class="shot-tab" aria-selected="false" tabindex="-1"
+                  data-src="assets/img/shot-gallery.webp"
+                  data-caption="Gallery: every frame you captured with F2, filed under the game it came from.">Gallery</button>
+          <button role="tab" class="shot-tab" aria-selected="false" tabindex="-1"
+                  data-src="assets/img/shot-contact.webp"
+                  data-caption="Contact: one person builds Apex, so bugs land in a real inbox.">Contact</button>
         </div>
 
         <figure class="shot-frame">
@@ -345,7 +374,7 @@
         shoulder-button tab switching. Search brings up the on-screen keyboard, and
         <kbd>M</kbd> opens the power menu so you are never stranded without a Start button.</p>
         <ul class="ticks">
-          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>Full-screen, 10-foot interface</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>Eleven sections, from Library to Contact</li>
           <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>Per-section search: Steam for the Store, itch.io for itch.io</li>
           <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>Hero banners with real prices and discounts</li>
         </ul>
@@ -359,6 +388,69 @@
           </div>
           <img src="assets/img/shot-bigpicture.webp" width="1920" height="1032" loading="lazy"
                decoding="async" alt="Apex Launcher Big Picture mode showing the Store shelf">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       Emulators
+       =================================================================== -->
+  <section class="section section-alt split" id="emulators">
+    <div class="wrap split-inner split-rev">
+      <div class="split-copy reveal">
+        <p class="kicker">Emulators</p>
+        <h2>Every console, already sorted</h2>
+        <p>Point Apex at the folder your ROMs live in and it does the boring part: it works
+        out which console each file belongs to, groups them, and names the emulator that
+        should open them. Nothing is copied, moved or renamed.</p>
+        <ul class="ticks">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>RetroArch covers almost every console &mdash; a dedicated emulator always wins</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>An <code>.iso</code> is read from its folder, so a PS2 rip is never shelved as a Wii game</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>A <code>.cue</code> and its tracks collapse into one entry, not forty</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>Pin a binary by hand when detection guesses wrong</li>
+        </ul>
+      </div>
+
+      <div class="split-art reveal">
+        <div class="window">
+          <div class="window-bar" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <em>Emulators</em>
+          </div>
+          <img src="assets/img/shot-emulators.webp" width="1920" height="1032" loading="lazy"
+               decoding="async" alt="Apex Launcher Emulators view with ROMs shelved by console">
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ===================================================================
+       Gallery
+       =================================================================== -->
+  <section class="section split">
+    <div class="wrap split-inner">
+      <div class="split-copy reveal">
+        <p class="kicker">Gallery</p>
+        <h2>The frames worth keeping</h2>
+        <p>Apex watches the screenshot hotkey while a game is running and files the result
+        under the title it came from. Every capture stays a plain PNG in a folder on your
+        own disk.</p>
+        <ul class="ticks">
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg><kbd>F2</kbd> from anywhere in the launcher, or while a game has focus</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>Thumbnails, then the original at full size in your own viewer</li>
+          <li><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 13 4 4 10-11"/></svg>Delete one, open the folder, or grab the whole wall from Big Picture</li>
+        </ul>
+      </div>
+
+      <div class="split-art reveal">
+        <div class="window">
+          <div class="window-bar" aria-hidden="true">
+            <span></span><span></span><span></span>
+            <em>Gallery</em>
+          </div>
+          <img src="assets/img/shot-gallery.webp" width="1920" height="1032" loading="lazy"
+               decoding="async" alt="Apex Launcher Gallery with captured screenshots">
         </div>
       </div>
     </div>
@@ -463,6 +555,13 @@
           launcher. No telemetry is sent anywhere, and nothing is sent to us.</p>
         </details>
         <details>
+          <summary>Where do the ROMs come from?</summary>
+          <p>Your own folder. Apex reads it, sorts it and launches it through an emulator you
+          already installed &mdash; it never downloads or hosts a game, and it will not point at
+          a commercial ROM or ISO. The Games panel links out to public-domain collections,
+          homebrew archives and open-source engines like ScummVM and OpenTTD.</p>
+        </details>
+        <details>
           <summary>Will it fight with Steam or Epic?</summary>
           <p>No. Apex reads their metadata to know what is installed, and launches titles
           through the store that owns the licence rather than replacing it.</p>
@@ -530,7 +629,7 @@
         </article>
       </div>
 
-      <p class="contact-tip reveal">Reporting something that broke? The sidebar of the launcher
+      <p class="contact-tip reveal">Reporting something that broke? The bottom right of the launcher
       prints the exact build you are on &mdash; include it, and which store the game came from.</p>
     </div>
   </section>

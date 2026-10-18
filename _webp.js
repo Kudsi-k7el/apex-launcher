@@ -29,7 +29,11 @@ const MAP = {
   '07-bigpicture-store.png': ['shot-bigpicture.webp', 1920, 0.95],
   '09-itch-browse.png': ['shot-itch.webp', 1920, 0.95],
   '18-search-unified.png': ['shot-search.webp', 1920, 0.95],
-  '16-profile.png': ['shot-profile.webp', 1920, 0.95]
+  '16-profile.png': ['shot-profile.webp', 1920, 0.95],
+  // 2.8.0: the ROM shelving, the screenshot wall and the contact page.
+  '25-emulators.png': ['shot-emulators.webp', 1920, 0.95],
+  '28-gallery.png': ['shot-gallery.webp', 1920, 0.95],
+  '33-contact.png': ['shot-contact.webp', 1920, 0.95]
 };
 
 app.disableHardwareAcceleration();

@@ -106,6 +106,7 @@ function renderProfile(el) {
   const p = State.profile || {};
   const s = profileStats();
   const name = String(p.name || '').trim();
+  const api = (State.settings && State.settings.api) || {};
 
   el.innerHTML = `
     <h1 class="page-title">Profile</h1>
@@ -116,7 +117,9 @@ function renderProfile(el) {
         <div class="profile-avatar">${avatarMarkup(96)}</div>
         <div class="profile-idtext">
           <h2>${esc(name || 'Unnamed player')}</h2>
-          <p class="profile-handle">${name ? `Local profile \u00b7 no account needed` : 'Set a name and picture to make this yours'}</p>
+          <p class="profile-handle">${api.signedIn && api.email
+            ? `Signed in as ${esc(api.email)}`
+            : (name ? 'Local profile \u00b7 no account needed' : 'Set a name and picture to make this yours')}</p>
           ${p.bio ? `<p class="profile-bio">${esc(p.bio)}</p>` : ''}
         </div>
         <div class="profile-hero-actions">
