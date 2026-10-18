@@ -53,23 +53,6 @@ body {
   user-select: none;
 }
 
-/* --- watermark ----------------------------------------------------------- */
-/* Tiled behind everything, barely there. It sits at z-index 0 while the shell
-   paints above it, so it shows through the open background and is hidden by the
-   cards, the sidebar and the title bar - a signature on the build rather than
-   something competing with the artwork. Purely decorative, so it must never
-   swallow a click. */
-body::before {
-  content: '';
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  opacity: .055;
-  background-repeat: repeat;
-  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='340'%20height='240'%3E%3Ctext%20x='0'%20y='140'%20transform='rotate(-24%200%20140)'%20font-family='Segoe%20UI,Helvetica,sans-serif'%20font-size='36'%20font-weight='700'%20letter-spacing='2'%20fill='%23ffffff'%3Ekudasai%3C/text%3E%3Ctext%20x='0'%20y='190'%20transform='rotate(-24%200%20190)'%20font-family='Segoe%20UI,Helvetica,sans-serif'%20font-size='17'%20font-weight='600'%20letter-spacing='4'%20fill='%23ffffff'%3E%40kudsoo%3C/text%3E%3C/svg%3E");
-}
-
 button { font-family: inherit; cursor: pointer; border: none; color: inherit; background: none; }
 a { color: inherit; text-decoration: none; }
 .ico { display: block; flex-shrink: 0; }
@@ -249,28 +232,23 @@ code { font-family: 'Cascadia Code', Consolas, monospace; }
 .side-foot strong { display: block; font-size: 12px; color: var(--text); }
 .side-foot small { font-size: 10px; }
 
-/* --- build stamp and maker's mark ---------------------------------------- */
-/* Always visible and never in the way: the stamp answers "which build am I on"
-   without opening Settings, and the signature is the maker's mark that matches
-   the watermark behind the shell. */
-.side-stamp {
-  padding: 0 14px 6px;
+/* --- build stamp ----------------------------------------------------------- */
+/* Bottom-right, deliberately small and quiet: it answers "which build is this"
+   without stealing a line from the sidebar. Decorative, so it never takes a
+   click, and it sits under the frame and the modals. */
+.build-stamp {
+  position: fixed;
+  right: 12px;
+  bottom: 8px;
+  z-index: 40;
+  pointer-events: none;
+  user-select: none;
   font-family: 'Cascadia Code', Consolas, monospace;
-  font-size: 9.5px;
-  letter-spacing: .3px;
-  line-height: 1.4;
-  color: color-mix(in srgb, var(--muted) 82%, transparent);
-  word-break: break-word;
+  font-size: 8.5px;
+  letter-spacing: .2px;
+  color: color-mix(in srgb, var(--muted) 62%, transparent);
+  opacity: .75;
 }
-.side-sign {
-  display: flex; align-items: center; justify-content: center; gap: 6px;
-  padding: 0 14px 10px;
-  font-size: 10.5px;
-  letter-spacing: .8px;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--muted) 78%, transparent);
-}
-.side-sign b { color: color-mix(in srgb, var(--accent) 72%, var(--muted)); font-weight: 700; }
 
 /* --- content ------------------------------------------------------------- */
 #content {
