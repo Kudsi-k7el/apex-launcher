@@ -117,14 +117,60 @@ API to attack.
 
 ## 5. Point the launcher at it
 
-In the launcher: **Settings → Account → Server address**, or the URL field on
-the sign-in gate. Enter `https://apex.example.com`.
+A released build has the server address compiled into it — there is no server
+field in the launcher any more, on purpose, so a signed-in account cannot be
+pointed at somebody else's API. The one source of truth is `DEFAULT_SERVER` in
+`src/js/auth.js`, and `main.js` forces it onto every load.
 
-A fresh install on someone else's machine still defaults to
-`http://127.0.0.1:8787`, so they would have to type the public address once. If
-you want it baked in as the default for everyone, that is a small change to
-`DEFAULT_SERVER` in `auth.js` plus the two defaults in `main.js` — ask and it
-will be done alongside a version bump, so the change ships in a release.
+So the launcher and the website have to live at the same address. If you move the
+site to a new hostname, change `DEFAULT_SERVER`, bump the version and cut a
+release; every install picks it up on the next launch.
+
+For a local run the address is `http://127.0.0.1:8787`, which needs no TLS.
+
+---
+
+## 6. The admin console
+
+Set `APEX_ADMIN_EMAIL` and `/admin` exists; leave it unset and `/admin` is an
+ordinary 404 — not a locked door, no door:
+
+```powershell
+node server\server.js --admin-email you@example.com
+# or, on a deployed machine, re-run the setup script:
+.\server\setup.ps1 -AdminEmail you@example.com
+```
+
+The setup script writes `server\apex.env`, which `run.cmd` reads before starting
+Node, so the setting survives `-Update`.
+
+**There is no admin password.** Access is decided by one question: is the email
+of the session making this request in `APEX_ADMIN_EMAIL`? Sign in with that
+account — the same sign-in as the launcher and the website — and the console
+opens. Any other account, signed in or not, gets nothing.
+
+| Panel | What it answers |
+|---|---|
+| **Overview** | Account and session counts, a 14-day signup chart, and every kind of event the server has logged. |
+| **Accounts** | Search by name, email, display name or id; open one to see its sessions, its activity, and its synced launcher profile. Disable, enable, reset the password, or delete it. |
+| **Sessions** | Every live session with its account, address and user agent. Revoke one and that client is signed out on its next request. |
+| **Audit log** | Signups, sign-ins, failed sign-ins, password changes and every action the console itself took — filterable by kind. |
+| **Queries** | A read-only SQL console over the same database. |
+
+Notes worth knowing:
+
+- The SQL console is read-only because SQLite itself opened the connection
+  read-only, not because a filter looks for suspicious words. A `DELETE` is
+  refused by the engine. Five hundred rows at most, one statement at a time.
+- Disabling an account also drops its live sessions, so a ban takes effect
+  immediately rather than in thirty days.
+- Resetting a password signs that account out everywhere.
+- An administrator account cannot be disabled or deleted from the console, so
+  there is no way to lock yourself out by clicking. To revoke an admin's access,
+  take the address out of `APEX_ADMIN_EMAIL` and restart.
+- Deleting an account needs its name typed in first.
+- No password hash ever leaves the database. Every admin response goes through a
+  row shape with the hash and salt already dropped.
 
 ---
 
@@ -158,6 +204,7 @@ easier to manage than a command line:
 | `APEX_DB` | `server\data\apex.db` | Where the SQLite file goes. |
 | `APEX_TRUST_PROXY` | off | Set to `1` behind Cloudflare/Caddy/nginx. |
 | `APEX_ALLOW_ORIGINS` | empty | Comma-separated origins allowed to call the API cross-origin. Not needed when the site is served from this same server. |
+| `APEX_ADMIN_EMAIL` | empty | Who may open `/admin`. Comma-separate for more than one; empty turns the console off entirely. Also `--admin-email`. |
 
 **Rate limits** are per-IP once `APEX_TRUST_PROXY` is on: 40 credential requests
 per 10 minutes per address, and failed logins are additionally limited to 10 per
@@ -175,3 +222,7 @@ curl.exe -sI https://apex.example.com/ | Select-Object -First 1  # HTTP/2 200
 Then, in a browser, sign up once on the site. If the account survives a page
 reload, the cookie is being set correctly — which is the thing most likely to go
 wrong behind a proxy.
+
+With `APEX_ADMIN_EMAIL` set, <https://apex.example.com/admin> should show a
+sign-in form, and signing in with an account that is *not* the administrator
+should be politely refused rather than let in.

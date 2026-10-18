@@ -1,0 +1,180 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<meta name="color-scheme" content="dark">
+<title>Apex Launcher &mdash; admin</title>
+<link rel="stylesheet" href="/admin/ui.css">
+</head>
+<body>
+
+<header class="top">
+  <a class="brand" href="/">
+    <span class="mark" aria-hidden="true"></span>
+    <span class="name">Apex Launcher</span>
+    <span class="tag">admin</span>
+  </a>
+  <span class="spacer"></span>
+  <span class="who" id="who" hidden></span>
+  <button class="btn ghost sm" id="out" type="button" hidden>Sign out</button>
+</header>
+
+<main>
+
+  <!-- Signed out ------------------------------------------------------------ -->
+  <section class="gate" id="gate" hidden>
+    <form class="card" id="signin" autocomplete="on">
+      <h1>Sign in</h1>
+      <p class="hint">
+        Sign in with the Apex account that owns this server. Only the address in
+        <code>APEX_ADMIN_EMAIL</code> gets any further than this form.
+      </p>
+      <label class="field">
+        <span>Email</span>
+        <input id="email" name="email" type="email" autocomplete="username" required>
+      </label>
+      <label class="field">
+        <span>Password</span>
+        <input id="pass" name="password" type="password" autocomplete="current-password" required>
+      </label>
+      <p class="msg" id="gate-msg" role="status"></p>
+      <button class="btn primary" type="submit" id="gate-go">Sign in</button>
+    </form>
+  </section>
+
+  <!-- Signed in, but not the administrator ---------------------------------- -->
+  <section class="gate" id="denied" hidden>
+    <div class="card">
+      <h1>Not an administrator</h1>
+      <p class="hint">
+        Signed in as <b id="denied-mail"></b>. That account is not listed in
+        <code>APEX_ADMIN_EMAIL</code>, so there is nothing here for it.
+      </p>
+      <button class="btn ghost" type="button" id="denied-out">Sign out</button>
+    </div>
+  </section>
+
+  <!-- The console ---------------------------------------------------------- -->
+  <section id="console" hidden>
+    <nav class="tabs" role="tablist">
+      <button class="tab is-on" type="button" data-tab="overview" role="tab" aria-selected="true">Overview</button>
+      <button class="tab" type="button" data-tab="accounts" role="tab" aria-selected="false">Accounts</button>
+      <button class="tab" type="button" data-tab="sessions" role="tab" aria-selected="false">Sessions</button>
+      <button class="tab" type="button" data-tab="events" role="tab" aria-selected="false">Audit log</button>
+      <button class="tab" type="button" data-tab="sql" role="tab" aria-selected="false">Queries</button>
+    </nav>
+
+    <!-- Overview -->
+    <div class="panel is-on" data-panel="overview">
+      <div class="tiles" id="stats"></div>
+      <div class="split">
+        <div class="card pad">
+          <h2>Signups, last 14 days</h2>
+          <div class="chart" id="chart"></div>
+        </div>
+        <div class="card pad">
+          <h2>What the server has been asked to do</h2>
+          <table class="table tight" id="kinds"><tbody></tbody></table>
+        </div>
+      </div>
+      <p class="foot" id="overview-foot"></p>
+    </div>
+
+    <!-- Accounts -->
+    <div class="panel" data-panel="accounts">
+      <div class="row">
+        <form class="search" id="user-search">
+          <input id="user-q" type="search" placeholder="username, email, display name or id" autocomplete="off">
+          <button class="btn" type="submit">Search</button>
+          <button class="btn ghost" type="button" id="user-clear">Clear</button>
+        </form>
+        <span class="spacer"></span>
+        <button class="btn ghost sm" type="button" id="user-reload">Reload</button>
+      </div>
+      <div class="split wide-left">
+        <div class="card">
+          <table class="table" id="users">
+            <thead><tr>
+              <th>#</th><th>Account</th><th>Email</th><th class="hide-sm">Joined</th>
+              <th class="hide-sm">Last seen</th><th>Sessions</th><th>Events</th><th>State</th>
+            </tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+        <aside class="card pad" id="user-detail"><p class="hint">Pick a row to see everything the server holds on that account.</p></aside>
+      </div>
+    </div>
+
+    <!-- Sessions -->
+    <div class="panel" data-panel="sessions">
+      <div class="row">
+        <h2 class="inline">Signed in right now</h2>
+        <span class="spacer"></span>
+        <button class="btn ghost sm" type="button" id="session-reload">Reload</button>
+      </div>
+      <div class="card">
+        <table class="table" id="sessions">
+          <thead><tr>
+            <th>Account</th><th class="hide-sm">Kind</th><th>Where from</th>
+            <th class="hide-sm">Signed in</th><th>Last seen</th><th class="hide-sm">Expires</th><th></th>
+          </tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <p class="foot">Revoking a session signs that client out on its next request. The password is not touched.</p>
+    </div>
+
+    <!-- Audit log -->
+    <div class="panel" data-panel="events">
+      <div class="row">
+        <label class="field inline">
+          <span>Kind</span>
+          <select id="event-kind"><option value="">everything</option></select>
+        </label>
+        <span class="spacer"></span>
+        <button class="btn ghost sm" type="button" id="event-reload">Reload</button>
+      </div>
+      <div class="card">
+        <table class="table" id="events">
+          <thead><tr><th>When</th><th>Kind</th><th>Account</th><th>Detail</th><th class="hide-sm">From</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="row center"><button class="btn ghost sm" type="button" id="event-more" hidden>Load older</button></div>
+    </div>
+
+    <!-- Queries -->
+    <div class="panel" data-panel="sql">
+      <div class="card pad">
+        <h2>Read-only query</h2>
+        <p class="hint">
+          SELECT, WITH, PRAGMA, EXPLAIN and VALUES only, one statement at a time.
+          The connection is opened by SQLite in read-only mode, so a write is
+          refused by the database itself. Five hundred rows at most.
+        </p>
+        <textarea id="sql-text" rows="6" spellcheck="false" placeholder="SELECT id, username, email, created_at FROM users ORDER BY id"></textarea>
+        <div class="row">
+          <button class="btn primary" type="button" id="sql-run">Run</button>
+          <button class="btn ghost" type="button" id="sql-clear">Clear</button>
+          <span class="spacer"></span>
+          <span class="foot" id="sql-note"></span>
+        </div>
+        <div id="sql-out"></div>
+      </div>
+      <details class="card pad">
+        <summary>What is in the database</summary>
+        <p class="hint">Every table the server owns, so nothing needs guessing:</p>
+        <table class="table tight" id="schema"><tbody></tbody></table>
+      </details>
+    </div>
+  </section>
+
+</main>
+
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script src="/admin/ui.js" defer></script>
+</body>
+</html>

@@ -51,13 +51,34 @@
   // -------------------------------------------------------------------------
   // Painting the nav
   // -------------------------------------------------------------------------
+  // -------------------------------------------------------------------------
+  // The admin door
+  // -------------------------------------------------------------------------
+  /**
+   * Only the administrator's account can open the console, and only that
+   * account is ever shown the link to it. /admin/api/whoami answers 401 to
+   * everyone signed out and 403 to everyone else, so asking is free and the
+   * answer says nothing to anybody it does not concern.
+   */
+  function probeAdmin() {
+    const link = $('#auth-menu-admin');
+    if (!link) return;
+    if (!state.user) { link.hidden = true; return; }
+    call('GET', '/admin/api/whoami').then((res) => {
+      link.hidden = !(res.ok && res.data && res.data.admin);
+      // A stale answer must never outlive the account that earned it.
+      if (state.user && res.ok && res.data.admin
+          && res.data.admin.email !== state.user.email) link.hidden = true;
+    });
+  }
+
   function paint(user) {
     state.user = user || null;
     const open = $('#auth-open');
     const chip = $('#auth-chip');
     if (open) open.hidden = !!state.user;
     if (chip) chip.hidden = !state.user;
-
+    probeAdmin();
     if (state.user) {
       const name = state.user.displayName || state.user.username || 'player';
       const av = $('#auth-av');

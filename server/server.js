@@ -19,21 +19,24 @@
  *   node server/server.js --host 0.0.0.0  # reachable from the LAN
  *   node server/server.js --trust-proxy   # behind Cloudflare Tunnel / Caddy
  *   node server/server.js --allow-origin https://example.com   # site elsewhere
+ *   node server/server.js --admin-email me@example.com         # + /admin console
  *
  * Every flag also reads an environment variable - APEX_PORT, APEX_HOST, APEX_DB,
- * APEX_TRUST_PROXY, APEX_ALLOW_ORIGINS - which is far easier to set for a
- * Windows service or scheduled task than a quoted command line.
+ * APEX_TRUST_PROXY, APEX_ALLOW_ORIGINS, APEX_ADMIN_EMAIL - which is far easier to
+ * set for a Windows service or scheduled task than a quoted command line.
  *
  * Safety posture: loopback by default (binding to 0.0.0.0 has to be asked for on
  * purpose), a 30-day sliding session, per-IP rate limits on the credential
  * endpoints, and no account enumeration - "wrong password" and "no such user"
- * give the same answer.
+ * give the same answer. The admin console does not exist at all until an
+ * administrator email is configured, and then it only answers to that account.
  */
 
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
 const { openStore } = require('./store');
+const { createAdmin } = require('./admin');
 
 const REPO = path.join(__dirname, '..');
 const SITE = path.join(REPO, 'website');
@@ -297,6 +300,22 @@ function createServer(opts = {}) {
   const sweep = setInterval(() => { try { store.sweep(); } catch { /* ignore */ } }, 30 * 60 * 1000);
   sweep.unref();
 
+  // Null unless an administrator is configured, in which case the console does
+  // not exist and /admin is an ordinary 404. `clientIp` closes over the same
+  // trust-proxy decision the rest of the server uses, so an audit line records
+  // the real caller even behind Cloudflare rather than 127.0.0.1.
+  const admin = createAdmin({
+    store,
+    emails: opts.adminEmails || [],
+    send,
+    fail,
+    readJson,
+    tokenOf,
+    clientIp: (req) => clientIp(req, opts),
+    name: NAME,
+    version: VERSION
+  });
+
   const routes = {
     'GET /health': (req, res) => send(res, 200, {
       ok: true, name: NAME, version: VERSION, time: Date.now(), accounts: store.count()
@@ -422,6 +441,12 @@ function createServer(opts = {}) {
       return res.end();
     }
 
+    // The admin console, when one is configured. It answers for `/admin` and
+    // `/admin/api/*` and keeps its own auth, so it sits ahead of both the route
+    // table and the static files: nothing in the site may shadow it, and it may
+    // not shadow the site. A false return means "not mine".
+    if (admin && await admin.handle(req, res, url)) return undefined;
+
     if (lookup === 'GET /' || lookup === 'GET /index.html') {
       if (!withStatic) return fail(res, 404, 'Not found.');
       if (serveStatic(req, res, staticOpts)) return undefined;
@@ -453,6 +478,7 @@ function createServer(opts = {}) {
 
   server.store = store;
   server.dbFile = dbFile;
+  server.admin = admin;
   return server;
 }
 
@@ -478,7 +504,8 @@ function parseArgs(argv) {
     host: String(env.APEX_HOST || '').trim() || '127.0.0.1',
     dbFile: String(env.APEX_DB || '').trim() || null,
     trustProxy: /^(1|true|yes)$/i.test(String(env.APEX_TRUST_PROXY || '')),
-    allowOrigins: list(env.APEX_ALLOW_ORIGINS)
+    allowOrigins: list(env.APEX_ALLOW_ORIGINS),
+    adminEmails: list(env.APEX_ADMIN_EMAIL)
   };
   for (let i = 0; i < argv.length; i += 1) {
     const a = argv[i];
@@ -487,6 +514,7 @@ function parseArgs(argv) {
     else if (a === '--db') out.dbFile = String(argv[++i] || '');
     else if (a === '--trust-proxy') out.trustProxy = true;
     else if (a === '--allow-origin') out.allowOrigins = out.allowOrigins.concat(list(argv[++i]));
+    else if (a === '--admin-email') out.adminEmails = out.adminEmails.concat(list(argv[++i]));
   }
   return out;
 }
@@ -506,6 +534,11 @@ function start() {
       console.log('  proxy           trusted (x-forwarded-* honoured; cookies marked Secure over https)');
     }
     if (args.allowOrigins.length) console.log(`  cors origins    ${args.allowOrigins.join(', ')}`);
+    if (server.admin) {
+      console.log(`  admin console   http://${shown}:${args.port}/admin  (${server.admin.emails.join(', ')})`);
+    } else {
+      console.log('  admin console   off (set APEX_ADMIN_EMAIL to turn it on)');
+    }
     console.log('');
   });
   server.on('error', (err) => {

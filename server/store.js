@@ -589,7 +589,7 @@ function openStore(file) {
     adminRevoke(prefix, ctx = {}) {
       const clean = String(prefix || '').trim().toLowerCase();
       if (!/^[0-9a-f]{8,64}$/.test(clean)) return { error: 'That session id does not look right.' };
-      const n = Number(q.dropByPrefix.run(`${clean}%`).changes);
+      const n = Number(adminQ().dropByPrefix.run(`${clean}%`).changes);
       log(null, 'admin-revoke', `${n} session(s) revoked by ${ctx.by || 'an administrator'}`, ctx.ip);
       return { ok: true, revoked: n };
     },
@@ -602,7 +602,7 @@ function openStore(file) {
     adminSetDisabled(id, disabled, ctx = {}) {
       const row = q.byId.get(id);
       if (!row) return { error: 'No such account.' };
-      q.setDisabled.run(disabled ? 1 : 0, Date.now(), id);
+      adminQ().setDisabled.run(disabled ? 1 : 0, Date.now(), id);
       if (disabled) q.dropUserSessions.run(id);
       log(id, disabled ? 'admin-disable' : 'admin-enable', `by ${ctx.by || 'an administrator'}`, ctx.ip);
       return { ok: true, disabled: !!disabled };
@@ -623,11 +623,22 @@ function openStore(file) {
     adminDelete(id, ctx = {}) {
       const row = q.byId.get(id);
       if (!row) return { error: 'No such account.' };
-      q.deleteUser.run(id);
+      adminQ().deleteUser.run(id);
       // Logged against nobody on purpose. The account is gone, so a line that
       // names it reads better than an event pointing at a dead id.
       log(null, 'admin-delete', `${row.username} <${row.email}> deleted by ${ctx.by || 'an administrator'}`, ctx.ip);
       return { ok: true, deleted: row.username };
+    },
+
+    /**
+     * Writes one line into the audit log on behalf of the admin console.
+     *
+     * Used for things that are not a change to an account - running a query, for
+     * instance - where the interesting fact is that it happened at all.
+     */
+    note(kind, detail, ctx = {}) {
+      log(null, String(kind || 'admin'), String(detail || '').slice(0, 300), ctx.ip);
+      return { ok: true };
     },
 
     /**

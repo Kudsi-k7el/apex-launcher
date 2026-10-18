@@ -210,8 +210,187 @@ async function main() {
       len: homeLen, getLen: Number(getHome.headers.get('content-length'))
     }));
 
+  // --- with no administrator configured -------------------------------------
+  // The console is not a locked door, it is no door: `createAdmin` returns null,
+  // no route is mounted, and /admin is an ordinary 404. There is no code path to
+  // reach any of it, which is the only version of "off" worth having.
+  const noAdminPage = await req(base, 'GET', '/admin');
+  const noAdminApi = await req(base, 'GET', '/admin/api/overview');
+  check('with no administrator configured the console does not exist at all',
+    noAdminPage.status === 404 && noAdminApi.status === 404,
+    `${noAdminPage.status}/${noAdminApi.status}`);
+
   await new Promise((r) => server.close(r));
   store.close();
+
+  // --- the admin console ----------------------------------------------------
+  const admin = await listen({ dbFile: path.join(tmp, 'admin.db'), adminEmails: ['Boss@Example.com'] });
+  const abase = admin.base;
+
+  const boss = await req(abase, 'POST', '/auth/register', {
+    body: { username: 'The_Boss', email: 'boss@example.com', password: 'a good password' }
+  });
+  const pleb = await req(abase, 'POST', '/auth/register', {
+    body: { username: 'Plebeian', email: 'pleb@example.com', password: 'a good password' }
+  });
+  const bossToken = boss.json.token;
+  const plebToken = pleb.json.token;
+  const plebId = pleb.json.user.id;
+  // The per-account routes live at /admin/api/users/<id>/<action>; one helper
+  // keeps the calls below readable.
+  const asUser = (method, id, action, opts) => req(abase, method, `/admin/api/users/${id}/${action}`, opts);
+  check('the console mounts once an administrator is configured',
+    !!admin.admin && admin.admin.emails[0] === 'boss@example.com',
+    JSON.stringify(admin.admin && admin.admin.emails));
+
+  // The page shell has to be public - a browser cannot log in without something
+  // to log into - so the shell is safe to hand to anybody, and every byte of data
+  // behind it arrives from a route that checks first.
+  const shell = await req(abase, 'GET', '/admin');
+  const shellBody = await req(abase, 'GET', '/admin/ui.js');
+  const shellCss = await req(abase, 'GET', '/admin/ui.css');
+  check('the console shell is served unsigned, without caching or outside code',
+    shell.status === 200 && /text\/html/.test(String(shell.headers.get('content-type')))
+    && /no-store/.test(String(shell.headers.get('cache-control')))
+    && /script-src 'self'/.test(String(shell.headers.get('content-security-policy')))
+    && /frame-ancestors 'none'/.test(String(shell.headers.get('content-security-policy')))
+    && shellCss.status === 200,
+    String(shell.headers.get('content-security-policy')).slice(0, 60));
+  check('the shell carries no inline script or style to go with that policy',
+    shellBody.status === 200 && /text\/javascript/.test(String(shellBody.headers.get('content-type'))),
+    shellBody.status);
+
+  const anonOverview = await req(abase, 'GET', '/admin/api/overview');
+  check('every admin route refuses an unsigned caller',
+    anonOverview.status === 401 && anonOverview.json.ok === false, anonOverview.status);
+
+  const signedInNotAdmin = await req(abase, 'GET', '/admin/api/users', { token: plebToken });
+  check('a signed-in stranger is refused, and told apart from unsigned',
+    signedInNotAdmin.status === 403, signedInNotAdmin.status);
+
+  const whoami = await req(abase, 'GET', '/admin/api/whoami', { token: bossToken });
+  check('the administrator is let in and named back to the page',
+    whoami.status === 200 && whoami.json.admin.email === 'boss@example.com'
+    && whoami.json.server.admins[0] === 'boss@example.com',
+    JSON.stringify(whoami.json.admin));
+
+  const overview = await req(abase, 'GET', '/admin/api/overview', { token: bossToken });
+  check('the overview counts the accounts and the audit log',
+    overview.status === 200 && overview.json.totals.users === 2
+    && overview.json.totals.liveSessions >= 2
+    && Array.isArray(overview.json.eventKinds)
+    && overview.json.eventKinds.some((k) => k.kind === 'signup'),
+    JSON.stringify(overview.json.totals));
+
+  const users = await req(abase, 'GET', '/admin/api/users?q=pleb', { token: bossToken });
+  const usersJson = JSON.stringify(users.json);
+  check('the account list searches, and never carries a password',
+    users.status === 200 && users.json.users.length === 1
+    && users.json.users[0].username === 'Plebeian'
+    && !/password/i.test(usersJson) && !/scrypt\$/.test(usersJson),
+    users.json.users[0] && users.json.users[0].email);
+
+  const one = await req(abase, 'GET', `/admin/api/users/${plebId}`, { token: bossToken });
+  check('one account shows its sessions, its activity and nothing secret',
+    one.status === 200 && one.json.user.username === 'Plebeian'
+    && Array.isArray(one.json.sessions) && one.json.sessions.length >= 1
+    && typeof one.json.sessions[0].id === 'string' && one.json.sessions[0].id.length === 16
+    && Array.isArray(one.json.events) && one.json.events[0].kind === 'signup'
+    && !/scrypt\$/.test(JSON.stringify(one.json)),
+    `${one.json.sessions.length} session(s)`);
+
+  // Locking the administrator out of their own console is never what was meant,
+  // so the config owns that decision rather than a button.
+  const bossId = boss.json.user.id;
+  const selfDisable = await asUser('POST', bossId, 'disabled', { token: bossToken, body: { disabled: true } });
+  const selfDelete = await asUser('POST', bossId, 'delete', { token: bossToken, body: { username: 'The_Boss' } });
+  check('an administrator account cannot be disabled or deleted from the console',
+    selfDisable.status === 400 && /APEX_ADMIN_EMAIL/.test(selfDisable.json.error)
+    && selfDelete.status === 400, selfDisable.json.error);
+
+  const disable = await asUser('POST', plebId, 'disabled', { token: bossToken, body: { disabled: true } });
+  const disabledLogin = await req(abase, 'POST', '/auth/login', { body: { email: 'pleb@example.com', password: 'a good password' } });
+  const disabledToken = await req(abase, 'GET', '/auth/me', { token: plebToken });
+  check('disabling an account refuses the next sign-in and kills its live session',
+    disable.status === 200 && disable.json.disabled === true
+    && disabledLogin.status === 401 && disabledToken.status === 401,
+    `${disable.status}/${disabledLogin.status}/${disabledToken.status}`);
+
+  const reEnable = await asUser('POST', plebId, 'disabled', { token: bossToken, body: { disabled: false } });
+  const reset = await asUser('POST', plebId, 'password', { token: bossToken, body: { password: 'a different password' } });
+  const resetShort = await asUser('POST', plebId, 'password', { token: bossToken, body: { password: 'no' } });
+  const afterReset = await req(abase, 'POST', '/auth/login', { body: { email: 'pleb@example.com', password: 'a different password' } });
+  check('a password can be reset without knowing the old one, and is still validated',
+    reEnable.status === 200 && reset.status === 200 && resetShort.status === 400
+    && afterReset.status === 200,
+    `${reset.status}/${resetShort.status}/${afterReset.status}`);
+
+  const live = await req(abase, 'GET', '/admin/api/sessions', { token: bossToken });
+  const liveRows = live.json.sessions || [];
+  check('every live session is listed with its account and nothing that could be replayed',
+    live.status === 200 && liveRows.length >= 2
+    && liveRows.every((s) => s.id.length === 16 && s.user && s.user.username)
+    && !/scrypt\$/.test(JSON.stringify(liveRows)),
+    `${liveRows.length} live`);
+
+  const victim = liveRows.find((s) => s.user.username === 'Plebeian');
+  const revoke = await req(abase, 'POST', '/admin/api/sessions/revoke', { token: bossToken, body: { id: victim.id } });
+  const revokedNow = await req(abase, 'GET', '/auth/me', { token: afterReset.json.token });
+  check('revoking a session signs that client out on its next request',
+    revoke.status === 200 && revoke.json.revoked === 1 && revokedNow.status === 401,
+    `${revoke.json.revoked} revoked`);
+
+  const junkId = await req(abase, 'POST', '/admin/api/sessions/revoke', { token: bossToken, body: { id: 'not a session' } });
+  check('a session id that is not a hex prefix is refused, not run',
+    junkId.status === 400, junkId.json.error);
+
+  const events = await req(abase, 'GET', '/admin/api/events?kind=admin-disable', { token: bossToken });
+  const allEvents = await req(abase, 'GET', '/admin/api/events', { token: bossToken });
+  check('the audit log records what the console did, and can be filtered',
+    events.status === 200 && events.json.events.length >= 1
+    && events.json.events.every((e) => e.kind === 'admin-disable')
+    && allEvents.json.events.some((e) => e.kind === 'admin-revoke')
+    && allEvents.json.events.some((e) => /boss@example\.com/.test(e.detail || '')),
+    events.json.events.map((e) => e.kind).join(','));
+
+  // The console is read-only because SQLite itself was opened read-only, not
+  // because a filter looked for suspicious words - which is the only version of
+  // this that cannot be talked around.
+  const sqlSelect = await req(abase, 'POST', '/admin/api/sql', { token: bossToken, body: { sql: 'SELECT username FROM users ORDER BY id' } });
+  const sqlWrite = await req(abase, 'POST', '/admin/api/sql', { token: bossToken, body: { sql: "DELETE FROM users WHERE username = 'Plebeian'" } });
+  const sqlDrop = await req(abase, 'POST', '/admin/api/sql', { token: bossToken, body: { sql: 'DROP TABLE events' } });
+  const sqlTwo = await req(abase, 'POST', '/admin/api/sql', { token: bossToken, body: { sql: 'SELECT 1; SELECT 2' } });
+  const stillThere = await req(abase, 'GET', '/admin/api/users', { token: bossToken });
+  check('the query box runs a select and refuses every write',
+    sqlSelect.status === 200 && sqlSelect.json.rows.length === 2 && sqlSelect.json.total === 2
+    && sqlWrite.status === 400 && sqlDrop.status === 400 && sqlTwo.status === 400
+    && stillThere.json.users.length === 2,
+    `${sqlSelect.json.rows.length} rows, writes ${sqlWrite.status}/${sqlDrop.status}/${sqlTwo.status}, users ${stillThere.json.users.length}`);
+  check('a refused query is still written to the audit log',
+    (await req(abase, 'GET', '/admin/api/events?kind=admin-sql', { token: bossToken }))
+      .json.events.some((e) => /refused/.test(e.detail || '')),
+    'admin-sql');
+
+  // A stray click on a stale row must not be able to wipe an account.
+  const wrongConfirm = await asUser('POST', plebId, 'delete', { token: bossToken, body: { username: 'nope' } });
+  const rightConfirm = await asUser('POST', plebId, 'delete', { token: bossToken, body: { username: 'plebeian' } });
+  const gone = await req(abase, 'GET', '/admin/api/users', { token: bossToken });
+  check('deleting an account needs its name typed, and then really deletes it',
+    wrongConfirm.status === 400 && /Type Plebeian/.test(wrongConfirm.json.error)
+    && rightConfirm.status === 200 && rightConfirm.json.deleted === 'Plebeian'
+    && gone.json.users.length === 1,
+    wrongConfirm.json.error);
+
+  const notThere = await req(abase, 'GET', '/admin/api/nope', { token: bossToken });
+  const wrongVerb = await req(abase, 'POST', '/admin', { token: bossToken });
+  const traversal = await req(abase, 'GET', '/admin/../server/store.js', { token: bossToken });
+  check('an unknown admin path is a 404, the shell is not writable, and nothing escapes',
+    notThere.status === 404 && wrongVerb.status === 405 && traversal.status === 404
+    && !/openStore/.test(JSON.stringify(traversal.json)),
+    `${notThere.status}/${wrongVerb.status}/${traversal.status}`);
+
+  await new Promise((r) => admin.close(r));
+  admin.store.close();
 
   // --- rate limiting (its own server, so the counters start clean) ----------
   const rl = await listen({ dbFile: path.join(tmp, 'rl.db'), static: false });

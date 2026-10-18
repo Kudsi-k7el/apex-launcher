@@ -26,4 +26,13 @@ if errorlevel 1 (
 set "APEX_HOST=127.0.0.1"
 set "APEX_PORT=8787"
 set "APEX_TRUST_PROXY=1"
+
+REM Anything in apex.env wins over the defaults above. That file is written by
+REM server\setup.ps1 and is not part of the repository: it is where a deployed
+REM machine keeps its own settings, the administrator's email above all. Read
+REM before Node starts, so a code refresh never costs the console.
+if exist "%~dp0apex.env" (
+  for /f "usebackq tokens=1,* delims==" %%a in ("%~dp0apex.env") do set "%%a=%%b"
+)
+
 node "%~dp0server.js"

@@ -8,6 +8,10 @@ dist/
 # The companion server's database and logs (accounts are local data).
 server/data/
 
+# Per-machine server settings written by server/setup.ps1 - the administrator's
+# email lives here and belongs to the machine, not to the repository.
+server/apex.env
+
 # Local update-feed override used by the updater's own test harness.
 dev-app-update.yml
 

@@ -20,6 +20,12 @@
       -Hostname apex.example.com  a permanent hostname (needs a Cloudflare login)
       -QuickTunnel                a temporary trycloudflare.com address instead
       -SkipTunnel                 backend only, no tunnel
+      -AdminEmail you@example.com turns on the /admin console for that account
+      -Update                     refresh the code, keeping the database
+
+    The administrator's email is written to server\apex.env, which run.cmd reads
+    before it starts Node. It is deliberately not part of the repository, and it
+    survives -Update, so a code refresh never costs you the console.
 
     Note on ASCII: this file is deliberately written without any non-ASCII
     characters. Windows PowerShell 5.1 reads a .ps1 as ANSI unless it carries a
@@ -32,7 +38,9 @@ param(
   [string]$InstallDir = 'C:\apex',
   [string]$Hostname = '',
   [switch]$QuickTunnel,
-  [switch]$SkipTunnel
+  [switch]$SkipTunnel,
+  [string]$AdminEmail = '',
+  [switch]$Update
 )
 
 $ErrorActionPreference = 'Stop'
@@ -108,8 +116,9 @@ if ((Get-NodeMajor) -ge 24) {
 # ---------------------------------------------------------------------------
 Step 2 "The code, in $InstallDir"
 # ---------------------------------------------------------------------------
-if (Test-Path (Join-Path $InstallDir 'server\server.js')) {
-  Ok 'already there - leaving it alone'
+$HaveCode = Test-Path (Join-Path $InstallDir 'server\server.js')
+if ($HaveCode -and -not $Update) {
+  Ok 'already there - leaving it alone (pass -Update to refresh it)'
 } else {
   $zip = Join-Path $env:TEMP 'apex-launcher.zip'
   $unpack = Join-Path $env:TEMP ('apex-unpack-' + [guid]::NewGuid().ToString('n'))
@@ -120,6 +129,12 @@ if (Test-Path (Join-Path $InstallDir 'server\server.js')) {
   # contents are what we want, not the folder.
   $inner = Get-ChildItem $unpack -Directory | Select-Object -First 1
   New-Item -ItemType Directory -Force -Path $InstallDir | Out-Null
+  if ($HaveCode) {
+    # An update replaces code and nothing else. The database and apex.env are not
+    # in the zip at all, so copying over the top of them cannot touch them - but
+    # say it out loud, because this is the step where silence is frightening.
+    Say 'refreshing the code (-Update); server\data and server\apex.env are kept'
+  }
   Copy-Item (Join-Path $inner.FullName '*') $InstallDir -Recurse -Force
   Remove-Item $unpack -Recurse -Force -ErrorAction SilentlyContinue
   Remove-Item $zip -Force -ErrorAction SilentlyContinue
@@ -133,7 +148,26 @@ $ServerDir = Join-Path $InstallDir 'server'
 $RunCmd = Join-Path $ServerDir 'run.cmd'
 
 # ---------------------------------------------------------------------------
-Step 3 'cloudflared'
+Step 3 'Configuration'
+# ---------------------------------------------------------------------------
+# The one setting a deployed machine owns: which account may open /admin. It goes
+# in a file the repository does not carry, which run.cmd reads before starting
+# Node, so it survives every -Update and never lands in git.
+$EnvFile = Join-Path $ServerDir 'apex.env'
+if ($AdminEmail) {
+  Set-Content -Path $EnvFile -Value "APEX_ADMIN_EMAIL=$AdminEmail" -Encoding ASCII
+  Ok "admin console enabled for $AdminEmail"
+  Say "  the console is at  http://127.0.0.1:8787/admin"
+} elseif (Test-Path $EnvFile) {
+  Ok "keeping the existing $EnvFile"
+  foreach ($line in (Get-Content $EnvFile)) { Say "  $line" }
+} else {
+  Say 'no administrator configured, so the /admin console stays switched off'
+  Say '  re-run with  -AdminEmail you@example.com  to turn it on'
+}
+
+# ---------------------------------------------------------------------------
+Step 4 'cloudflared'
 # ---------------------------------------------------------------------------
 $Cloudflared = Join-Path $InstallDir 'bin\cloudflared.exe'
 if ($SkipTunnel) {
@@ -148,13 +182,17 @@ if ($SkipTunnel) {
 }
 
 # ---------------------------------------------------------------------------
-Step 4 'Start the backend with Windows'
+Step 5 'Start the backend with Windows'
 # ---------------------------------------------------------------------------
 if (-not (Test-Path $RunCmd)) { Die "$RunCmd is missing - step 2 did not put the code where expected." }
 
 $existing = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
 if ($existing) {
   Ok 'the scheduled task is already registered - updating it'
+  # Registering does not restart a task that is already running, so a code
+  # refresh or a new apex.env would sit there unread until the next reboot.
+  Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+  Start-Sleep -Seconds 1
 }
 
 $action = New-ScheduledTaskAction -Execute $RunCmd -WorkingDirectory $ServerDir
@@ -172,7 +210,7 @@ Start-ScheduledTask -TaskName $TaskName
 Ok "registered as '$TaskName' and started"
 
 # ---------------------------------------------------------------------------
-Step 5 'Is it answering?'
+Step 6 'Is it answering?'
 # ---------------------------------------------------------------------------
 $health = $null
 for ($i = 0; $i -lt 40; $i++) {
@@ -195,7 +233,7 @@ if ($health) {
 }
 
 # ---------------------------------------------------------------------------
-Step 6 'A public HTTPS address'
+Step 7 'A public HTTPS address'
 # ---------------------------------------------------------------------------
 $PublicUrl = ''
 
@@ -275,6 +313,9 @@ if ($PublicUrl) {
   Write-Host "Check it from outside:  curl.exe -s $PublicUrl/health" -ForegroundColor Gray
 }
 Write-Host ''
-Write-Host 'The launcher needs the public address (https, not http):' -ForegroundColor Gray
-Write-Host '  Settings -> Account -> Server address' -ForegroundColor Gray
+Write-Host 'That is the whole install step - there is no npm install to run.' -ForegroundColor Gray
+if (Test-Path $EnvFile) {
+  Write-Host "Admin console:  http://127.0.0.1:8787/admin  (only $(Get-Content $EnvFile -Raw).Trim() gets in)" -ForegroundColor Gray
+  Write-Host 'Reach it from outside at  <public address>/admin' -ForegroundColor Gray
+}
 Write-Host ''
