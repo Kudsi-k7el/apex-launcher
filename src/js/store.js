@@ -29,6 +29,7 @@ let liveResults = [];
 let liveBusy = false;
 let liveError = null;
 let liveTimer = null;
+let repaintTimer = null;  // coalesces Store rebuilds while the user is typing
 let liveFor = '';      // the query liveResults belongs to
 
 /** Loose match across title, studio, genre, year and tags. */
@@ -78,6 +79,7 @@ function storeRow(title, ico, ids, key) {
 
 function renderStore(el) {
   clearInterval(slideTimer);
+  clearTimeout(repaintTimer);
 
   const pool = available();
 
@@ -154,9 +156,18 @@ function renderStore(el) {
     <div id="store-body"></div>`;
 
   const search = el.querySelector('#store-search');
+  // Typing must not rebuild the Store on every keystroke. Below the hero is the
+  // whole curated catalogue: five carousels plus the All Games grid, which is
+  // the same ~60 cards rendered twice. Re-creating that per character is the
+  // single largest source of jank in this view, so the repaint is coalesced and
+  // the live Steam search keeps its own, separate debounce.
   search.addEventListener('input', (e) => {
     storeSearch = e.target.value;
-    paintStoreBody(el, pool);
+    clearTimeout(repaintTimer);
+    repaintTimer = setTimeout(() => {
+      repaintTimer = null;
+      paintStoreBody(el, pool);
+    }, 90);
     queueLiveSearch(el);
   });
 

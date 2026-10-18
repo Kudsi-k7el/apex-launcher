@@ -186,6 +186,25 @@ small { color: var(--muted); }
   border-color: color-mix(in srgb, #107c10 54%, transparent);
 }
 .plat-xbox .ico { color: #37b83c; }
+/* EA: the App's own red-orange. Ubisoft: Connect's blue. Battle.net: Blizzard blue. */
+.plat-ea {
+  color: #ffc2ad;
+  background: color-mix(in srgb, #ff5a1f 22%, transparent);
+  border-color: color-mix(in srgb, #ff5a1f 54%, transparent);
+}
+.plat-ea .ico { color: #ff7a45; }
+.plat-ubisoft {
+  color: #b6d4ff;
+  background: color-mix(in srgb, #0070ff 22%, transparent);
+  border-color: color-mix(in srgb, #0070ff 54%, transparent);
+}
+.plat-ubisoft .ico { color: #4c9bff; }
+.plat-battlenet {
+  color: #a8d8ff;
+  background: color-mix(in srgb, #148eff 22%, transparent);
+  border-color: color-mix(in srgb, #148eff 54%, transparent);
+}
+.plat-battlenet .ico { color: #35a7ff; }
 .plat-local, .plat-apex {
   color: #cfd6e2;
   background: color-mix(in srgb, var(--text) 9%, transparent);

@@ -732,6 +732,34 @@ async function run() {
       && storePage.metaText.length > 0,
       JSON.stringify({ overlay: storePage.overlayText, meta: storePage.metaText.slice(0, 64) }));
 
+    // --- 22b. typing in the Store does not rebuild the catalogue per key ----
+    // Everything below the hero is five carousels plus the All Games grid - the
+    // same ~60 cards rendered twice - so a synchronous repaint per keystroke is
+    // the single largest source of jank in this view. A burst of typing must
+    // leave the body untouched, and exactly one repaint must land afterwards.
+    const storeTyping = await js(`
+      const input = document.getElementById('store-search');
+      const body = document.getElementById('store-body');
+      const cards = () => body.querySelectorAll('.scard').length;
+      const before = cards();
+      for (const v of ['c', 'cy', 'cyb']) {
+        input.value = v;
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }
+      const duringBurst = cards();
+      await new Promise(r => setTimeout(r, 260));
+      const afterBurst = cards();
+      input.value = '';
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      await new Promise(r => setTimeout(r, 260));
+      return { before, duringBurst, afterBurst, restored: cards() };`);
+    check('a burst of typing in the Store repaints once, not once per keystroke',
+      storeTyping.before > 40
+      && storeTyping.duringBurst === storeTyping.before
+      && storeTyping.afterBurst < storeTyping.before
+      && storeTyping.restored === storeTyping.before,
+      JSON.stringify(storeTyping));
+
     // --- 23. GTA VI keeps its whole composition ----------------------------
     const gta = await js(`
       const g = byId('gta6');
@@ -1289,14 +1317,15 @@ async function run() {
         lockedClass: document.body.classList.contains('auth-locked'),
         signInForm: !!document.getElementById('ag-form-in'),
         signUpForm: !!document.getElementById('ag-form-up'),
-        urlField: !!document.getElementById('ag-url'),
-        tabIn: !!document.querySelector('[data-ag-tab="in"]'),
-        startServer: !!document.getElementById('ag-start-server')
+        noServerField: !document.getElementById('ag-url')
+          && !document.getElementById('ag-start-server')
+          && !document.getElementById('ag-save-url'),
+        tabIn: !!document.querySelector('[data-ag-tab="in"]')
       };`);
-    check('the gate is in the document but out of the way while signed in',
+    check('the gate is in the document but out of the way while signed in, with no server field',
       gateDom.present && gateDom.unlocked && !gateDom.lockedClass
-      && gateDom.signInForm && gateDom.signUpForm && gateDom.urlField
-      && gateDom.tabIn && gateDom.startServer,
+      && gateDom.signInForm && gateDom.signUpForm && gateDom.noServerField
+      && gateDom.tabIn,
       JSON.stringify(gateDom));
 
     // Painting it by hand is exactly what the renderer does when the main
@@ -1340,7 +1369,7 @@ async function run() {
       return { api: (st && st.settings && st.settings.api) || null, auth: (st && st.settings && st.settings.auth) || null };`);
     check('the renderer\u2019s state file carries no session token',
       !!noTokenLeak.api && !('token' in noTokenLeak.api) && typeof noTokenLeak.api.signedIn === 'boolean'
-      && noTokenLeak.api.baseUrl === 'http://127.0.0.1:8787'
+      && noTokenLeak.api.baseUrl === require('./auth').DEFAULT_SERVER
       && !!noTokenLeak.auth && noTokenLeak.auth.required === false,
       JSON.stringify(noTokenLeak));
 

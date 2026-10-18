@@ -153,6 +153,87 @@ function sha256(value) {
   return crypto.createHash('sha256').update(String(value)).digest('hex');
 }
 
+/**
+ * Splits SQL into statements, ignoring semicolons that are inside a string or a
+ * comment.
+ *
+ * This exists because `prepare()` silently runs only the first statement of a
+ * multi-statement string. Quietly discarding half of what somebody typed in a
+ * query box is worse than refusing it, and the refusal needs a real split.
+ */
+function splitStatements(sql) {
+  const out = [];
+  let cur = '';
+  let quote = null;
+
+  for (let i = 0; i < sql.length; i += 1) {
+    const c = sql[i];
+    if (quote) {
+      cur += c;
+      if (c === quote) {
+        if (sql[i + 1] === quote) { cur += sql[i + 1]; i += 1; }   // '' inside ''
+        else quote = null;
+      }
+    } else if (c === "'" || c === '"' || c === '`') {
+      quote = c;
+      cur += c;
+    } else if (c === '-' && sql[i + 1] === '-') {
+      while (i < sql.length && sql[i] !== '\n') i += 1;            // line comment
+      cur += ' ';
+    } else if (c === '/' && sql[i + 1] === '*') {
+      i += 2;
+      while (i < sql.length && !(sql[i] === '*' && sql[i + 1] === '/')) i += 1;
+      i += 1;                                                      // block comment
+      cur += ' ';
+    } else if (c === ';') {
+      if (cur.trim()) out.push(cur.trim());
+      cur = '';
+    } else {
+      cur += c;
+    }
+  }
+  if (cur.trim()) out.push(cur.trim());
+  return out;
+}
+
+/** The admin view of a user. Note what is still absent: password_hash. */
+function adminUserRow(r) {
+  return {
+    id: Number(r.id),
+    username: r.username,
+    email: r.email,
+    displayName: r.display_name || r.username,
+    createdAt: Number(r.created_at),
+    updatedAt: Number(r.updated_at),
+    lastLoginAt: r.last_login_at ? Number(r.last_login_at) : 0,
+    disabled: !!r.disabled,
+    sessions: r.sessions === undefined ? undefined : Number(r.sessions),
+    liveSessions: r.live === undefined ? undefined : Number(r.live),
+    eventCount: r.events === undefined ? undefined : Number(r.events)
+  };
+}
+
+/**
+ * A session row, identified by a prefix of its token hash.
+ *
+ * The full hash is what the database looks sessions up by, so it is left here
+ * and only the first 16 characters travel. That is enough to revoke one session
+ * and not enough to be a credential (it is a hash to begin with).
+ */
+function adminSessionRow(r) {
+  const hash = String(r.token_hash || '');
+  return {
+    id: hash.slice(0, 16),
+    kind: r.kind,
+    createdAt: Number(r.created_at),
+    lastSeenAt: Number(r.last_seen_at),
+    expiresAt: Number(r.expires_at),
+    userAgent: r.user_agent,
+    ip: r.ip,
+    user: r.username ? { id: Number(r.user_id), username: r.username, email: r.email } : undefined
+  };
+}
+
 /** The public shape of a user. Note what is *not* here: no hash, no salt. */
 function publicUser(row) {
   if (!row) return null;
@@ -207,6 +288,82 @@ function openStore(file) {
     recentEvents: db.prepare('SELECT kind, detail, ip, at FROM events WHERE user_id = ? ORDER BY at DESC LIMIT ?'),
     countUsers: db.prepare('SELECT COUNT(*) AS n FROM users')
   };
+
+  // ---------------------------------------------------------------------------
+  // Admin
+  // ---------------------------------------------------------------------------
+  // Prepared on first use rather than at startup, and the read-only connection
+  // is not opened until somebody actually runs a query. A server with no
+  // administrator configured never touches any of this.
+  let admin = null;
+  function adminQ() {
+    if (admin) return admin;
+    admin = {
+      listUsers: db.prepare(`
+        SELECT u.id, u.username, u.email, u.display_name, u.created_at, u.updated_at,
+               u.last_login_at, u.disabled,
+               (SELECT COUNT(*) FROM sessions s WHERE s.user_id = u.id) AS sessions,
+               (SELECT COUNT(*) FROM sessions s WHERE s.user_id = u.id AND s.expires_at > ?) AS live,
+               (SELECT COUNT(*) FROM events e WHERE e.user_id = u.id) AS events
+        FROM users u
+        WHERE ? = ''
+           OR u.username     LIKE ?
+           OR u.email        LIKE ?
+           OR u.display_name LIKE ?
+           OR CAST(u.id AS TEXT) = ?
+        ORDER BY u.created_at DESC
+        LIMIT ? OFFSET ?`),
+
+      userById: db.prepare('SELECT * FROM users WHERE id = ?'),
+
+      userSessions: db.prepare(`
+        SELECT token_hash, kind, created_at, last_seen_at, expires_at, user_agent, ip
+        FROM sessions WHERE user_id = ?
+        ORDER BY last_seen_at DESC LIMIT 100`),
+
+      liveSessions: db.prepare(`
+        SELECT s.token_hash, s.kind, s.created_at, s.last_seen_at, s.expires_at,
+               s.user_agent, s.ip, s.user_id, u.username, u.email
+        FROM sessions s JOIN users u ON u.id = s.user_id
+        WHERE s.expires_at > ?
+        ORDER BY s.last_seen_at DESC LIMIT 200`),
+
+      dropByPrefix: db.prepare("DELETE FROM sessions WHERE token_hash LIKE ?"),
+
+      setDisabled: db.prepare('UPDATE users SET disabled = ?, updated_at = ? WHERE id = ?'),
+      deleteUser: db.prepare('DELETE FROM users WHERE id = ?'),
+      profileOf: db.prepare('SELECT data, updated_at FROM profiles WHERE user_id = ?'),
+
+      allEvents: db.prepare(`
+        SELECT e.id, e.user_id, e.kind, e.detail, e.ip, e.at, u.username
+        FROM events e LEFT JOIN users u ON u.id = e.user_id
+        WHERE ? = '' OR e.kind = ?
+        ORDER BY e.at DESC LIMIT ? OFFSET ?`),
+
+      eventKinds: db.prepare('SELECT kind, COUNT(*) AS n FROM events GROUP BY kind ORDER BY n DESC'),
+
+      signupsByDay: db.prepare(`
+        SELECT CAST(created_at / 86400000 AS INTEGER) AS day, COUNT(*) AS n
+        FROM users WHERE created_at >= ?
+        GROUP BY day ORDER BY day`),
+
+      totals: db.prepare(`
+        SELECT (SELECT COUNT(*) FROM users) AS users,
+               (SELECT COUNT(*) FROM users WHERE disabled = 1) AS disabled,
+               (SELECT COUNT(*) FROM sessions WHERE expires_at > ?) AS live_sessions,
+               (SELECT COUNT(*) FROM sessions) AS sessions,
+               (SELECT COUNT(*) FROM events) AS events,
+               (SELECT COUNT(*) FROM profiles) AS profiles`)
+    };
+    return admin;
+  }
+
+  /** The connection the SQL console runs on. Opened read-only, once. */
+  let roDb = null;
+  function readOnlyDb() {
+    if (!roDb) roDb = new DatabaseSync(file, { readOnly: true });
+    return roDb;
+  }
 
   function log(userId, kind, detail, ip) {
     try { q.addEvent.run(userId == null ? null : userId, kind, String(detail || ''), String(ip || ''), Date.now()); }
@@ -352,7 +509,165 @@ function openStore(file) {
       return q.sweepSessions.run(Date.now()).changes;
     },
 
+    // --- admin ---------------------------------------------------------------
+    // Every one of these hands back data with the password hash and the full
+    // session hash stripped. Nothing here is reachable without an administrator.
+
+    adminOverview() {
+      const a = adminQ();
+      const now = Date.now();
+      const t = a.totals.get(now);
+      return {
+        totals: {
+          users: Number(t.users),
+          disabled: Number(t.disabled),
+          liveSessions: Number(t.live_sessions),
+          sessions: Number(t.sessions),
+          events: Number(t.events),
+          profiles: Number(t.profiles)
+        },
+        signups: a.signupsByDay.all(now - 14 * DAY).map((r) => ({ day: Number(r.day), n: Number(r.n) })),
+        eventKinds: a.eventKinds.all().map((r) => ({ kind: r.kind, n: Number(r.n) })),
+        now
+      };
+    },
+
+    adminUsers({ q: term = '', limit = 50, offset = 0 } = {}) {
+      const text = String(term || '').trim();
+      const like = `%${text}%`;
+      return adminQ().listUsers.all(
+        Date.now(), text, like, like, like, text,
+        Math.max(1, Math.min(200, Number(limit) || 50)),
+        Math.max(0, Number(offset) || 0)
+      ).map(adminUserRow);
+    },
+
+    adminUser(id) {
+      const a = adminQ();
+      const row = a.userById.get(id);
+      if (!row) return null;
+
+      let profile = null;
+      const p = a.profileOf.get(id);
+      if (p) {
+        try { profile = { data: JSON.parse(p.data), updatedAt: Number(p.updated_at) }; }
+        catch { profile = { data: null, updatedAt: Number(p.updated_at), note: 'This blob is not valid JSON.' }; }
+      }
+
+      return {
+        user: adminUserRow(row),
+        sessions: a.userSessions.all(id).map(adminSessionRow),
+        profile,
+        events: q.recentEvents.all(id, 100).map((e) => ({
+          kind: e.kind, detail: e.detail, ip: e.ip, at: Number(e.at)
+        }))
+      };
+    },
+
+    adminSessions() {
+      return adminQ().liveSessions.all(Date.now()).map(adminSessionRow);
+    },
+
+    adminEvents({ kind = '', limit = 100, offset = 0 } = {}) {
+      const k = String(kind || '').trim();
+      return adminQ().allEvents.all(
+        k, k,
+        Math.max(1, Math.min(500, Number(limit) || 100)),
+        Math.max(0, Number(offset) || 0)
+      ).map((r) => ({
+        id: Number(r.id),
+        userId: r.user_id == null ? null : Number(r.user_id),
+        username: r.username || null,
+        kind: r.kind,
+        detail: r.detail,
+        ip: r.ip,
+        at: Number(r.at)
+      }));
+    },
+
+    /** Revokes one session by the prefix the admin console was shown. */
+    adminRevoke(prefix, ctx = {}) {
+      const clean = String(prefix || '').trim().toLowerCase();
+      if (!/^[0-9a-f]{8,64}$/.test(clean)) return { error: 'That session id does not look right.' };
+      const n = Number(q.dropByPrefix.run(`${clean}%`).changes);
+      log(null, 'admin-revoke', `${n} session(s) revoked by ${ctx.by || 'an administrator'}`, ctx.ip);
+      return { ok: true, revoked: n };
+    },
+
+    /**
+     * Disabling refuses the next sign-in and also drops the account's live
+     * sessions, because resolveSession re-checks the flag on every request - so
+     * a ban takes effect immediately rather than in thirty days.
+     */
+    adminSetDisabled(id, disabled, ctx = {}) {
+      const row = q.byId.get(id);
+      if (!row) return { error: 'No such account.' };
+      q.setDisabled.run(disabled ? 1 : 0, Date.now(), id);
+      if (disabled) q.dropUserSessions.run(id);
+      log(id, disabled ? 'admin-disable' : 'admin-enable', `by ${ctx.by || 'an administrator'}`, ctx.ip);
+      return { ok: true, disabled: !!disabled };
+    },
+
+    /** Sets a new password without knowing the old one, and signs them out. */
+    adminSetPassword(id, password, ctx = {}) {
+      const row = q.byId.get(id);
+      if (!row) return { error: 'No such account.' };
+      const pw = checkPassword(password);
+      if (pw.error) return { error: pw.error };
+      q.setPassword.run(hashPassword(pw.value), Date.now(), id);
+      q.dropUserSessions.run(id);
+      log(id, 'admin-password', `reset by ${ctx.by || 'an administrator'}`, ctx.ip);
+      return { ok: true, signedOut: true };
+    },
+
+    adminDelete(id, ctx = {}) {
+      const row = q.byId.get(id);
+      if (!row) return { error: 'No such account.' };
+      q.deleteUser.run(id);
+      // Logged against nobody on purpose. The account is gone, so a line that
+      // names it reads better than an event pointing at a dead id.
+      log(null, 'admin-delete', `${row.username} <${row.email}> deleted by ${ctx.by || 'an administrator'}`, ctx.ip);
+      return { ok: true, deleted: row.username };
+    },
+
+    /**
+     * One read-only statement, for the console.
+     *
+     * The connection is opened with SQLite's own read-only flag, so a write is
+     * refused by SQLite itself rather than by looking for suspicious words in
+     * the text - which is the only version of this that is genuinely safe. The
+     * checks below are here to give a better error message, not to be the wall.
+     */
+    sql(text, { maxRows = 500 } = {}) {
+      const parts = splitStatements(String(text || ''));
+      if (!parts.length) return { error: 'Type a query first.' };
+      if (parts.length > 1) return { error: 'Run one statement at a time.' };
+
+      const src = parts[0];
+      const verb = (src.match(/^[a-zA-Z]+/) || [''])[0].toLowerCase();
+      const allowed = ['select', 'with', 'pragma', 'explain', 'values'];
+      if (!allowed.includes(verb)) {
+        return { error: `Only ${allowed.join(', ').toUpperCase()} statements run here.` };
+      }
+      if (/\b(attach|detach|writable_schema|load_extension)\b/i.test(src)) {
+        return { error: 'That is not available here.' };
+      }
+
+      try {
+        const rows = readOnlyDb().prepare(src).all();
+        return {
+          ok: true,
+          rows: rows.slice(0, maxRows),
+          truncated: rows.length > maxRows,
+          total: rows.length
+        };
+      } catch (err) {
+        return { error: String((err && err.message) || 'That query failed.').slice(0, 300) };
+      }
+    },
+
     close() {
+      try { roDb.close(); } catch { /* not opened, or already closed */ }
       try { db.close(); } catch { /* already closed */ }
     }
   };

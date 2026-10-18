@@ -60,12 +60,19 @@ async function waitForServer() {
   const up = await waitForServer();
   if (!up) { console.log(`the throwaway server never came up on ${PORT}`); process.exit(2); }
 
+  // The launcher forces its own server address on load (FORCED_SERVER in
+  // main.js). An unpackaged build is the one case where APEX_SERVER_URL is
+  // honoured, so the gate is exercised against the throwaway server below
+  // rather than against the live deployment.
+  process.env.APEX_SERVER_URL = `http://127.0.0.1:${PORT}`;
+
   if (PHASE === '1') {
-    // Exactly what a fresh install looks like: armed, pointed at our server, no
-    // session yet.
+    // Exactly what a fresh install looks like: armed, no session yet. The
+    // baseUrl written here is deliberately wrong - an install that still
+    // carries an old address must be corrected on load, never trusted.
     fs.writeFileSync(STATE, JSON.stringify({
       settings: {
-        api: { baseUrl: `http://127.0.0.1:${PORT}`, token: '', email: '', name: '' },
+        api: { baseUrl: 'http://127.0.0.1:1', token: '', email: '', name: '' },
         auth: { required: true }
       }
     }, null, 2), 'utf8');
@@ -94,15 +101,19 @@ async function waitForServer() {
           upVisible: !document.getElementById('ag-form-up').hidden,
           inVisible: !document.getElementById('ag-form-in').hidden,
           upTab: document.querySelector('[data-ag-tab="up"]').getAttribute('aria-selected'),
-          url: document.getElementById('ag-url').value,
+          url: document.getElementById('ag-url'),
+          serverButton: !!document.getElementById('ag-start-server'),
+          servedBy: AuthGate.snapshot().baseUrl,
           bodyOverflow: getComputedStyle(document.body).overflow
         };`);
       check('an armed launcher starts behind the gate, not in front of it',
         boot.shown && boot.locked && boot.isLocked, JSON.stringify(boot));
       check('a brand-new install is offered the create-account form first',
         boot.upVisible && !boot.inVisible && boot.upTab === 'true', JSON.stringify(boot));
-      check('the gate shows the configured server, and the shell cannot scroll behind it',
-        /127\.0\.0\.1:/.test(boot.url) && boot.bodyOverflow === 'hidden', `${boot.url} / ${boot.bodyOverflow}`);
+      check('the gate offers no way to point the launcher at another server, and the shell cannot scroll behind it',
+        !boot.url && !boot.serverButton && boot.bodyOverflow === 'hidden', JSON.stringify(boot));
+      check('a stale address left in the state file is overwritten on load, never trusted',
+        boot.servedBy === `http://127.0.0.1:${PORT}`, String(boot.servedBy));
 
       const esc = await js(`
         document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));

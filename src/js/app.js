@@ -197,6 +197,9 @@ async function addDetectedGame(d) {
   // that game's own artwork straight from the Steam CDN the moment it renders,
   // and its store-page link works — no lookup needed.
   if (d.type === 'steam' && d.appId) g.steamAppId = String(d.appId);
+  // Remember which storefront published it, so the card keeps a GOG/EA/
+  // Ubisoft/Battle.net badge instead of falling back to a generic "Local".
+  if (store) g.platform = store.id;
 
   State.custom = State.custom || [];
   State.custom.push(g);
@@ -916,6 +919,40 @@ if (vkbdBtn) vkbdBtn.onclick = () => {
 // automatic after-update show is only the first time.
 const versionChip = document.getElementById('btn-version');
 if (versionChip) versionChip.onclick = () => openChangelog();
+
+// ---------------------------------------------------------------------------
+// Live clock (top right)
+// ---------------------------------------------------------------------------
+// There are no seconds on the face, so it repaints on the minute boundary
+// instead of every second: 60x less work, and aligning to :00 stops it drifting
+// a second or two behind the system clock. A machine that sleeps comes back
+// with a stale face, so it also repaints whenever the window is shown again.
+(() => {
+  const box = document.getElementById('clock');
+  const timeEl = document.getElementById('clock-time');
+  const dateEl = document.getElementById('clock-date');
+  if (!box || !timeEl) return;
+
+  const pad = (n) => String(n).padStart(2, '0');
+
+  function paint() {
+    const now = new Date();
+    timeEl.textContent = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    if (dateEl) {
+      dateEl.textContent = now.toLocaleDateString(undefined, { weekday: 'short', day: 'numeric', month: 'short' });
+    }
+    const title = now.toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    if (box.title !== title) box.title = title;
+  }
+
+  paint();
+  setTimeout(() => {
+    paint();
+    setInterval(paint, 60000);
+  }, 60000 - (Date.now() % 60000) + 20);
+
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) paint(); });
+})();
 
 document.getElementById('btn-dl').onclick = (e) => { e.stopPropagation(); toggleDrawer(); };
 

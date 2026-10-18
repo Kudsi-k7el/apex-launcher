@@ -577,9 +577,10 @@ function renderSettings(el) {
 
       <div class="setting-row">
         <div class="s-ico">${icon('globe', 20)}</div>
-        <div class="s-text"><h4>Server</h4><p>Where your account and your synced profile are stored.</p>
+        <div class="s-text"><h4>Server</h4><p>The Apex account server, fixed for this build. It cannot be changed.</p>
           <code id="api-url-code">${esc(apiUrl || 'none')}</code></div>
-        <button class="btn secondary" id="api-configure">${icon('edit', 15)} Change</button>
+        <button class="btn secondary" id="api-configure" disabled
+          title="Baked into the launcher - it cannot be pointed anywhere else">${icon('lock', 15)} Locked</button>
       </div>
 
       <div class="setting-row">
@@ -1143,19 +1144,10 @@ function renderSettings(el) {
   }
 
   // --- backend account / cloud sync ---------------------------------------
-  const apiCfgBtn = el.querySelector('#api-configure');
-  if (apiCfgBtn) apiCfgBtn.addEventListener('click', async () => {
-    const current = String((State.settings.api && State.settings.api.baseUrl) || '');
-    const picked = window.prompt('Apex server address (for example http://127.0.0.1:8787)', current);
-    if (picked === null) return;
-    const snap = await window.api.authConfigure(picked.trim());
-    State.settings.api = { ...(State.settings.api || {}), baseUrl: (snap && snap.baseUrl) || '' };
-    await persist();
-    renderSettings(el);
-    if (!snap || snap.status === 'unreachable') toast('Nothing is answering at that address', 'warn');
-    else if (snap.status === 'signedOut') toast('Server found \u2014 sign in to continue', 'check');
-    else toast('Server updated', 'check');
-  });
+  // There is deliberately no "change server" control: the address is compiled
+  // in (auth.DEFAULT_SERVER) and main.js re-forces it on every load, so the row
+  // is shown read-only. #api-configure stays in the DOM, disabled, purely so
+  // the setting row keeps its usual shape.
 
   // local game library
   el.querySelectorAll('[data-local="scan"]').forEach((b) => b.addEventListener('click', async () => {

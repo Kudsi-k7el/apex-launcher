@@ -28,7 +28,11 @@ const fs = require('node:fs');
 const path = require('node:path');
 const api = require('./net/api');
 
-const DEFAULT_SERVER = 'http://127.0.0.1:8787';
+// The one and only Apex server. It is baked in on purpose: the launcher is
+// locked to this deployment, and the sign-in screen has no field to point it
+// somewhere else - see src/js/auth.js. HTTPS is required by net/api.js for
+// anything that is not loopback, so this must stay an https:// address.
+const DEFAULT_SERVER = 'https://features-separation-sporting-parties.trycloudflare.com';
 const LOOPBACK_RE = /^https?:\/\/(?:127\.0\.0\.1|localhost|\[::1\])(?::\d+)?(?:\/|$)/i;
 const REVERIFY_MS = 10 * 60 * 1000;
 

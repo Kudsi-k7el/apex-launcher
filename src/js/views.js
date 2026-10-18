@@ -443,8 +443,12 @@ const PLATFORM_META = {
   itch: { label: 'itch.io', ico: 'flame' },
   epic: { label: 'Epic', ico: 'globe' },
   gog: { label: 'GOG', ico: 'globe' },
+  ubisoft: { label: 'Ubisoft', ico: 'globe' },
+  ea: { label: 'EA App', ico: 'globe' },
+  battlenet: { label: 'Battle.net', ico: 'globe' },
   xbox: { label: 'Microsoft', ico: 'box' },
   local: { label: 'Local', ico: 'hardDrive' },
+  lightning: { label: 'Nexus', ico: 'zap' },
   apex: { label: 'Apex', ico: 'flame' }
 };
 

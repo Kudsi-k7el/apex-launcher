@@ -48,8 +48,12 @@
 
        Covers everything until the backend vouches for a session. Deliberately
        has no close button and no Escape handler: the launcher is meant to be
-       unusable without an account, so the only ways out are signing in, aiming
-       at a different server, or the explicit escape hatch at the bottom.
+       unusable without an account, so the only ways out are signing in or the
+       explicit escape hatch at the bottom.
+
+       There is no server field. The account server is compiled in (see
+       auth.DEFAULT_SERVER), so a user cannot point the launcher at a backend of
+       their own choosing.
        ===================================================================== -->
   <div id="auth-gate" hidden>
     <div class="ag-card">
@@ -96,22 +100,6 @@
 
       <p class="ag-msg" id="ag-msg" role="status" aria-live="polite"></p>
 
-      <details class="ag-server" id="ag-server">
-        <summary>Server</summary>
-        <div class="ag-server-body">
-          <label class="field"><span>Address</span>
-            <input id="ag-url" type="text" spellcheck="false" placeholder="http://127.0.0.1:8787">
-          </label>
-          <div class="ag-row">
-            <button class="btn secondary sm" type="button" id="ag-save-url">Save &amp; retry</button>
-            <button class="btn secondary sm" type="button" id="ag-start-server">Start server</button>
-            <button class="btn secondary sm" type="button" id="ag-site">Open website</button>
-          </div>
-          <p class="ag-hint">Where your account lives. The bundled backend is started with
-            <code>npm run serve</code> in the Apex folder &mdash; or point this at any Apex server.</p>
-        </div>
-      </details>
-
       <div class="ag-foot">
         <button class="ag-skip" id="ag-skip" type="button">Continue without signing in</button>
       </div>
@@ -148,6 +136,12 @@
           <a data-act="open-settings"><span data-icon="settings" data-size="15"></span> Settings</a>
         </div>
       </div>
+
+      <!-- live clock: see tickClock() in src/js/app.js -->
+      <span id="clock" class="clock" title="Local time">
+        <b id="clock-time">--:--</b>
+        <small id="clock-date"></small>
+      </span>
 
       <span id="pad-status" title="No controller detected"></span>
 

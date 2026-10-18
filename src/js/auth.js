@@ -30,8 +30,6 @@ const AuthGate = (() => {
     el.sub = document.getElementById('ag-sub');
     el.status = document.getElementById('ag-status');
     el.msg = document.getElementById('ag-msg');
-    el.url = document.getElementById('ag-url');
-    el.start = document.getElementById('ag-start-server');
     el.forms = {
       in: document.getElementById('ag-form-in'),
       up: document.getElementById('ag-form-up')
@@ -67,7 +65,6 @@ const AuthGate = (() => {
       if (!b.dataset.label) b.dataset.label = b.textContent.trim();
       b.textContent = on ? (label || 'One moment\u2026') : b.dataset.label;
     });
-    if (el.start) el.start.disabled = !!on;
   }
 
   function showTab(which) {
@@ -133,8 +130,6 @@ const AuthGate = (() => {
     const changed = syncedSignedIn !== !!snap.signedIn;
     syncedSignedIn = !!snap.signedIn;
     syncApiState(snap);
-    if (el.url && document.activeElement !== el.url) el.url.value = snap.baseUrl || '';
-    if (el.start) el.start.hidden = snap.canStartServer === false;
 
     if (snap.required === false || snap.signedIn) {
       unlock();
@@ -143,15 +138,12 @@ const AuthGate = (() => {
     }
     if (changed) afterAccountChange();
 
-    const url = snap.baseUrl || '';
     if (snap.status === 'checking') {
       status('Checking your session\u2026', 'info');
     } else if (snap.status === 'unconfigured') {
-      status('No server address is set. Add one below to sign in.', 'warn');
+      status('The Apex server address is missing from this build. Reinstall the launcher.', 'warn');
     } else if (snap.status === 'unreachable') {
-      status(url
-        ? `Cannot reach the server at ${url}. Start it, or change the address below.`
-        : 'Cannot reach the server. Add an address below.', 'warn');
+      status('Cannot reach the Apex server. Check your internet connection, then try again.', 'warn');
     } else if (snap.status === 'signedOut') {
       status(snap.error || '', 'warn');
     } else {
@@ -209,33 +201,6 @@ const AuthGate = (() => {
     return true;
   }
 
-  async function saveUrl() {
-    const url = (el.url.value || '').trim();
-    setBusy(true, 'Connecting\u2026');
-    const next = await window.api.authConfigure(url);
-    setBusy(false);
-    apply(next);
-    if (!url) msg('Add the address of your Apex server.', 'err');
-    else if (next && next.status === 'unreachable') msg('Still nothing answering at that address.', 'err');
-    else if (next && (next.signedIn || next.status === 'signedOut')) msg('Server found. Sign in to continue.', 'ok');
-  }
-
-  async function startServer() {
-    msg('Starting the server\u2026', 'info');
-    const res = await window.api.authStartServer();
-    if (!res || !res.ok) { msg((res && res.error) || 'Could not start it.', 'err'); return; }
-
-    // It has to compile, open the database and bind a socket, so ask a few times
-    // rather than once.
-    for (let i = 0; i < 5; i += 1) {
-      await new Promise((r) => setTimeout(r, 700));
-      const next = await window.api.authRecheck();
-      apply(next);
-      if (next && (next.signedIn || next.status === 'signedOut')) { msg('Server is running.', 'ok'); return; }
-    }
-    msg('The server did not answer. Is Node.js installed?', 'err');
-  }
-
   async function skip() {
     const yes = window.confirm(
       'Open Apex Launcher without an account?\n\n' +
@@ -262,13 +227,6 @@ const AuthGate = (() => {
     if (el.forms.in) el.forms.in.addEventListener('submit', (e) => { e.preventDefault(); submit('in'); });
     if (el.forms.up) el.forms.up.addEventListener('submit', (e) => { e.preventDefault(); submit('up'); });
 
-    const saveBtn = document.getElementById('ag-save-url');
-    if (saveBtn) saveBtn.addEventListener('click', saveUrl);
-    if (el.url) el.url.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); saveUrl(); } });
-    if (el.start) el.start.addEventListener('click', startServer);
-
-    const site = document.getElementById('ag-site');
-    if (site) site.addEventListener('click', () => window.api.openSite('home'));
     const out = document.getElementById('ag-signout');
     if (out) out.addEventListener('click', async () => {
       apply(await window.api.authSignOut());

@@ -352,16 +352,90 @@ async function scanUbisoft() {
   return { present, path: clientPath, apps };
 }
 
+/** `"C:\x\game.exe",0` -> `C:\x\game.exe`; null when it is not an .exe. */
+function displayIconPath(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return null;
+  // Entries quote the path and may append an icon index: `"C:\x\y.exe",0`.
+  const quoted = raw.match(/^"([^"]+)"/);
+  const p = (quoted ? quoted[1] : raw.split(',')[0]).trim();
+  return /\.exe$/i.test(p) ? p : null;
+}
+
+/** Uninstall entries that are the store client itself, never a game. */
+const EA_CLIENT = /^(ea app|ea desktop|origin|electronic arts|ea anti-?cheat|eaac|ea help|ea background service|eabackgroundservice)$/i;
+
+/**
+ * Every record in the Windows uninstall registry, in real Unicode.
+ *
+ * `reg.exe` is deliberately not used for this one. When its output is piped it
+ * is written in the OEM code page, and non-ASCII is silently *rewritten*: the
+ * EA App's own entry for Battlefield(TM) 1 comes back as "BattlefieldT 1".
+ * That is not cosmetic - the mangled name then fails to match the catalogue
+ * title, so the game arrives in the library misspelled, unrecognised and
+ * without its artwork. PowerShell has the same habit unless
+ * [Console]::OutputEncoding is forced, which the prelude below does.
+ */
+function uninstallEntries() {
+  return new Promise((resolve) => {
+    if (!isWin) return resolve([]);
+    const script = [
+      "$ErrorActionPreference='SilentlyContinue';",
+      '[Console]::OutputEncoding=[System.Text.Encoding]::UTF8;',
+      "$k=@('HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*',",
+      "'HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*',",
+      "'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\*');",
+      'Get-ItemProperty $k |',
+      '  Where-Object { $_.Publisher -and $_.DisplayName } |',
+      '  Select-Object DisplayName,Publisher,InstallLocation,DisplayIcon |',
+      '  ConvertTo-Json -Compress -Depth 3'
+    ].join('\n');
+    execFile('powershell',
+      ['-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-Command', script],
+      { windowsHide: true, timeout: 25000, maxBuffer: 32 * 1024 * 1024, encoding: 'utf8' },
+      (err, stdout) => {
+        if (err || !stdout) return resolve([]);
+        try {
+          const parsed = JSON.parse(stdout);
+          return resolve(Array.isArray(parsed) ? parsed : [parsed]);
+        } catch { resolve([]); }
+      });
+  });
+}
+
+/**
+ * Installed EA titles, across both generations of the store.
+ *
+ *   - The legacy `Electronic Arts\EA Games` keys, which Origin wrote for the
+ *     older titles and which some installs still carry.
+ *   - The Windows uninstall registry, which is the source that actually works
+ *     for today's EA App. A title installed through the EA App lands there with
+ *     `Publisher` = "Electronic Arts", an `InstallLocation` and - the valuable
+ *     part - a `DisplayIcon` pointing straight at the game's own executable.
+ *
+ * That last field is why this source beats folder guessing. EA install trees
+ * bury the real binary (Battlefield 1 ships `bf1.exe` next to `bf1Trial.exe`,
+ * an EAAntiCheat launcher and a full `__Installer` tree), so `pickExe` is a coin
+ * flip where `DisplayIcon` is authoritative.
+ *
+ * Modern EA App titles are absent from `EA Games` entirely, which is exactly why
+ * an EA App install used to show up nowhere in Apex.
+ */
 async function scanEa() {
-  const keys = [
-    'HKLM\\SOFTWARE\\WOW6432Node\\Electronic Arts\\EA Games',
-    'HKLM\\SOFTWARE\\Electronic Arts\\EA Games'
-  ];
   const apps = [];
   const seen = new Set();
   let present = false;
+  let clientPath = null;
 
-  for (const key of keys) {
+  const add = (name, dir, exe) => {
+    const id = norm(name);
+    if (!id || seen.has(id) || !exe || !exists(exe)) return;
+    seen.add(id);
+    apps.push({ source: 'ea', gameId: id, name, installPath: dir, exe, uri: null, installed: true });
+  };
+
+  // --- legacy Origin keys (older titles) ----------------------------------
+  for (const key of ['HKLM\\SOFTWARE\\WOW6432Node\\Electronic Arts\\EA Games', 'HKLM\\SOFTWARE\\Electronic Arts\\EA Games']) {
     const dump = await regQueryAll(key);
     if (!dump) continue;
     present = true;
@@ -370,14 +444,37 @@ async function scanEa() {
       const dir = v['Install Dir'] || v.InstallDir || v.InstallLocation;
       const name = v.DisplayName || v.ProductName || rec.key.split('\\').pop();
       if (!dir || !name || !exists(dir)) continue;
-      if (seen.has(norm(name))) continue;
-      const exe = pickExe(dir, [name]);
-      if (!exe) continue;
-      seen.add(norm(name));
-      apps.push({ source: 'ea', gameId: norm(name), name, installPath: dir, exe, uri: null, installed: true });
+      add(name, dir, (v.Executable && exists(v.Executable)) ? v.Executable : pickExe(dir, [name]));
     }
   }
-  return { present, path: present ? 'Windows registry (EA Games)' : null, apps };
+
+  // --- the client itself, which also proves EA is present at all -----------
+  for (const [key, value] of [
+    ['HKLM\\SOFTWARE\\WOW6432Node\\Electronic Arts\\EA Desktop', 'DesktopAppPath'],
+    ['HKLM\\SOFTWARE\\Electronic Arts\\EA Desktop', 'DesktopAppPath'],
+    ['HKLM\\SOFTWARE\\Electronic Arts\\EA Core', 'ClientPath']
+  ]) {
+    const p = await regQuery(key, value);
+    if (p) { present = true; clientPath = clientPath || p; }
+  }
+
+  // --- today's EA App: the Windows uninstall registry ----------------------
+  for (const rec of await uninstallEntries()) {
+    if (!/electronic arts/i.test(String(rec.Publisher || ''))) continue;
+    const name = String(rec.DisplayName || '').trim();
+    if (!name || EA_CLIENT.test(name) || NON_GAME.test(name)) continue;
+    const dir = String(rec.InstallLocation || '').replace(/[\\/]+$/, '');
+    if (!dir || !exists(dir)) continue;
+    present = true;
+    const icon = displayIconPath(rec.DisplayIcon);
+    add(name, dir, (icon && exists(icon)) ? icon : pickExe(dir, [name, path.basename(dir)]));
+  }
+
+  return {
+    present,
+    path: clientPath || (apps[0] && apps[0].installPath) || (present ? 'Windows registry (EA)' : null),
+    apps
+  };
 }
 
 async function scanBattleNet() {
@@ -680,4 +777,4 @@ async function detectAll(hints = []) {
   };
 }
 
-module.exports = { detectAll, findSteamRoots, steamLibraries, scanEpic, scanSteamOwned, pickExe };
+module.exports = { detectAll, findSteamRoots, steamLibraries, scanEpic, scanSteamOwned, scanEa, pickExe };

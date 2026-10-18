@@ -94,6 +94,37 @@ code { font-family: 'Cascadia Code', Consolas, monospace; }
 
 .title-right { display: flex; height: 100%; align-items: center; -webkit-app-region: no-drag; }
 
+/* --- live clock (top right) ---------------------------------------------- */
+/* Tabular figures so the digits do not jitter as the seconds tick over. */
+.clock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  line-height: 1.06;
+  margin: 0 8px 0 4px;
+  padding: 3px 10px;
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 16%, transparent);
+  -webkit-app-region: no-drag;
+  user-select: none;
+}
+.clock b {
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: .5px;
+  color: var(--text, #e9edf5);
+  font-variant-numeric: tabular-nums;
+}
+.clock small {
+  font-size: 9px;
+  letter-spacing: .7px;
+  text-transform: uppercase;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.clock.warn b { color: var(--warn, #f5c451); }
+
 .win-controls { display: flex; height: 100%; margin-left: 4px; }
 .win-controls button {
   width: 46px; height: 100%;

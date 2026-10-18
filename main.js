@@ -32,6 +32,14 @@ const { DownloadQueue } = require('./net/queue');
 const itch = require('./net/itch');
 const api = require('./net/api');
 const auth = require('./auth');
+
+// The Apex account server, baked in. Every load() forces this value, so the
+// launcher cannot be pointed at a different backend: there is no UI for it (the
+// sign-in gate has no server field, Settings shows the row read-only) and
+// editing the state file by hand does not survive startup. The env override
+// exists only for the test harnesses, which boot unpackaged against a throwaway
+// server on a loopback port.
+const FORCED_SERVER = (!app.isPackaged && process.env.APEX_SERVER_URL) || auth.DEFAULT_SERVER;
 const discord = require('./discord');
 const updater = require('./updater');
 
@@ -142,11 +150,11 @@ function defaults() {
         clientId: ''
       },
       // --- backend account / cloud sync (see net/api.js) -------------------
-      // Pre-filled with the address the bundled backend listens on, so a fresh
-      // install has a working sign-in screen as soon as `npm run serve` is up.
-      // Point it at any other Apex backend and everything here follows.
+      // Locked to the deployed Apex server. auth.DEFAULT_SERVER is the single
+      // source of truth for the address, so changing it in one place moves the
+      // launcher, the sign-in screen and every sync call together.
       api: {
-        baseUrl: 'http://127.0.0.1:8787',
+        baseUrl: auth.DEFAULT_SERVER,
         token: '',               // bearer token; only ever sent to baseUrl
         email: '',               // who is signed in, for the UI
         name: ''                 // their username, for the UI
@@ -260,7 +268,12 @@ function load() {
         art: { ...d.settings.art, ...((raw.settings && raw.settings.art) || {}) },
         itch: { ...d.settings.itch, ...((raw.settings && raw.settings.itch) || {}) },
         discord: { ...d.settings.discord, ...((raw.settings && raw.settings.discord) || {}) },
-        api: { ...d.settings.api, ...((raw.settings && raw.settings.api) || {}) },
+        // The address is compiled into the build (auth.DEFAULT_SERVER), so
+        // whatever an older install happened to leave in settings.json is
+        // discarded here. This is the hard stop behind the missing UI: even
+        // hand-editing the settings file cannot point the launcher at a
+        // different backend.
+        api: { ...d.settings.api, ...((raw.settings && raw.settings.api) || {}), baseUrl: FORCED_SERVER },
         pl: { ...d.settings.pl, ...((raw.settings && raw.settings.pl) || {}) },
         overlay: { ...d.settings.overlay, ...((raw.settings && raw.settings.overlay) || {}) },
         screenshot: { ...d.settings.screenshot, ...((raw.settings && raw.settings.screenshot) || {}) },
@@ -670,7 +683,9 @@ api.setToken(apiSettings().token);
 //
 // `_gate-check.js` is deliberately NOT in this list: it exists to test the gate
 // while it is armed, so disarming it would quietly turn that harness into a no-op.
-const HARNESS = /(^|[\\/])_(smoke|download-test|render-test|feat-check)\.js$/i.test(String(process.argv[1] || ''));
+// `_shots.js` is in it because the screenshot pass has to photograph the real
+// shell, not the sign-in card.
+const HARNESS = /(^|[\\/])_(smoke|download-test|render-test|feat-check|shots)\.js$/i.test(String(process.argv[1] || ''));
 
 if (HARNESS) {
   const st = load();
