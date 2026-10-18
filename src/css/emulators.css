@@ -1,0 +1,291 @@
+/* =========================================================================
+   Emulators - one shelf per console, built from the ROMs already on disk
+   -------------------------------------------------------------------------
+   Everything here is in service of "which console is this, and can I play it".
+   The console is the loudest thing on a card; the file name is a tooltip.
+   ========================================================================= */
+
+.emu-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 70px 0;
+  color: var(--muted);
+  font-size: 13.5px;
+}
+.emu-loading .ico { color: var(--accent); animation: emuSpin 1.6s linear infinite; }
+@keyframes emuSpin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .emu-loading .ico { animation: none; } }
+
+.emu-toolbar { flex-wrap: wrap; gap: 12px; }
+.emu-folders { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.emu-folders-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12.5px;
+  font-weight: 650;
+  color: var(--muted);
+  padding-right: 4px;
+}
+.emu-folders-label .ico { color: var(--accent); }
+
+.emu-warn {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 14px 0 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  font-size: 12.5px;
+  color: var(--text);
+  background: color-mix(in srgb, var(--warn) 12%, transparent);
+  border: 1px solid color-mix(in srgb, var(--warn) 38%, transparent);
+}
+.emu-warn .ico { color: var(--warn); flex-shrink: 0; }
+
+/* --- detected emulators -------------------------------------------------- */
+.echips {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0 4px;
+}
+.echips-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .6px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.echips-label .ico { color: var(--ok); }
+.echips.none .echips-label .ico { color: var(--warn); }
+.echips-note { font-size: 12px; color: var(--muted); max-width: 46ch; }
+
+.echip {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 13px;
+  border-radius: 11px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+}
+.echip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--ok);
+  box-shadow: 0 0 9px var(--ok);
+  flex-shrink: 0;
+}
+.echip strong { display: block; font-size: 12.5px; }
+.echip small { display: block; font-size: 10.5px; color: var(--muted); }
+
+/* --- folders ------------------------------------------------------------- */
+.emu-fold-list { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0 2px; }
+.efolder {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 8px 6px 11px;
+  border-radius: 999px;
+  font-size: 11.5px;
+  color: var(--muted);
+  background: color-mix(in srgb, var(--panel) 70%, transparent);
+  border: 1px solid var(--border);
+}
+.efolder .ico { color: var(--accent); flex-shrink: 0; }
+.efolder b { color: var(--text); font-weight: 600; max-width: 26ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.efolder button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: var(--muted);
+  transition: background .18s, color .18s;
+}
+.efolder button:hover { background: color-mix(in srgb, var(--danger) 20%, transparent); color: var(--danger); }
+
+/* --- console filter chips ------------------------------------------------ */
+.emu-groups { display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0 0; }
+.emu-groups .chip em {
+  font-style: normal;
+  font-size: 10.5px;
+  opacity: .7;
+  margin-left: 3px;
+}
+.emu-count { margin: 10px 0 18px; font-size: 12px; color: var(--muted); }
+
+/* --- shelves ------------------------------------------------------------- */
+.eshelf { margin-bottom: 30px; }
+.eshelf-head {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding-bottom: 12px;
+  margin-bottom: 15px;
+  border-bottom: 1px solid var(--border);
+}
+.eshelf-head h3 { font-size: 17px; display: flex; align-items: baseline; gap: 9px; }
+.eshelf-head h3 small { font-size: 11.5px; font-weight: 500; color: var(--muted); }
+.eshelf-count {
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent) 14%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 32%, transparent);
+}
+.eshelf-engine {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+.eshelf-engine.on .ico { color: var(--ok); }
+.eshelf-engine.off { color: var(--warn); }
+
+.erom-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(228px, 1fr));
+  gap: 12px;
+}
+
+/* --- a ROM card ---------------------------------------------------------- */
+.erom {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  padding: 14px;
+  border-radius: 12px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  transition: transform .25s var(--ease), border-color .25s, box-shadow .25s;
+}
+.erom:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .42);
+}
+.erom.nogo { opacity: .78; }
+.erom.nogo:hover { border-color: color-mix(in srgb, var(--warn) 45%, var(--border)); }
+
+.erom-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.erom-ext {
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-family: 'Cascadia Code', Consolas, monospace;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .5px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 30%, transparent);
+}
+.erom-size { font-size: 11px; color: var(--muted); }
+
+.erom h4 {
+  font-size: 13.5px;
+  line-height: 1.35;
+  margin-bottom: 5px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.erom-dir {
+  font-size: 10.5px;
+  color: color-mix(in srgb, var(--muted) 82%, transparent);
+  margin-bottom: 12px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  /* The folder is a hint, not the headline; it takes the leftover space. */
+  margin-top: auto;
+}
+
+.erom-actions { display: flex; gap: 8px; }
+.erom-actions .btn { flex: 0 1 auto; }
+.erom-actions .btn[disabled] { opacity: .55; cursor: default; transform: none; }
+
+.erom-engine {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 9px;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.erom-engine .ico { color: var(--ok); }
+.erom.nogo .erom-engine .ico { color: var(--warn); }
+
+/* --- where to get games -------------------------------------------------- */
+.esources {
+  margin-top: 34px;
+  padding: 24px;
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  background:
+    radial-gradient(120% 150% at 0% 0%, color-mix(in srgb, var(--accent) 12%, transparent), transparent 60%),
+    color-mix(in srgb, var(--panel) 70%, transparent);
+}
+.esources .section-head { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; margin-bottom: 12px; }
+.esources-lede { font-size: 13px; line-height: 1.65; color: var(--muted); max-width: 76ch; margin-bottom: 20px; }
+
+.esources-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 12px;
+}
+.esource {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 13px;
+  padding: 15px;
+  border-radius: 12px;
+  background: var(--bg2);
+  border: 1px solid var(--border);
+  transition: transform .25s var(--ease), border-color .25s, box-shadow .25s;
+}
+.esource:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in srgb, var(--accent) 48%, var(--border));
+  box-shadow: 0 14px 30px rgba(0, 0, 0, .42);
+}
+.esource-ico {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 13%, transparent);
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, transparent);
+}
+.esource strong { display: block; font-size: 13.5px; }
+.esource em {
+  display: block;
+  font-style: normal;
+  font-size: 11px;
+  font-weight: 650;
+  color: var(--accent);
+  margin: 2px 0 6px;
+}
+.esource p { font-size: 12px; line-height: 1.55; color: var(--muted); }
+.esource-go { margin-left: auto; color: var(--muted); flex-shrink: 0; }
+.esource:hover .esource-go { color: var(--accent); }

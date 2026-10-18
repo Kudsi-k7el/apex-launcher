@@ -22,6 +22,7 @@ const VIEWS = {
   profile: () => renderProfile(content),
   gallery: () => renderGallery(content),
   contact: () => renderContact(content),
+  emulators: () => renderEmulators(content),
   settings: () => renderSettings(content)
 };
 
@@ -1149,7 +1150,7 @@ document.querySelectorAll('#profile-wrap .menu a').forEach((a) => a.addEventList
     syncOverlayButton(!!(await window.api.perfStatus()).open);
   } catch { /* the buttons still work; only the hotkeys are missing */ }
 
-  // The version chip doubles as the "What's new" door, and the sidebar build
+  // The version chip doubles as the "What's new" door, and the corner build
   // stamp spells the same version out in full. Both read one appInfo() call, so
   // the two can never disagree about which build is running.
   const chip = document.getElementById('btn-version');

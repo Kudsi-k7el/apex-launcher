@@ -29,7 +29,7 @@ const newsMod = require(path.join(__dirname, 'news'));
  * to actually perform. The stubs append here and the assertions read them back,
  * which beats poking at the frozen `window.api` bridge from the renderer.
  */
-const CALLS = { dlStart: [], applyFix: [], steamlessReplace: [] };
+const CALLS = { dlStart: [], applyFix: [], steamlessReplace: [], emuScan: [], emuLaunch: [] };
 
 const STUBS = {
   'art:resolve': () => ({ ok: false }),
@@ -87,7 +87,39 @@ const STUBS = {
     CALLS.steamlessReplace.push(payload);
     return { ok: true, replaced: [payload.targets[0]], errors: [] };
   },
-  'dialog:folder': () => 'C:/picked'
+  'dialog:folder': () => 'C:/picked',
+  // --- emulators: a RetroArch that claims everything, plus one console with no
+  // --- emulator at all, so both the playable and the nogo card are exercised.
+  'emu:systems': () => ([
+    { id: 'nes', label: 'NES', full: 'Nintendo Entertainment System', group: 'Nintendo' },
+    { id: 'snes', label: 'SNES', full: 'Super Nintendo', group: 'Nintendo' },
+    { id: 'ps2', label: 'PlayStation 2', full: 'PlayStation 2', group: 'Sony' }
+  ]),
+  'emu:detect': () => ({
+    ok: true,
+    emulators: [{ id: 'retroarch', name: 'RetroArch', exe: 'C:/emu/retroarch.exe', systems: ['nes', 'snes'], via: 'folder' }],
+    systems: {
+      nes: { emulator: 'retroarch', name: 'RetroArch', exe: 'C:/emu/retroarch.exe' },
+      snes: { emulator: 'retroarch', name: 'RetroArch', exe: 'C:/emu/retroarch.exe' },
+      ps2: null
+    }
+  }),
+  'emu:scan': (_e, folders) => {
+    CALLS.emuScan.push(folders);
+    return {
+      ok: true,
+      folders: folders || [],
+      count: 3,
+      capped: false,
+      skippedTracks: 1,
+      roms: [EMU_ROM_NES, EMU_ROM_SNES, EMU_ROM_PS2],
+      bySystem: { nes: [EMU_ROM_NES], snes: [EMU_ROM_SNES], ps2: [EMU_ROM_PS2] }
+    };
+  },
+  'emu:launch': (_e, system, romPath, opts) => {
+    CALLS.emuLaunch.push({ system, romPath, opts });
+    return { ok: true, emulator: 'RetroArch', system, title: 'Super Mario Bros' };
+  }
 };
 
 const TINY_PNG = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
@@ -104,6 +136,11 @@ const LIVE_STEAM = {
   art: { wide: TINY_PNG, hero: TINY_PNG, cover: TINY_PNG },
   tinyImage: TINY_PNG
 };
+
+/** ROM records shaped exactly like the ones emulators.js returns. */
+const EMU_ROM_NES = { path: 'C:/roms/NES/Super Mario Bros (USA).nes', name: 'Super Mario Bros (USA).nes', title: 'Super Mario Bros', system: 'nes', size: 40976, dir: 'C:/roms/NES' };
+const EMU_ROM_SNES = { path: 'C:/roms/SNES/Zelda.sfc', name: 'Zelda.sfc', title: 'Zelda', system: 'snes', size: 1048576, dir: 'C:/roms/SNES' };
+const EMU_ROM_PS2 = { path: 'C:/roms/PS2/Shadow of the Colossus.iso', name: 'Shadow of the Colossus.iso', title: 'Shadow of the Colossus', system: 'ps2', size: 734003200, dir: 'C:/roms/PS2' };
 
 const ITCH_ITEM = {
   id: 'itch:teststudio/test-game',
@@ -850,19 +887,97 @@ async function run() {
       const marks = document.querySelectorAll('#content .cc-ico svg path').length;
       const copy = document.querySelectorAll('#content [data-copy]').length;
       const open = document.querySelectorAll('#content [data-open]').length;
-      const stamp = ((document.getElementById('build-stamp') || {}).textContent || '').trim();
-      const sign = ((document.querySelector('#sidebar .side-sign') || {}).textContent || '').trim();
+      const stampEl = document.getElementById('build-stamp');
+      const stamp = ((stampEl || {}).textContent || '').trim();
+      const st = stampEl ? getComputedStyle(stampEl) : null;
       const nav = !!document.querySelector('#sidebar .tab[data-view="contact"]');
+      // The watermark was a tiled body::before; with it gone the pseudo-element
+      // does not render at all, so there is no background image to find.
+      const watermark = getComputedStyle(document.body, '::before').backgroundImage || 'none';
+      const sideBrand = !!document.querySelector('#sidebar .side-stamp, #sidebar .side-sign');
       gotoView('store');
-      return { handles, cards, marks, copy, open, stamp, sign, nav };`);
+      return {
+        handles, cards, marks, copy, open, nav, stamp, sideBrand, watermark,
+        position: st ? st.position : '',
+        right: st ? parseFloat(st.right) : 999,
+        bottom: st ? parseFloat(st.bottom) : 999,
+        size: st ? parseFloat(st.fontSize) : 99
+      };`);
     check('the Contact page shows both handles, each with a copy and an open button',
       contact.cards === 2 && contact.handles.includes('z1.f') && contact.handles.includes('@kudsoo')
       && contact.marks === 2 && contact.copy === 2 && contact.open === 2 && contact.nav,
       JSON.stringify(contact));
-    check('the sidebar build stamp names the exact build and carries the maker mark',
+    check('the build stamp names the exact build small in the bottom-right corner, out of the sidebar',
       /^apexlauncher developer build \d+\.\d+\.\d+$/.test(contact.stamp)
-      && /kudasai/i.test(contact.sign) && contact.sign.includes('@kudsoo'),
-      JSON.stringify({ stamp: contact.stamp, sign: contact.sign }));
+      && contact.position === 'fixed' && contact.right < 40 && contact.bottom < 40
+      && contact.size <= 10 && !contact.sideBrand,
+      JSON.stringify({ stamp: contact.stamp, position: contact.position, right: contact.right, bottom: contact.bottom, size: contact.size, sideBrand: contact.sideBrand }));
+    check('the background watermark is gone',
+      !/kudasai|kudsoo/i.test(contact.watermark),
+      contact.watermark);
+
+    // --- 26f. emulators: shelves, play gating, and the free-games panel ------
+    const emuView = await js(`
+      State.emulators = { folders: ['C:/roms'], exes: {} };
+      emu.loaded = false;
+      gotoView('emulators');
+      await new Promise(r => setTimeout(r, 900));
+      const heads = [...document.querySelectorAll('#content .eshelf-head h3')]
+        .map((h) => (h.firstChild && h.firstChild.textContent || '').trim());
+      return {
+        shelves: document.querySelectorAll('#content .eshelf').length,
+        roms: document.querySelectorAll('#content .erom').length,
+        heads,
+        playable: document.querySelectorAll('#content .erom [data-launch]:not([disabled])').length,
+        blocked: document.querySelectorAll('#content .erom [data-launch][disabled]').length,
+        chips: [...document.querySelectorAll('#content .echip strong')].map((e) => e.textContent),
+        sources: [...document.querySelectorAll('#content .esource strong')].map((e) => e.textContent),
+        hrefs: [...document.querySelectorAll('#content .esource')].map((a) => a.getAttribute('href')),
+        sizes: [...document.querySelectorAll('#content .erom-size')].map((e) => e.textContent)
+      };`);
+    check('the Emulators view shelves ROMs by console and only offers Play where an emulator exists',
+      emuView.shelves === 3 && emuView.roms === 3 && emuView.playable === 2 && emuView.blocked === 1
+      && emuView.heads.includes('NES') && emuView.heads.includes('PlayStation 2')
+      && emuView.chips.includes('RetroArch'),
+      JSON.stringify(emuView));
+    check('ROM sizes are shown in bytes-appropriate units, not gigabytes',
+      emuView.sizes.includes('40 KB') && emuView.sizes.includes('1 MB') && emuView.sizes.includes('700 MB'),
+      JSON.stringify(emuView.sizes));
+    check('the saved ROM folder was scanned on the way in',
+      CALLS.emuScan.length >= 1 && JSON.stringify(CALLS.emuScan[CALLS.emuScan.length - 1]) === JSON.stringify(['C:/roms']),
+      JSON.stringify(CALLS.emuScan));
+    check('the games panel points only at a known set of free, legal sources',
+      emuView.sources.length >= 5
+      && emuView.hrefs.every((h) => /^https:\/\//.test(h))
+      && emuView.hrefs.every((h) => {
+        const host = h.replace(/^https:\/\//, '').split('/')[0].toLowerCase();
+        return ['archive.org', 'www.archive.org', 'www.pdroms.de', 'hh.gbdev.io',
+          'itch.io', 'www.scummvm.org', 'www.openttd.org'].some((ok) => host === ok || host.endsWith(`.${ok}`));
+      }),
+      JSON.stringify(emuView.hrefs));
+
+    const emuPlayed = await js(`
+      const b = document.querySelector('#content .erom [data-launch]:not([disabled])');
+      const sys = b.dataset.system;
+      b.click();
+      await new Promise(r => setTimeout(r, 400));
+      return { sys, was: b.dataset.launch, busy: b.disabled, said: b.textContent.trim() };`);
+    check('pressing Play hands the console and the exact file to the emulator bridge',
+      CALLS.emuLaunch.length === 1 && CALLS.emuLaunch[0].system === 'nes'
+      && /Super Mario Bros \(USA\)\.nes$/.test(CALLS.emuLaunch[0].romPath)
+      && emuPlayed.busy && /Starting/.test(emuPlayed.said),
+      JSON.stringify({ calls: CALLS.emuLaunch, played: emuPlayed }));
+
+    const emuAdded = await js(`
+      document.querySelector('#content [data-act="emu-add"]').click();
+      await new Promise(r => setTimeout(r, 700));
+      return {
+        shown: [...document.querySelectorAll('#content .efolder b')].map((e) => e.textContent),
+        saved: (State.emulators && State.emulators.folders) || []
+      };`);
+    check('a folder picked by hand is added to the shelf and kept in state',
+      emuAdded.shown.includes('picked') && emuAdded.saved.includes('C:/picked'),
+      JSON.stringify(emuAdded));
 
     // --- 27. unified search (Steam catalogue + itch.io, real time) ----------
     const uni = await js(`

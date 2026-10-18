@@ -55,6 +55,14 @@ contextBridge.exposeInMainWorld('api', {
 
   scanFolder: (dir) => ipcRenderer.invoke('folder:scanGames', dir),
 
+  // --- emulators & ROM shelves (see emulators.js) --------------------------
+  // `emuSystems` is the static console table; detection and scanning are
+  // read-only walks of the user's own folders, and only `emuLaunch` is gated.
+  emuSystems: () => ipcRenderer.invoke('emu:systems'),
+  emuDetect: (overrides) => ipcRenderer.invoke('emu:detect', overrides),
+  emuScan: (folders, opts) => ipcRenderer.invoke('emu:scan', folders, opts),
+  emuLaunch: (system, romPath, opts) => ipcRenderer.invoke('emu:launch', system, romPath, opts),
+
   // --- itch.io (browse needs nothing; downloads use the user's own key) -----
   itchFeeds: () => ipcRenderer.invoke('itch:feeds'),
   itchBrowse: (feed, page) => ipcRenderer.invoke('itch:browse', feed, page),

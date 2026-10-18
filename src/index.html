@@ -34,6 +34,7 @@
   <link rel="stylesheet" href="css/gallery.css">
   <link rel="stylesheet" href="css/changelog.css">
   <link rel="stylesheet" href="css/contact.css">
+  <link rel="stylesheet" href="css/emulators.css">
   <link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
@@ -185,6 +186,7 @@
       <button class="tab" data-view="library"><span data-icon="library"></span><span>Library</span></button>
       <button class="tab" data-view="itch"><span data-icon="flame"></span><span>itch.io</span></button>
       <button class="tab" data-view="lightning"><span data-icon="zap"></span><span>Nexus</span></button>
+      <button class="tab" data-view="emulators"><span data-icon="gamepad"></span><span>Emulators</span></button>
 
       <button class="tab" data-view="news"><span data-icon="news"></span><span>News</span></button>
       <span class="side-label">Downloads</span>
@@ -202,12 +204,9 @@
         <span data-icon="tv"></span><span>Big Picture</span>
       </button>
 
-      <!-- kudasai / @kudsoo is the maker's mark and the build stamp says exactly
-           which build is running; app.js refreshes the stamp from appInfo() so it
-           can never drift from the real version. -->
-      <div class="side-stamp" id="build-stamp" title="This build">apexlauncher developer build 2.8.0</div>
-      <div class="side-sign" title="Made by">kudasai <b>@kudsoo</b></div>
-
+      <!-- The build stamp lives in the bottom-right corner of the window (see
+           .build-stamp). app.js refreshes it from appInfo() at boot, so it can
+           never drift from the version actually running. -->
       <div class="side-foot">
         <span data-icon="cpu" data-size="14"></span>
         <div><strong>Apex Engine</strong><small>Ready</small></div>
@@ -258,6 +257,9 @@
 
   <div id="modal-root"></div>
   <div id="toast"></div>
+
+  <!-- The build stamp: which build this is, quietly, out of everything's way. -->
+  <div class="build-stamp" id="build-stamp" title="This build">apexlauncher developer build 2.8.0</div>
 
   <!-- controller connection notice (see controller.js) -->
   <div id="pad-toast" aria-live="polite"></div>
@@ -335,6 +337,7 @@
   <script src="js/gallery.js"></script>
   <script src="js/changelog.js"></script>
   <script src="js/contact.js"></script>
+  <script src="js/emulators.js"></script>
   <script src="js/api.js"></script>
   <script src="js/vkeyboard.js"></script>
   <script src="js/modal.js"></script>

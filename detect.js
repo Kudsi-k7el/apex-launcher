@@ -777,4 +777,4 @@ async function detectAll(hints = []) {
   };
 }
 
-module.exports = { detectAll, findSteamRoots, steamLibraries, scanEpic, scanSteamOwned, scanEa, pickExe };
+module.exports = { detectAll, findSteamRoots, steamLibraries, scanEpic, scanSteamOwned, scanEa, pickExe, uninstallEntries, displayIconPath };

@@ -18,6 +18,7 @@ const gameLaunch = require('./launch');
 const procs = require('./procs');
 const verify = require('./verify');
 const catalog = require('./catalog');
+const emulators = require('./emulators');
 const news = require('./news');
 const coverart = require('./coverart');
 const logoart = require('./logoart');
@@ -1246,6 +1247,33 @@ handleAuthed('game:launch', async (_e, target) => {
   } catch { /* ignore */ }
   return res;
 });
+
+// ---------------------------------------------------------------------------
+// Emulators and ROM shelves
+// ---------------------------------------------------------------------------
+// Detection and scanning only ever read the user's own disk, so they run
+// unauthenticated: the Emulators page has to be able to tell a signed-out user
+// that nothing is installed yet. Starting an emulator is a launch, so that one
+// goes through the gate exactly like launching a game does.
+ipcMain.handle('emu:systems', () => emulators.systems());
+
+ipcMain.handle('emu:detect', async (_e, overrides) => {
+  try {
+    return { ok: true, ...(await emulators.detectEmulators(overrides || null)) };
+  } catch (err) {
+    return { ok: false, emulators: [], systems: {}, error: (err && err.message) || 'Detection failed' };
+  }
+});
+
+ipcMain.handle('emu:scan', (_e, folders, opts) => {
+  try {
+    return emulators.scanRoms(folders, opts || {});
+  } catch (err) {
+    return { ok: false, roms: [], bySystem: {}, count: 0, error: (err && err.message) || 'Scan failed' };
+  }
+});
+
+handleAuthed('emu:launch', (_e, system, romPath, opts) => emulators.launch(system, romPath, opts || {}));
 
 // --- running games ---------------------------------------------------------
 // Every game Apex starts is registered in procs.js, so STOP can terminate the
