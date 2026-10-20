@@ -295,7 +295,12 @@ function verifySteam(rec, opts = {}) {
 function verifyEpic(rec, opts = {}) {
   const deep = !!opts.deep;
   const item = rec.item || {};
-  const dir = rec.installPath || item.InstallLocation || null;
+  // Two shapes reach this function: the detection record itself, which calls the
+  // folder `installPath`, and the link Apex stores on the game, which calls it
+  // `path`. Reading only `installPath` made every stored Epic link look like it
+  // had no folder at all, so a perfectly good install reported "the install
+  // folder is gone" and lost its installed flag.
+  const dir = rec.installPath || rec.path || item.InstallLocation || null;
   const base = {
     method: 'epic',
     name: rec.name || item.DisplayName || item.AppName || null,
@@ -449,7 +454,11 @@ function summarize(report) {
     installed: !!r.installed,
     complete: !!r.complete,
     incomplete: r.state === 'incomplete',
-    missing: r.state === 'missing' || r.state === 'unknown',
+    // "Verification could not run" must not be reported as "the files are gone".
+    // Only a genuine `missing` state is allowed to cost a game its installed
+    // flag (see verifyGame in src/js/app.js).
+    missing: r.state === 'missing',
+    unknown: r.state === 'unknown',
     verifiable: r.state !== 'unverifiable',
     label,
     reason: r.reason || '',

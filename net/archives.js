@@ -438,10 +438,15 @@ async function extractWithToolAt(archivePath, destDir, format, ctx) {
     return { format, entries: null, skipped: 0 };
   }
   if (format === '7z') {
-    if (!sevenZip) {
-      throw new Error('7z archives need 7-Zip installed (or extract it and add the game manually)');
+    if (sevenZip) return runSevenZip(sevenZip, archivePath, destDir, ctx);
+    // bsdtar (libarchive) reads 7z, and Windows 10+ ships it as tar.exe — so a
+    // 7z archive no longer requires the user to go and install 7-Zip first.
+    if (bsdtar) {
+      ctx.onLog('info', `Extracting 7z with ${path.basename(bsdtar)}`);
+      await runTool(bsdtar, ['-xf', archivePath, '-C', destDir], { onLine: () => {}, onLog: ctx.onLog });
+      return { format, entries: null, skipped: 0 };
     }
-    return runSevenZip(sevenZip, archivePath, destDir, ctx);
+    throw new Error('7z archives need 7-Zip or bsdtar installed (or extract it and add the game manually)');
   }
   if (['tar', 'gz', 'bz2', 'xz'].includes(format)) {
     if (bsdtar) {

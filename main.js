@@ -10,6 +10,7 @@
 const { app, BrowserWindow, ipcMain, dialog, shell, Tray, Menu, nativeImage, globalShortcut, Notification } = require('electron');
 const path = require('path');
 const fs = require('fs');
+const { execFile } = require('child_process');
 
 const detect = require('./detect');
 const drives = require('./drives');
@@ -19,6 +20,7 @@ const procs = require('./procs');
 const verify = require('./verify');
 const catalog = require('./catalog');
 const emulators = require('./emulators');
+const emulatorCatalog = require('./emulator-catalog');
 const news = require('./news');
 const coverart = require('./coverart');
 const logoart = require('./logoart');
@@ -91,6 +93,8 @@ function defaults() {
     settings: {
       theme: 'dark',                 // dark | oled | neon
       accent: '#00a8ff',
+      // Interface language: en | es | fr | de | pt (see src/js/i18n.js).
+      lang: 'en',
       reduceMotion: false,
       minimizeToTray: true,
       hideOnMinimize: false,
@@ -1275,6 +1279,92 @@ ipcMain.handle('emu:scan', (_e, folders, opts) => {
 
 handleAuthed('emu:launch', (_e, system, romPath, opts) => emulators.launch(system, romPath, opts || {}));
 
+// Starting an emulator with no game in it is still starting a program, so it
+// goes through the same gate as a ROM launch.
+handleAuthed('emu:run', (_e, id, overrides) => emulators.run(id, overrides || null));
+
+// --- the emulator shelf ----------------------------------------------------
+// An emulator is an ordinary, legal program published by the people who write
+// it, so fetching one runs unauthenticated like the rest of this page: a user
+// who has not signed in still needs a way to get an emulator installed. Only
+// one download per emulator runs at a time, and progress is pushed back rather
+// than polled so the card can move smoothly.
+const emuJobs = new Map();
+
+const emuSend = (payload) => {
+  if (win && !win.isDestroyed()) win.webContents.send('emu:event', payload);
+};
+
+ipcMain.handle('emu:catalog', async () => {
+  try {
+    return { ok: true, emulators: await emulatorCatalog.list(), groups: emulatorCatalog.GROUPS };
+  } catch (err) {
+    return { ok: false, emulators: [], groups: emulatorCatalog.GROUPS, error: (err && err.message) || 'Could not read the emulator list' };
+  }
+});
+
+// Which downloaded emulators have a newer build waiting. Read-only, and cheap
+// in the only way that matters: it asks GitHub once per emulator Apex installed
+// itself, and not at all when the user has none.
+ipcMain.handle('emu:updates', async (_e, force) => {
+  try {
+    return await emulatorCatalog.checkUpdates(!!force);
+  } catch (err) {
+    return { ok: false, checked: 0, updates: [], error: (err && err.message) || 'Could not check for emulator updates' };
+  }
+});
+
+ipcMain.handle('emu:install', async (_e, id) => {
+  if (emuJobs.has(id)) return { ok: false, error: 'That download is already running.' };
+
+  const controller = new AbortController();
+  emuJobs.set(id, controller);
+
+  // Percent only, and only when the whole number changes: the card does not
+  // need a hundred repaints a second to look smooth.
+  let lastPct = -1;
+  const send = (payload) => emuSend({ id, ...payload });
+
+  send({ type: 'start' });
+
+  try {
+    const result = await emulatorCatalog.install(id, {
+      signal: controller.signal,
+      onLog: (level, message) => send({ type: 'log', level, message }),
+      onProgress: (p) => {
+        if (p.phase === 'download') {
+          const pct = p.total ? Math.floor((p.got / p.total) * 100) : 0;
+          if (pct === lastPct) return;
+          lastPct = pct;
+          send({ type: 'progress', phase: 'download', pct, got: p.got, total: p.total });
+        } else {
+          const pct = Math.floor(p.pct || 0);
+          if (pct === lastPct) return;
+          lastPct = pct;
+          send({ type: 'progress', phase: 'extract', pct });
+        }
+      }
+    });
+
+    send({ type: result.ok ? 'done' : 'manual', ...result });
+    return result;
+  } catch (err) {
+    const cancelled = controller.signal.aborted;
+    const message = cancelled ? 'Download cancelled.' : ((err && err.message) || 'The download failed.');
+    send({ type: 'error', message });
+    return { ok: false, error: message };
+  } finally {
+    emuJobs.delete(id);
+  }
+});
+
+ipcMain.handle('emu:cancel', (_e, id) => {
+  const controller = emuJobs.get(id);
+  if (!controller) return { ok: false, error: 'Nothing is downloading for that emulator.' };
+  controller.abort();
+  return { ok: true };
+});
+
 // --- running games ---------------------------------------------------------
 // Every game Apex starts is registered in procs.js, so STOP can terminate the
 // real process tree. Exits (natural or killed) are pushed back to the renderer
@@ -1339,6 +1429,31 @@ handleAuthed('steam:seedManifest', async (_e, target) => {
 ipcMain.handle('steam:removeManifest', (_e, file) => {
   try { return drives.removeManifest(file); }
   catch (err) { return { ok: false, error: err.message }; }
+});
+
+// The library folders Steam already knows about, for Apex Tools.
+ipcMain.handle('steam:libraries', async () => {
+  try { return { ok: true, libraries: await drives.steamLibraries() }; }
+  catch (err) { return { ok: false, error: err.message, libraries: [] }; }
+});
+
+// Closes Steam if it is open and hands steam://open/main back to the shell, so
+// the tools can pick up a folder or a manifest without a manual restart.
+ipcMain.handle('steam:restart', async () => {
+  let running = false;
+  try { running = await drives.steamRunning(); } catch { running = false; }
+  if (running && process.platform === 'win32') {
+    await new Promise((resolve) => {
+      execFile('taskkill', ['/IM', 'steam.exe', '/T'], { windowsHide: true }, () => resolve());
+    });
+    await new Promise((resolve) => setTimeout(resolve, 1500));
+  }
+  try {
+    await shell.openExternal('steam://open/main');
+    return { ok: true, restarted: running };
+  } catch (err) {
+    return { ok: false, error: err.message };
+  }
 });
 
 // Just "is Steam open right now?" - cheap enough to poll while waiting for it

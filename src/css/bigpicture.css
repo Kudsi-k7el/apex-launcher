@@ -449,6 +449,42 @@ body.big-picture #frame { visibility: hidden; }
 .bp-shelf-head { display: flex; align-items: center; gap: 12px; padding: 0 2px 10px; flex: 0 0 auto; flex-wrap: wrap; }
 .bp-shelf-head h2 { font-size: 15px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--muted); }
 .bp-shelf-head span { font-size: 12px; color: color-mix(in srgb, var(--muted) 80%, transparent); }
+
+/* --- category chooser -----------------------------------------------------
+   One row between the shelf header and the tiles. It scrolls sideways rather
+   than wrapping, so a long storefront list can never push the shelf off a
+   television. The chips are ordinary buttons, which is enough for the focus
+   ring to walk them (ArrowUp from the first tile lands here). */
+.bp-cats {
+  display: flex; align-items: center; gap: 8px; flex: 0 0 auto;
+  padding: 0 2px 12px; overflow-x: auto; scrollbar-width: none;
+}
+.bp-cats[hidden] { display: none; }
+.bp-cats::-webkit-scrollbar { display: none; }
+.bp-cats-label {
+  display: inline-flex; align-items: center; gap: 6px; margin-right: 4px;
+  font-size: 11.5px; letter-spacing: .07em; text-transform: uppercase;
+  color: var(--muted); white-space: nowrap;
+}
+.bp-cat {
+  display: inline-flex; align-items: center; gap: 8px; flex: 0 0 auto;
+  padding: 7px 14px; border-radius: 999px;
+  background: var(--panel); border: 1px solid var(--border);
+  color: var(--muted); font-size: 13px; cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s, box-shadow .15s;
+}
+.bp-cat span { white-space: nowrap; }
+.bp-cat em {
+  font-style: normal; font-size: 11px; font-variant-numeric: tabular-nums;
+  padding: 1px 6px; border-radius: 999px;
+  background: color-mix(in srgb, var(--text) 10%, transparent);
+}
+.bp-cat:hover { color: var(--text); background: var(--hover); }
+.bp-cat.on {
+  color: #04121c; background: var(--accent); border-color: var(--accent);
+  font-weight: 600; box-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent);
+}
+.bp-cat.on em { background: rgba(0, 0, 0, .18); }
 .bp-search {
   margin-left: auto;
   display: flex; align-items: center; gap: 8px;

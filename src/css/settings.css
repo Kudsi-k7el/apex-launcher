@@ -105,9 +105,69 @@
 [data-theme-preview="neon"] .tp-panel { background: #150e2b; }
 [data-theme-preview="neon"] .tp-accent { background: #ff2fd0; }
 
+/* The Lightning card is a gradient, not a flat colour, so the preview paints
+   the gradient itself and lets the translucent panel sit on top of it. */
+[data-theme-preview="lightning"] {
+  background: linear-gradient(180deg, #000000 0%, #400d0d 55%, #801717 100%);
+}
+[data-theme-preview="lightning"] .tp-side { background: #1e1e1e; }
+[data-theme-preview="lightning"] .tp-panel {
+  background: rgba(0, 0, 0, .5);
+  border: 1px solid rgba(255, 255, 255, .1);
+}
+[data-theme-preview="lightning"] .tp-accent { background: #ff3355; }
+
 .tp-text strong { display: block; font-size: 13px; }
 .tp-text small { font-size: 11px; }
 .tp-check { position: absolute; top: 12px; right: 12px; color: var(--accent); }
+
+/* --- interface picker (2.8.0 rail / 2.9.0 top row) ----------------------- */
+.ui-pick { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+
+.ui-card {
+  position: relative; text-align: left;
+  display: flex; align-items: center; gap: 12px;
+  padding: 10px 12px; border-radius: 11px;
+  background: var(--bg); border: 1px solid var(--border);
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+}
+.ui-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.ui-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+
+.ui-preview {
+  position: relative; flex-shrink: 0;
+  width: 64px; height: 44px; border-radius: 7px; overflow: hidden;
+  background: #0e1015; border: 1px solid rgba(255, 255, 255, .08);
+}
+.ui-preview i { position: absolute; display: block; border-radius: 2px; }
+.ui-28 .ui-rail { left: 0; top: 0; bottom: 0; width: 15px; background: #2b2f3a; }
+.ui-28 .ui-page { left: 19px; right: 4px; top: 4px; bottom: 4px; background: #1c202a; }
+.ui-29 .ui-top { left: 3px; right: 3px; top: 3px; height: 9px; background: #1e1e1e; }
+.ui-29 .ui-page { left: 3px; right: 3px; top: 15px; bottom: 3px; background: rgba(0, 0, 0, .45); }
+
+.ui-text strong { display: block; font-size: 13px; }
+.ui-text small { font-size: 11px; color: var(--muted); }
+.ui-card .tp-check { top: 8px; right: 10px; }
+
+/* --- language picker ----------------------------------------------------- */
+/* Smaller than the theme cards: a language needs a word, not a picture, so the
+   grid is denser and the whole set fits without scrolling. Every name is the
+   language's own - "Español", never "Spanish" - which is why the panel is
+   skipped by the translation pass. */
+.lang-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+
+.lang-card {
+  position: relative; text-align: left;
+  display: flex; flex-direction: column; gap: 2px;
+  padding: 11px 13px; border-radius: 10px;
+  background: var(--bg); border: 1px solid var(--border);
+  transition: border-color .2s, box-shadow .2s, transform .2s;
+}
+.lang-card:hover { transform: translateY(-2px); border-color: color-mix(in srgb, var(--accent) 50%, transparent); }
+.lang-card.active { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent), 0 0 18px color-mix(in srgb, var(--accent) 30%, transparent); }
+.lang-name { font-size: 13.5px; font-weight: 650; }
+.lang-card small { font-size: 11px; color: var(--muted); }
+.lang-card .tp-check { top: 10px; right: 11px; }
 
 /* --- about --------------------------------------------------------------- */
 .about { display: flex; align-items: center; gap: 16px; padding: 12px 0; flex-wrap: wrap; }

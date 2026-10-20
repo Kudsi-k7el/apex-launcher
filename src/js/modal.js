@@ -38,12 +38,22 @@ function openModal({ title, ico = 'info', body, footer = '', onMount }) {
   </div>`;
 
   root.appendChild(el);
-  requestAnimationFrame(() => el.classList.add('show'));
+  // The class goes on one frame later so the fade and lift have a first state to
+  // animate from. The timer is the belt to that braces: a window that is
+  // occluded, minimised or otherwise not producing frames can leave a dialog
+  // sitting in the DOM fully opaque-but-invisible, which is a dialog nobody can
+  // use. Marking it visible twice is harmless.
+  const reveal = () => { if (el.isConnected) el.classList.add('show'); };
+  requestAnimationFrame(reveal);
+  setTimeout(reveal, 50);
 
   el.addEventListener('click', (e) => { if (e.target === el) closeModal(); });
   el.querySelectorAll('[data-modal-close]').forEach((b) => b.addEventListener('click', closeModal));
 
   if (onMount) onMount(el);
+  // Dialog headings and bodies are assembled from the same English strings as
+  // the views, so the same pass covers them.
+  if (typeof applyI18n === 'function') applyI18n(el);
   return el;
 }
 

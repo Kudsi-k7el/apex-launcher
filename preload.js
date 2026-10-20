@@ -62,6 +62,17 @@ contextBridge.exposeInMainWorld('api', {
   emuDetect: (overrides) => ipcRenderer.invoke('emu:detect', overrides),
   emuScan: (folders, opts) => ipcRenderer.invoke('emu:scan', folders, opts),
   emuLaunch: (system, romPath, opts) => ipcRenderer.invoke('emu:launch', system, romPath, opts),
+  // Opens an installed emulator with nothing loaded, for its own menu.
+  emuRun: (id, overrides) => ipcRenderer.invoke('emu:run', id, overrides),
+
+  // The emulator shelf: which programs Apex can fetch for you, and the one
+  // download at a time that goes with it. Emulators are ordinary downloads, so
+  // none of this is gated. `onEmuEvent` carries start/progress/done/error.
+  emuCatalog: () => ipcRenderer.invoke('emu:catalog'),
+  emuUpdates: (force) => ipcRenderer.invoke('emu:updates', force),
+  emuInstall: (id) => ipcRenderer.invoke('emu:install', id),
+  emuCancel: (id) => ipcRenderer.invoke('emu:cancel', id),
+  onEmuEvent: (cb) => ipcRenderer.on('emu:event', (_e, evt) => cb(evt)),
 
   // --- itch.io (browse needs nothing; downloads use the user's own key) -----
   itchFeeds: () => ipcRenderer.invoke('itch:feeds'),
@@ -161,6 +172,8 @@ contextBridge.exposeInMainWorld('api', {
   steamProgress: () => ipcRenderer.invoke('steam:progress'),
   seedManifest: (target) => ipcRenderer.invoke('steam:seedManifest', target),
   removeManifest: (file) => ipcRenderer.invoke('steam:removeManifest', file),
+  steamLibraries: () => ipcRenderer.invoke('steam:libraries'),
+  steamRestart: () => ipcRenderer.invoke('steam:restart'),
   steamRunning: () => ipcRenderer.invoke('steam:running'),
 
   // --- uninstall / remove (see uninstall.js) -------------------------------

@@ -150,6 +150,25 @@ function epicLaunchUri(item) {
   return null;
 }
 
+/**
+ * The parts of an Epic `.item` manifest that verification needs, and nothing
+ * else. A full manifest is several KB of install bookkeeping; these are just the
+ * flags that decide whether an install is complete. Carrying them on the link
+ * means a later "Verify files" reaches the same conclusion detection did.
+ */
+function epicVerifyItem(item) {
+  const it = item || {};
+  return {
+    AppName: it.AppName || null,
+    DisplayName: it.DisplayName || null,
+    InstallLocation: it.InstallLocation || null,
+    LaunchExecutable: it.LaunchExecutable || null,
+    InstallSize: it.InstallSize || null,
+    bIsIncompleteInstall: it.bIsIncompleteInstall === true,
+    bIsApplication: it.bIsApplication
+  };
+}
+
 function scanEpic() {
   const apps = [];
   const seen = new Set();
@@ -683,9 +702,21 @@ async function detectAll(hints = []) {
 
   for (const app of epicApps) {
     const id = byTitle.get(norm(app.name));
+    // The install folder and the slim manifest travel with the link, so a later
+    // renderer-side verify has the same facts detection just used. Without them
+    // the link said "The install folder is gone" for games sitting right there.
+    const base = {
+      name: app.name,
+      path: app.installPath || null,
+      installPath: app.installPath || null,
+      item: epicVerifyItem(app.item),
+      source: 'epic',
+      verify: app.verify || null,
+      installed: app.installed
+    };
     const descriptor = app.uri
-      ? { type: 'epic', uri: app.uri, name: app.name, path: app.installPath || null, source: 'epic', verify: app.verify || null, installed: app.installed }
-      : { type: 'exe', exe: app.exe, cwd: app.installPath || null, name: app.name, path: app.installPath || null, source: 'epic', verify: app.verify || null, installed: app.installed };
+      ? { type: 'epic', uri: app.uri, ...base }
+      : { type: 'exe', exe: app.exe, cwd: app.installPath || null, ...base };
     if (id) { if (!matched[id]) matched[id] = descriptor; continue; }
     const key = `epic:${norm(app.name)}`;
     // Only offer titles we can actually start (launcher URI or a real .exe);

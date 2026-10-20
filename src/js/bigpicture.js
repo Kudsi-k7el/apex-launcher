@@ -60,6 +60,9 @@ const BP = {
   liveError: { steam: null, itch: null },
   liveFor: '',
   liveTimer: null,
+  // The category chooser's selection, kept per section so leaving the Library
+  // for Emulators and coming back does not silently change what is on show.
+  cat: { library: 'all', emulators: 'all' },
 
   isOpen: () => BP.openFlag
 };
@@ -91,9 +94,10 @@ function bpCount(n) {
  */
 function bpEntryTitle(e) {
   if (!e) return '';
+  if (e.emulator) return e.emulator.name || '';
   if (e.rom) return e.rom.title || e.rom.name || '';
   if (e.shot) return e.shot.game || e.shot.name || '';
-  if (e.tool) return e.it.name || '';
+  if (e.it) return e.it.name || '';
   const g = e.game || (e.id && byId(e.id));
   return (g && g.title) || (e.news && e.news.title) || '';
 }
@@ -131,17 +135,17 @@ function bpEntries(tab) {
       out.push({ kind: 'nexus', key: it.id, id: it.id, it, game: ltAsGame(it) });
     }
   } else if (tab === 'emulators') {
-    // Ordered by console, not by the order the disk walk happened to find files
-    // in: a shelf that interleaves a Mega Drive and a Game Boy reads as noise.
-    const bySystem = (emu.scan && emu.scan.bySystem) || {};
-    const keys = Object.keys(bySystem).sort((a, b) => {
-      const ga = emuSystem(a).group || '';
-      const gb = emuSystem(b).group || '';
-      if (ga !== gb) return ga.localeCompare(gb);
-      return String(emuSystem(a).label).localeCompare(String(emuSystem(b).label));
-    });
-    for (const key of keys) {
-      for (const rom of bySystem[key]) out.push({ kind: 'rom', key: rom.path, id: rom.path, rom });
+    out = bpEmulatorItems();
+    // The console-family chooser above the shelf. ROMs are grouped by their
+    // system's family; an emulator carries its own group from the catalogue.
+    const cat = BP.cat.emulators || 'all';
+    if (cat !== 'all') {
+      out = out.filter((e) => {
+        const group = e.kind === 'emulator'
+          ? (e.emulator && e.emulator.group)
+          : (typeof emuSystem === 'function' && e.rom ? emuSystem(e.rom.system).group : null);
+        return group === cat;
+      });
     }
   } else if (tab === 'gallery') {
     const shots = (galleryShots && galleryShots.shots) || [];
@@ -151,7 +155,11 @@ function bpEntries(tab) {
   } else if (bpIsInfo(tab)) {
     out = [];
   } else {
-    const games = tab === 'store' ? storeGames() : [...installedGames(), ...preorderedGames()];
+    // The Library's chooser cuts by storefront. The Store section is a single
+    // storefront already and has no such row, so the filter stays off there.
+    const cat = tab === 'library' ? (BP.cat.library || 'all') : 'all';
+    const games = tab === 'store' ? storeGames() : [...installedGames(), ...preorderedGames()]
+      .filter((g) => cat === 'all' || (typeof platformTag === 'function' && platformTag(g) === cat));
     const seen = new Set();
     for (const g of games) {
       if (!g || seen.has(g.id)) continue;
@@ -604,6 +612,60 @@ function bpHeroRom(e) {
     </div>`;
 }
 
+function bpHeroEmulator(e) {
+  const it = e.emulator;
+  const upd = e.update || null;
+  const systems = it.systems || [];
+  const sys = systems.slice(0, 4).map((k) => emuSystem(k).label).join(', ') + (systems.length > 4 ? ` +${systems.length - 4}` : '');
+  const size = (typeof emuMb === 'function') ? emuMb(it.mb) : '';
+
+  const meta = [
+    sys ? `<span>${icon('gamepad', 13)} ${esc(sys)}</span>` : '',
+    it.installed && it.version ? `<span>${icon('cpu', 13)} ${esc(it.version)}</span>` : '',
+    it.installed && !it.version ? `<span>${icon('cpu', 13)} Installed</span>` : '',
+    !it.installed && size ? `<span>${icon('download', 13)} ${esc(size)}</span>` : ''
+  ].filter(Boolean).join('<i class="bp-sep"></i>');
+
+  // A page button only where there is a page: an entry can be listed with nothing
+  // to fetch and nowhere safe to send anyone, and a button that opens nothing is
+  // worse than no button at all.
+  const pageBtn = (label) => (it.page
+    ? `<button class="btn secondary" data-bp-emupage="${esc(it.page)}">${icon('external', 15)} ${label}</button>`
+    : '');
+
+  // "Later" leaves the newer build on the shelf, but it should not keep the
+  // headline: once the question has been answered, playing is the main verb and
+  // the update is the second button.
+  const waved = it.installed && typeof emuSkipUpdate === 'function' && emuSkipUpdate(it.id);
+  const actions = it.installed
+    ? `${upd ? `<button class="btn ${waved ? 'secondary' : 'primary glow'}" data-bp-emuget="${esc(it.id)}">${icon('refresh', 15)} ${waved ? 'Update' : 'Update now'}</button>` : ''}
+       <button class="btn ${upd && !waved ? 'secondary' : 'primary glow'}" data-bp-emurun="${esc(it.id)}">${icon('play', 15)} Launch</button>
+       ${pageBtn('Project page')}`
+    : `${it.auto
+        ? `<button class="btn primary glow" data-bp-emuget="${esc(it.id)}">${icon('download', 15)} Download${size ? ` ${esc(size)}` : ''}</button>`
+        : ''}
+       ${pageBtn('Open the download page')}`;
+
+  const note = upd
+    ? (upd.version
+      ? emuStage('A newer build is out: {tag} \u2014 you have {have}.', { tag: upd.latest, have: upd.version })
+      : emuStage('A newer build is out: {tag}.', { tag: upd.latest }))
+    : (it.blurb || '');
+
+  return `
+    <div class="bp-hero-bg bp-hero-flat"></div>
+    <div class="bp-hero-veil"></div>
+    <div class="bp-hero-inner bp-hero-solo">
+      <div class="bp-hero-info">
+        <div class="bp-eyebrow">${icon(upd ? 'refresh' : 'cpu', 12)} Emulator${it.group ? ` <i class="bp-sep"></i> ${esc(it.group)}` : ''}${upd ? ' <i class="bp-sep"></i> Update ready' : ''}</div>
+        <h1 class="bp-h1-news">${esc(it.name)}</h1>
+        <div class="bp-meta">${meta}</div>
+        <p class="bp-blurb">${esc(note)}</p>
+        <div class="bp-actions">${actions}</div>
+      </div>
+    </div>`;
+}
+
 function bpHeroShot(e) {
   const s = e.shot;
   const dims = (s.width && s.height) ? `${s.width} \u00d7 ${s.height}` : '';
@@ -752,6 +814,7 @@ function bpRenderInfo() {
   const hero = document.getElementById('bp-hero');
   if (!hero) return;
   hero.innerHTML = BP.tab === 'contact' ? bpInfoContact() : bpInfoProfile();
+  bpI18n();
 }
 
 /** Reads the hero's screenshot at full thumb size, once the panel is on screen. */
@@ -787,6 +850,7 @@ function bpRenderHero() {
   else if (e.kind === 'itch') { hero.innerHTML = bpHeroItch(e); g = e.game; }
   else if (e.kind === 'nexus') { hero.innerHTML = bpHeroNexus(e); g = e.game; }
   else if (e.kind === 'rom') { hero.innerHTML = bpHeroRom(e); }
+  else if (e.kind === 'emulator') { hero.innerHTML = bpHeroEmulator(e); }
   else if (e.kind === 'shot') { hero.innerHTML = bpHeroShot(e); bpHydrateHeroShot(e); }
   else if (e.kind === 'tool') { hero.innerHTML = bpHeroTool(e); }
   else if (e.kind === 'news') { hero.innerHTML = bpHeroNews(e.news); }
@@ -861,6 +925,44 @@ function bpTileHtml(e, i) {
     </button>`;
   }
 
+  if (e.kind === 'emulator') {
+    const it = e.emulator;
+    const upd = e.update || null;
+    const job = (typeof emu !== 'undefined' && emu.installs) ? emu.installs[it.id] : null;
+    const systems = it.systems || [];
+    const sys = systems.slice(0, 2).map((k) => emuSystem(k).label).join(', ') + (systems.length > 2 ? ` +${systems.length - 2}` : '');
+
+    let tag;
+    if (job) {
+      const pct = Math.max(0, Math.min(100, Math.round(job.pct || 0)));
+      tag = `<em class="bp-tag ${job.phase === 'extract' ? '' : 'ok'}">${icon(job.phase === 'extract' ? 'hourglass' : 'download', 11)} ${pct}%</em>`;
+    } else if (upd) {
+      tag = `<em class="bp-tag ok">${icon('refresh', 11)} Update</em>`;
+    } else if (it.installed) {
+      tag = `<em class="bp-tag ok">${icon('checkCircle', 11)} Ready</em>`;
+    } else if (it.auto) {
+      tag = `<em class="bp-tag dim">${icon('download', 11)} Get</em>`;
+    } else if (it.page) {
+      tag = `<em class="bp-tag dim">${icon('external', 11)} Page</em>`;
+    } else {
+      tag = '';
+    }
+
+    const sub = job ? (job.phase === 'extract' ? 'Unpacking' : 'Downloading')
+      : upd ? (upd.version ? `Have ${upd.version}` : 'A newer build is out')
+        : it.installed ? (it.version || 'Installed')
+          : sys || 'Emulator';
+
+    return `<button class="bp-tile plate${sel}" data-bp="tile" data-idx="${i}" title="${esc(it.name)}">
+      <span class="bp-tile-art plate">
+        <span class="bp-plate-ext">${icon('cpu', 26)}</span>
+        ${tag}
+      </span>
+      <span class="bp-tile-name">${esc(it.name)}</span>
+      <span class="bp-tile-sub">${esc(sub)}</span>
+    </button>`;
+  }
+
   if (e.kind === 'rom') {
     const rom = e.rom;
     const target = (typeof emuFor === 'function') ? emuFor(rom.system) : null;
@@ -915,6 +1017,82 @@ function bpTileHtml(e, i) {
     <span class="bp-tile-name">${esc(g.title)}</span>
   </button>`;
 }
+
+/**
+ * The chooser's contents for whichever section is on screen.
+ *
+ * Two sections have a second axis worth cutting along: the Library by the
+ * storefront a game came from, and Emulators by console family. Both are built
+ * from what is actually present, so a storefront with nothing behind it never
+ * appears, and a section with a single category gets no row at all.
+ *
+ * Everything here is deliberately unfiltered: the counts have to describe the
+ * whole section, not the slice the chooser has already narrowed it to.
+ */
+function bpCatList() {
+  if (BP.tab === 'library') {
+    const counts = new Map();
+    for (const g of [...installedGames(), ...preorderedGames()]) {
+      const key = typeof platformTag === 'function' ? platformTag(g) : null;
+      if (key && PLATFORM_META[key]) counts.set(key, (counts.get(key) || 0) + 1);
+    }
+    if (!counts.size) return [];
+    const out = [{ key: 'all', label: t('All'), count: [...counts.values()].reduce((n, v) => n + v, 0) }];
+    const sorted = [...counts.entries()]
+      .sort((a, b) => PLATFORM_META[a[0]].label.localeCompare(PLATFORM_META[b[0]].label));
+    for (const [key, count] of sorted) {
+      out.push({ key, label: PLATFORM_META[key].label, ico: PLATFORM_META[key].ico, count });
+    }
+    return out;
+  }
+
+  if (BP.tab === 'emulators') {
+    if (typeof emuCatalogView !== 'function') return [];
+    const items = bpEmulatorItems();
+    const counts = new Map();
+    for (const e of items) {
+      const group = e.kind === 'emulator'
+        ? (e.emulator && e.emulator.group)
+        : (typeof emuSystem === 'function' && e.rom ? emuSystem(e.rom.system).group : null);
+      if (group) counts.set(group, (counts.get(group) || 0) + 1);
+    }
+    if (!counts.size) return [];
+    const out = [{ key: 'all', label: t('All consoles'), count: items.length }];
+    for (const g of EMU_GROUPS) if (counts.has(g)) out.push({ key: g, label: g, count: counts.get(g) });
+    return out;
+  }
+
+  return [];
+}
+
+/** Draws the chooser row, or takes it out of the layout when there is nothing to choose. */
+function bpRenderCats() {
+  const host = document.getElementById('bp-cats');
+  if (!host) return;
+  const cats = bpIsInfo(BP.tab) ? [] : bpCatList();
+  if (cats.length < 2) { host.hidden = true; host.innerHTML = ''; return; }
+  host.hidden = false;
+  const on = BP.cat[BP.tab] || 'all';
+  const label = BP.tab === 'library' ? t('Stores') : t('Consoles');
+  host.innerHTML = `<span class="bp-cats-label">${icon('filter', 13)}<span>${esc(label)}</span></span>`
+    + cats.map((c) => `<button class="bp-cat${c.key === on ? ' on' : ''}" data-bp="cat" data-cat="${esc(c.key)}">
+      ${c.ico ? icon(c.ico, 14) : ''}<span>${esc(c.label)}</span><em>${c.count}</em></button>`).join('');
+}
+
+/**
+ * Applies a chooser chip and keeps the ring on that chip: the row is one
+ * left/right run, so moving along it and pressing again is the whole gesture.
+ */
+BP.setCat = function (key) {
+  if (!key || (BP.cat[BP.tab] || 'all') === key) return;
+  BP.cat[BP.tab] = key;
+  BP.index = 0;
+  bpBuild();
+  const chips = [...document.querySelectorAll('#bp-cats [data-cat]')];
+  const chip = chips.find((b) => b.dataset.cat === key);
+  if (chip) Focus.set(chip, { src: 'bp', sound: false });
+  else BP.focusTile();
+};
 
 function bpRenderShelf() {
   const shelf = document.getElementById('bp-shelf');
@@ -994,15 +1172,30 @@ BP.focusRing = function () {
 // ---------------------------------------------------------------------------
 // Full rebuild
 // ---------------------------------------------------------------------------
+/**
+ * Big Picture's own text, translated after each rebuild.
+ *
+ * The mode is redrawn piece by piece - tabs, hero, shelf, legend, the power
+ * menu, the settings sheet - rather than through one entry point, and the shelf
+ * is rebuilt again on every download tick, so each of those ends with this
+ * rather than the desktop views' single pass in `render()`.
+ */
+function bpI18n() {
+  if (typeof applyI18n !== 'function') return;
+  applyI18n(document.getElementById('bigpic') || document.body);
+}
+
 function bpBuild() {
   BP.entries = bpEntries(BP.tab);
   if (BP.index >= BP.entries.length) BP.index = Math.max(0, BP.entries.length - 1);
   bpRenderTabs();
   bpRenderShelf();
+  bpRenderCats();
   bpRenderHero();
   bpApplySectionShape();
   bpRenderStatus();
   bpRenderFoot();
+  bpI18n();
 }
 
 /** Page sections have no shelf, so the shelf block is taken out of the layout. */
@@ -1019,15 +1212,18 @@ BP.refresh = function () {
   if (BP.index >= BP.entries.length) BP.index = Math.max(0, BP.entries.length - 1);
   bpRenderTabs();
   bpRenderShelf();
+  bpRenderCats();
   bpRenderHero();
   bpApplySectionShape();
   bpRenderStatus();
   if (hadRing) BP.focusTile();
+  bpI18n();
 };
 
 BP.refreshHints = function () {
   bpRenderFoot();
   bpRenderStatus();
+  bpI18n();
 };
 
 /** Big Picture's news shelf reads State.news; fetch it if it is still empty. */
@@ -1093,15 +1289,109 @@ function bpToolItems() {
 }
 
 /**
+ * The Emulators section's shelf.
+ *
+ * It leads with what the user can act on: the emulators Apex downloaded - each
+ * one either ready to start or offering a newer build - and then the ROMs
+ * already on disk. The rest of the catalogue follows, so a machine with no ROM
+ * folders configured yet still has something to browse and something to press,
+ * instead of an empty shelf that reads like the section is broken.
+ */
+function bpEmulatorItems() {
+  const out = [];
+  if (typeof emuCatalogView !== 'function') return out;
+  const shelf = emuCatalogView();
+  const updates = (typeof emu !== 'undefined' && emu.updates) ? emu.updates : {};
+  const owned = new Set();
+
+  for (const e of shelf) {
+    if (!e.installed) continue;
+    owned.add(e.id);
+    out.push({ kind: 'emulator', key: `e:${e.id}`, id: e.id, emulator: e, installed: true, update: updates[e.id] || null });
+  }
+
+  const roms = (typeof emu !== 'undefined' && emu.scan && Array.isArray(emu.scan.roms)) ? emu.scan.roms : [];
+  for (const rom of roms) out.push({ kind: 'rom', key: `r:${rom.path}`, id: rom.path, rom });
+
+  for (const e of shelf) {
+    if (owned.has(e.id)) continue;
+    out.push({ kind: 'emulator', key: `e:${e.id}`, id: e.id, emulator: e, installed: false, update: null });
+  }
+  return out;
+}
+
+/** The emulator behind a shelf entry, for a hero button. */
+function bpFindEmulator(id) {
+  const e = BP.entries.find((x) => x.kind === 'emulator' && x.id === id);
+  return e ? e.emulator : null;
+}
+
+/**
+ * Starts an installed emulator with no game in it, from Big Picture. The launch
+ * itself lives in the Emulators view's own state, so both surfaces share it.
+ */
+function bpEmuRun(id) {
+  SFX.play('select');
+  if (typeof emuStart === 'function') { emuStart(id); return; }
+  toast('The emulator would not start.', 'warn');
+}
+
+/** Downloads, or updates, one catalogue entry from Big Picture. */
+function bpEmuGet(id) {
+  SFX.play('select');
+  if (typeof emuGet !== 'function') return;
+  const upd = (typeof emu !== 'undefined' && emu.updates) ? emu.updates[id] : null;
+  const name = (bpFindEmulator(id) || {}).name || 'The emulator';
+  toast(typeof emuStage === 'function'
+    ? emuStage(upd ? 'Updating {name}' : 'Downloading {name}', { name })
+    : `${upd ? 'Updating' : 'Downloading'} ${name}`, 'info');
+  emuGet(id);
+}
+
+/** What double-clicking an emulator tile does: the tile's own headline action. */
+function bpEmulatorAct(id) {
+  const upd = (typeof emu !== 'undefined' && emu.updates) ? emu.updates[id] : null;
+  // An update that was waved away with "Later" stays on the shelf, so the
+  // headline action goes back to playing it instead of downloading again.
+  const waved = typeof emuSkipUpdate === 'function' && emuSkipUpdate(id);
+  if (upd && !waved) { bpEmuGet(id); return; }
+  const e = bpFindEmulator(id);
+  if (!e) return;
+  if (e.installed) { bpEmuRun(id); return; }
+  if (e.auto) { bpEmuGet(id); return; }
+  // Nothing of Apex's to install and perhaps no page either: play the press and
+  // let the hero's description do the talking rather than opening nothing.
+  SFX.play('select');
+  if (e.page) {
+    try { window.api.openExternal(e.page); } catch { /* nothing to do */ }
+  }
+}
+
+/**
+ * Keeps the Emulators shelf honest while an emulator downloads, whichever
+ * surface started it. Progress arrives several times a second, so the shelf is
+ * only rebuilt when it would actually look different.
+ */
+let bpEmuPaintAt = 0;
+function bpEmuChanged(id) {
+  if (typeof BP === 'undefined' || !BP.openFlag || BP.tab !== 'emulators') return;
+  const busy = !!(typeof emu !== 'undefined' && emu.installs && emu.installs[id]);
+  const now = Date.now();
+  if (busy && now - bpEmuPaintAt < 400) return;
+  bpEmuPaintAt = now;
+  BP.refresh();
+}
+
+/**
  * Big Picture's Emulators shelf is the ROM scan the Emulators view already knows
- * how to run. Nothing is rescanned once a scan exists, so moving between
- * sections never walks the disk again; the view's own refresh button is still
- * the way to ask for a fresh look.
+ * how to run, plus the catalogue behind it. Nothing is rescanned once a scan
+ * exists, so moving between sections never walks the disk again; the view's own
+ * refresh button is still the way to ask for a fresh look.
  */
 function bpEnsureEmulators() {
   if (BP.tab !== 'emulators') return;
   if (typeof emu === 'undefined' || typeof emuRefresh !== 'function') return;
-  if (emu.scan && emu.systems && emu.map) return;
+  if (emu.scan && emu.systems && emu.map && emu.catalog) return;
   emuLoadState();
   Promise.resolve(emuRefresh(null, { detect: true })).then(() => {
     if (BP.isOpen() && BP.tab === 'emulators') { bpBuild(); BP.focusTile(); }
@@ -1220,6 +1510,7 @@ BP.renderOverlay = function () {
         ${bpOverlayRow('quit', 'power', 'Quit Apex Launcher', 'Closes the launcher', ' danger')}
       </div>
     </div>`;
+  bpI18n();
 };
 
 BP.openOverlay = function () {
@@ -1334,6 +1625,7 @@ BP.renderSettings = function () {
         </button>
       </div>
     </div>`;
+  bpI18n();
 };
 
 BP.openSettings = function () {
@@ -1568,6 +1860,9 @@ BP.toggle = function () {
     const tab = e.target.closest('[data-bp="tab"]');
     if (tab) { SFX.play('tab'); BP.setTab(tab.dataset.tab); return; }
 
+    const cat = e.target.closest('[data-bp="cat"]');
+    if (cat) { SFX.play('tab'); BP.setCat(cat.dataset.cat); return; }
+
     const tile = e.target.closest('[data-bp="tile"]');
     if (tile) { SFX.play('move'); BP.select(Number(tile.dataset.idx)); return; }
 
@@ -1605,6 +1900,22 @@ BP.toggle = function () {
     // console belongs to.
     const rom = e.target.closest('[data-bp-rom]');
     if (rom) { SFX.play('select'); bpLaunchRom(rom.dataset.bpRom, rom.dataset.path); return; }
+
+    // The Emulators shelf: starting one, taking the newer build it is offering,
+    // and opening the project's own page all go through the same functions the
+    // Emulators view uses.
+    const emuRun = e.target.closest('[data-bp-emurun]');
+    if (emuRun) { bpEmuRun(emuRun.dataset.bpEmurun); return; }
+
+    const emuGet = e.target.closest('[data-bp-emuget]');
+    if (emuGet) { bpEmuGet(emuGet.dataset.bpEmuget); return; }
+
+    const emuPage = e.target.closest('[data-bp-emupage]');
+    if (emuPage) {
+      SFX.play('select');
+      try { window.api.openExternal(emuPage.dataset.bpEmupage); } catch { /* nothing to do */ }
+      return;
+    }
 
     const reveal = e.target.closest('[data-bp-reveal]');
     if (reveal) {
@@ -1749,6 +2060,7 @@ function bpActivateIndex(i) {
   if (e.kind === 'itch') { itchOpenDialog(e.it); return; }
   if (e.kind === 'nexus') { ltOpenDialog(e.it); return; }
   if (e.kind === 'rom') { bpLaunchRom(e.rom.system, e.rom.path); return; }
+  if (e.kind === 'emulator') { bpEmulatorAct(e.id); return; }
   if (e.kind === 'tool') {
     if (typeof fxOpenInfo === 'function') fxOpenInfo(e.it, e.it.kind);
     return;

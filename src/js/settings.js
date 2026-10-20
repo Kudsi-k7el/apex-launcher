@@ -19,7 +19,7 @@ const State = {
   artAuto: {},         // per-game artwork resolved from the web (never overrides `art`)
   logoAuto: {},        // per-game transparent wordmark resolved from the web
   installDirs: {},     // per-game install folders chosen in the installer
-  local: { installs: {}, roots: {}, stores: {} },
+  local: { installs: {}, roots: {}, stores: {}, detected: {} },
   profile: { name: '', avatar: null, avatarUrl: null, bio: '' },
   news: { items: [], fetchedAt: null, lang: 'fr' },
   verify: {},          // last real file-verification report per game id
@@ -29,6 +29,7 @@ const State = {
 };
 
 const THEMES = {
+  lightning: { label: 'Project Apex', desc: 'Black into deep red, with a warm red accent', accent: '#ff3355' },
   dark: { label: 'Dark', desc: 'Balanced dark grey', accent: '#00a8ff' },
   oled: { label: 'Pitch Black OLED', desc: 'True black for OLED panels', accent: '#00a8ff' },
   neon: { label: 'Neon Accent', desc: 'Violet glow, vivid highlights', accent: '#ff2fd0' }
@@ -44,9 +45,13 @@ const BANDWIDTHS = [
 
 function applySettings() {
   const s = State.settings;
-  const theme = THEMES[s.theme] ? s.theme : 'dark';
+  const theme = THEMES[s.theme] ? s.theme : 'lightning';
   const root = document.documentElement;
   root.setAttribute('data-theme', theme);
+  // Which shell the window wears. The palette and the shell are separate
+  // choices: 2.8.0 is the sidebar rail, 2.9.0 the Project Lightning layout, and
+  // either one can be worn with any theme.
+  root.setAttribute('data-ui', s.ui === '2.8' ? '2.8' : '2.9');
   root.style.setProperty('--accent', s.accent || THEMES[theme].accent);
   root.classList.toggle('reduce-motion', !!s.reduceMotion);
 
@@ -63,6 +68,29 @@ function applySettings() {
 
 async function persist() {
   try { await window.api.saveState(State); } catch { /* renderer can keep running */ }
+}
+
+/**
+ * One-time move onto the Project Lightning shell.
+ *
+ * Changing the default alone would not move an existing install: every saved
+ * state carries its own `theme`, and most carry an `accent` written when the
+ * theme was picked. `look` records that the new shell has been introduced once;
+ * after that, whatever the user chooses - including going back to Dark - is
+ * theirs and is never overwritten again.
+ *
+ * The old default blue is the one accent that gets cleared. It was written by
+ * the theme picker rather than chosen as a colour, and left in place it would
+ * paint over Lightning's own red. A custom accent is left exactly as it is.
+ */
+function migrateLook() {
+  const s = State.settings || (State.settings = {});
+  if (s.look === 'lightning') return false;
+  s.look = 'lightning';
+  s.theme = 'lightning';
+  s.ui = '2.9';
+  if (!s.accent || String(s.accent).toLowerCase() === '#00a8ff') s.accent = '';
+  return true;
 }
 
 // ---------------------------------------------------------------------------
@@ -159,16 +187,42 @@ function renderSettings(el) {
     <section class="panel">
       <h3>Appearance</h3>
       <div class="setting-row col">
+        <div class="s-text wide"><h4>Interface language</h4><p>Menus, buttons and labels across Apex Launcher</p></div>
+        <div class="lang-grid" data-i18n-skip>
+          ${I18N_LANGS.map((l) => `
+            <button class="lang-card ${currentLang() === l.code ? 'active' : ''}" data-lang-pick="${l.code}">
+              <span class="lang-name">${esc(l.native)}</span>
+              <small>${esc(l.name)}</small>
+              <span class="tp-check">${currentLang() === l.code ? icon('check', 15) : ''}</span>
+            </button>`).join('')}
+        </div>
+      </div>
+      <div class="setting-row col">
         <div class="s-text wide"><h4>Theme</h4><p>Pick the overall look of Apex Launcher</p></div>
         <div class="theme-grid">
           ${Object.entries(THEMES).map(([k, t]) => `
-            <button class="theme-card ${(s.theme || 'dark') === k ? 'active' : ''}" data-theme-pick="${k}">
+            <button class="theme-card ${(s.theme || 'lightning') === k ? 'active' : ''}" data-theme-pick="${k}">
               <span class="theme-preview" data-theme-preview="${k}">
                 <i class="tp-side"></i><i class="tp-panel"></i><i class="tp-accent"></i><i class="tp-panel2"></i>
               </span>
               <span class="tp-text"><strong>${t.label}</strong><small>${t.desc}</small></span>
-              <span class="tp-check">${(s.theme || 'dark') === k ? icon('check', 15) : ''}</span>
+              <span class="tp-check">${(s.theme || 'lightning') === k ? icon('check', 15) : ''}</span>
             </button>`).join('')}
+        </div>
+      </div>
+      <div class="setting-row col">
+        <div class="s-text wide"><h4>Interface</h4><p>Pick the shell: 2.8.0 keeps the sidebar on the left, 2.9.0 is the Project Apex layout with the sections across the top</p></div>
+        <div class="ui-pick" role="group" aria-label="Interface version">
+          <button class="ui-card ${s.ui === '2.8' ? 'active' : ''}" data-ui-pick="2.8">
+            <span class="ui-preview ui-28"><i class="ui-rail"></i><i class="ui-page"></i></span>
+            <span class="ui-text"><strong>2.8.0 UI</strong><small>Sidebar on the left</small></span>
+            <span class="tp-check">${s.ui === '2.8' ? icon('check', 15) : ''}</span>
+          </button>
+          <button class="ui-card ${s.ui !== '2.8' ? 'active' : ''}" data-ui-pick="2.9">
+            <span class="ui-preview ui-29"><i class="ui-top"></i><i class="ui-page"></i></span>
+            <span class="ui-text"><strong>2.9.0 UI</strong><small>Sections across the top</small></span>
+            <span class="tp-check">${s.ui !== '2.8' ? icon('check', 15) : ''}</span>
+          </button>
         </div>
       </div>
       <div class="setting-row">
@@ -841,6 +895,15 @@ function renderSettings(el) {
     volRange.addEventListener('change', () => persist());
   }
 
+  // interface picker: the shell, not the palette
+  el.querySelectorAll('[data-ui-pick]').forEach((card) => card.addEventListener('click', async () => {
+    State.settings.ui = card.dataset.uiPick;
+    applySettings();
+    await persist();
+    renderSettings(el);
+    toast(State.settings.ui === '2.8' ? 'The 2.8.0 interface is on' : 'The 2.9.0 interface is on', 'check');
+  }));
+
   // theme picker
   el.querySelectorAll('[data-theme-pick]').forEach((card) => card.addEventListener('click', async () => {
     const key = card.dataset.themePick;
@@ -850,6 +913,17 @@ function renderSettings(el) {
     await persist();
     renderSettings(el);
     toast(`${THEMES[key].label} theme applied`, 'check');
+  }));
+
+  // language picker: this is the one setting that changes the page it sits on,
+  // so it re-renders the view (setLang does that) instead of patching labels.
+  el.querySelectorAll('[data-lang-pick]').forEach((card) => card.addEventListener('click', () => {
+    const code = card.dataset.langPick;
+    if (code === currentLang()) return;
+    const lang = I18N_LANGS.find((l) => l.code === code);
+    SFX.play('select');
+    setLang(code);
+    toast(`${lang ? lang.native : code} \u2014 ${t('Interface language updated')}`, 'check');
   }));
 
   // accent color

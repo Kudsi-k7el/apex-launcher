@@ -6,7 +6,7 @@
   <meta name="application-name" content="Apex Launcher">
   <meta name="description" content="Apex Launcher - your games, one place.">
   <meta name="color-scheme" content="dark">
-  <title>Apex Launcher</title>
+  <title>Project Apex</title>
   <link rel="stylesheet" href="css/style.css">
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/banner.css">
@@ -35,6 +35,8 @@
   <link rel="stylesheet" href="css/changelog.css">
   <link rel="stylesheet" href="css/contact.css">
   <link rel="stylesheet" href="css/emulators.css">
+  <link rel="stylesheet" href="css/home.css">
+  <link rel="stylesheet" href="css/apextools.css">
   <link rel="stylesheet" href="css/auth.css">
 </head>
 <body>
@@ -112,7 +114,7 @@
   <header id="titlebar">
     <div class="brand">
       <span class="logo" data-icon="flame" data-size="17"></span>
-      <span class="brand-text"><b>APEX</b> LAUNCHER</span>
+      <span class="brand-text"><b>PROJECT</b> APEX</span>
     </div>
 
     <!-- unified search: filters the Store, itch.io and the library at once -->
@@ -182,16 +184,16 @@
       </div>
 
       <span class="side-label">Browse</span>
-      <button class="tab active" data-view="store"><span data-icon="store"></span><span>Store</span></button>
+      <button class="tab active" data-view="home"><span data-icon="flame"></span><span>Home</span></button>
+      <button class="tab" data-view="store"><span data-icon="store"></span><span>Store</span></button>
       <button class="tab" data-view="library"><span data-icon="library"></span><span>Library</span></button>
       <button class="tab" data-view="itch"><span data-icon="flame"></span><span>itch.io</span></button>
       <button class="tab" data-view="lightning"><span data-icon="zap"></span><span>Nexus</span></button>
-      <button class="tab" data-view="emulators"><span data-icon="gamepad"></span><span>Emulators</span></button>
+      <button class="tab" data-view="emulators"><span data-icon="gamepad"></span><span>Emulators</span><em class="tab-badge" id="nav-emu-badge"></em></button>
 
-      <button class="tab" data-view="news"><span data-icon="news"></span><span>News</span></button>
       <span class="side-label">Downloads</span>
       <button class="tab" data-view="downloads"><span data-icon="download"></span><span>Downloads</span><em class="tab-badge" id="nav-dl-badge"></em></button>
-      <button class="tab" data-view="tools"><span data-icon="shield"></span><span>Tools</span></button>
+      <button class="tab" data-view="tools"><span data-icon="cpu"></span><span>Apex Tools</span></button>
 
       <span class="side-label">You</span>
       <button class="tab" data-view="profile"><span data-icon="user"></span><span>Profile</span></button>
@@ -309,6 +311,7 @@
           <input id="bp-search-input" type="search" placeholder="Search this section…" spellcheck="false" autocomplete="off">
         </div>
       </div>
+      <div class="bp-cats" id="bp-cats" hidden></div>
       <div class="bp-shelf" id="bp-shelf"></div>
     </section>
 
@@ -322,6 +325,10 @@
   <script src="js/sfx.js"></script>
   <script src="js/banner.js"></script>
   <script src="js/data.js"></script>
+  <!-- The dictionaries load first: i18n.js reads them, and a `const` read before
+       its file has run throws rather than returning undefined. -->
+  <script src="js/i18n-strings.js"></script>
+  <script src="js/i18n.js"></script>
   <script src="js/presence.js"></script>
   <script src="js/views.js"></script>
   <script src="js/settings.js"></script>
@@ -332,6 +339,8 @@
   <script src="js/install.js"></script>
   <script src="js/detail.js"></script>
   <script src="js/news.js"></script>
+<script src="js/home.js"></script>
+<script src="js/apextools.js"></script>
   <script src="js/profile.js"></script>
   <script src="js/achieve.js"></script>
   <script src="js/gallery.js"></script>

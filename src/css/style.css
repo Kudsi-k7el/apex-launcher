@@ -40,6 +40,27 @@
   --muted: #9d8fc4;
 }
 
+/*
+ * Lightning: the palette Project Lightning's WPF window is built on. Black
+ * falls into deep red behind a single translucent card; the rail is the same
+ * near-black the original uses (#1E1E1E) with #333 hovers. The accent is
+ * pulled back from the gradient's #801717 so small text on it still reads.
+ */
+[data-theme="lightning"] {
+  --accent: #ff3355;
+  --bg: #0a0405;
+  --bg2: #050202;
+  --panel: #1d1718;
+  --side: #1e1e1e;
+  --hover: #333333;
+  --border: #2c2425;
+  --text: #f4eeee;
+  --muted: #a29495;
+  --rail-w: 78px;
+  --rail-open: 232px;
+  --sidebar-w: 232px;
+}
+
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; overflow: hidden; }
 
@@ -298,12 +319,35 @@ code { font-family: 'Cascadia Code', Consolas, monospace; }
 
 /* --- view transitions ---------------------------------------------------- */
 #content { scroll-behavior: smooth; }
-#content.view-swap { animation: viewSwap .34s var(--ease); }
+#content.view-swap { animation: viewSwap .42s var(--ease); }
 @keyframes viewSwap {
-  from { opacity: 0; transform: translateY(14px) scale(.997); filter: blur(2px); }
+  from { opacity: 0; transform: translateY(16px) scale(.996); filter: blur(3px); }
   to { opacity: 1; transform: none; filter: none; }
 }
 .reduce-motion #content.view-swap { animation: none; }
+
+/* --- smooth movement -----------------------------------------------------
+   One place for the small transitions the whole shell shares, so a hover
+   anywhere reads the same. Everything here is cancelled by .reduce-motion. */
+.tab,
+.fx-tab,
+.btn,
+.chip,
+.card,
+.news-card,
+.home-btn,
+.ap-tile,
+.home-tile,
+.home-more {
+  transition-timing-function: var(--ease);
+}
+#sidebar .tab { will-change: color, border-color; }
+.card, .home-tile, .ap-tile, .nb-card { will-change: transform; }
+
+@media (prefers-reduced-motion: reduce) {
+  #content { scroll-behavior: auto; }
+  #content.view-swap { animation: none; }
+}
 
 /* --- custom background picture (Settings > Background) ------------------- */
 #bg-layer,
@@ -342,4 +386,158 @@ code { font-family: 'Cascadia Code', Consolas, monospace; }
 .has-bg .dl-summary {
   background-color: color-mix(in srgb, var(--panel) 84%, transparent);
   backdrop-filter: blur(3px);
+}
+
+/* =========================================================================
+   Project Lightning shell
+   -------------------------------------------------------------------------
+   Apex's own markup dressed as the Lightning window: the black-to-red
+   gradient behind everything, the title line at the top, the centred row of
+   sections under it, and the page itself sitting straight on the gradient.
+
+   The measurements come from reading that project's XAML and your captures -
+   as numbers, not as code. None of its XAML, icons, fonts or video is copied.
+
+   The shell is selected by data-ui="2.9" (Settings > Interface), separately
+   from the palette, which stays on data-theme. So the 2.8.0 rail can wear the
+   Lightning colours, and the 2.9.0 shell can wear any of the older themes.
+   ========================================================================= */
+
+[data-theme="lightning"]:not(.has-bg) body {
+  background: linear-gradient(180deg, #000000 0%, #2a0808 58%, #400d0d 82%, #801717 100%);
+}
+
+/* The neon frame belongs to the other themes; this window has no glow. */
+[data-theme="lightning"] #frame {
+  border-color: rgba(255, 255, 255, .05);
+  box-shadow: none;
+}
+
+/* --- title line ----------------------------------------------------------
+   Brand at the left, search in the middle, the window's own controls at the
+   right, all straight on the gradient with no bar behind them. */
+[data-ui="2.9"] #titlebar {
+  height: 42px;
+  background: transparent;
+  border-bottom: none;
+  box-shadow: none;
+  padding-right: 6px;
+}
+[data-ui="2.9"] .brand { padding-left: 16px; }
+[data-ui="2.9"] .brand-text { font-size: 12.5px; letter-spacing: 1.5px; color: rgba(255, 255, 255, .9); }
+[data-ui="2.9"] .brand-text b { color: #fff; }
+[data-ui="2.9"] .logo { color: currentColor; filter: none; }
+[data-ui="2.9"] .title-search input {
+  background: rgba(0, 0, 0, .45);
+  border-color: rgba(255, 255, 255, .12);
+  color: #fff;
+}
+[data-ui="2.9"] .clock {
+  background: transparent;
+  border-color: rgba(255, 255, 255, .14);
+}
+[data-ui="2.9"] .win-controls button:hover { background: rgba(255, 255, 255, .14); }
+
+/* --- the section row -----------------------------------------------------
+   The nav is the one Apex already has, laid on its side: one centred run of
+   items, no rail, no card under them. It scrolls sideways on a narrow window
+   rather than wrapping, which is what keeps the title line from moving. */
+[data-ui="2.9"] #layout {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border: none;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  overflow: visible;
+}
+
+[data-ui="2.9"] #sidebar {
+  position: static;
+  flex: 0 0 auto;
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: safe center;
+  width: auto;
+  height: 46px;
+  padding: 0 18px;
+  gap: 2px;
+  background: transparent;
+  border-right: none;
+  border-bottom: 1px solid rgba(255, 255, 255, .07);
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+[data-ui="2.9"] #sidebar::-webkit-scrollbar { display: none; }
+
+/* The rail's own furniture has no place in a top row. */
+[data-ui="2.9"] .side-brand,
+[data-ui="2.9"] .side-label,
+[data-ui="2.9"] .side-foot,
+[data-ui="2.9"] .spacer { display: none; }
+
+[data-ui="2.9"] .tab {
+  flex: 0 0 auto;
+  padding: 0 17px;
+  border-radius: 0;
+  border-bottom: 2px solid transparent;
+  gap: 8px;
+  font-size: 14px;
+  color: #b6b6b6;
+  white-space: nowrap;
+  transition: color .15s, border-color .15s;
+}
+/* The reference window is text only: the underline carries the state. */
+[data-ui="2.9"] .tab .ico { display: none; }
+[data-ui="2.9"] .tab:hover { background: none; color: #fff; transform: none; }
+[data-ui="2.9"] .tab:active { background: none; }
+[data-ui="2.9"] .tab.active {
+  background: none;
+  color: #fff;
+  font-weight: 500;
+  border-bottom-color: var(--accent);
+}
+[data-ui="2.9"] .tab.active .ico { color: var(--accent); filter: none; }
+[data-ui="2.9"] .tab.active::before { display: none; }
+
+[data-ui="2.9"] .tab-badge {
+  position: static;
+  margin-left: 2px;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  font-size: 10.5px;
+  color: #fff;
+}
+
+/* --- the page sits straight on the gradient ------------------------------ */
+[data-ui="2.9"] #content {
+  flex: 1;
+  min-height: 0;
+  padding: 16px 30px 30px;
+}
+[data-ui="2.9"] .page-title { font-size: 26px; letter-spacing: -.3px; }
+
+/* --- the build stamp, bottom right --------------------------------------- */
+[data-ui="2.9"] .build-stamp {
+  right: 18px;
+  bottom: 10px;
+  font-family: 'Segoe UI', system-ui, sans-serif;
+  font-size: 9.5px;
+  letter-spacing: .3px;
+  color: rgba(255, 255, 255, .38);
+  opacity: 1;
+}
+
+/* --- the download drawer spans the width, like the rest of the page ------ */
+[data-ui="2.9"] #drawer {
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: 12px 12px 0 0;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-bottom: none;
+  background: #191414;
 }

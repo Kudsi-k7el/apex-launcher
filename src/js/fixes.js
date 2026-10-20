@@ -19,7 +19,7 @@
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
-let fxTab = 'bypass';        // bypass | onlinefix | steamless
+let fxTab = 'apex';           // apex | bypass | onlinefix | steamless
 let fxMeta = null;           // catalogs() summary
 let fxBypass = null;         // { items, publishers, total }
 let fxOnlinefix = null;      // { items, total }
@@ -72,21 +72,23 @@ function renderFixes(el) {
   const pl = fxSettings();
 
   el.innerHTML = `
-    <h1 class="page-title">${icon('shield', 24)} Tools</h1>
+    <h1 class="page-title">${icon('shield', 24)} Apex Tools</h1>
     <div class="page-intro">
-      <p>Fix and tooling helpers ported from Project Lightning. Bypass and OnlineFix list what each
-      title needs and apply a fix you already have on disk; SteamLess swaps the Steamworks DLLs
-      inside a game for your own copies. Apex stores the catalogue metadata and the tooling &mdash;
-      it never ships the fix files themselves, and it backs up everything it replaces.</p>
+      <p>One page for the tools around your library: the Steam helpers and the clock at the top,
+      then the fix catalogues. Bypass and OnlineFix list what each title needs and apply a fix you
+      already have on disk; SteamLess swaps the Steamworks DLLs inside a game for your own copies.
+      Apex stores the catalogue metadata and the tooling &mdash; it never ships the fix files
+      themselves, and it backs up everything it replaces.</p>
     </div>
 
     <div class="fx-tabs" role="tablist">
+      <button class="fx-tab ${fxTab === 'apex' ? 'active' : ''}" data-fx-tab="apex">${icon('cpu', 15)} Apex Tools</button>
       <button class="fx-tab ${fxTab === 'bypass' ? 'active' : ''}" data-fx-tab="bypass">${icon('shield', 15)} Bypass</button>
       <button class="fx-tab ${fxTab === 'onlinefix' ? 'active' : ''}" data-fx-tab="onlinefix">${icon('globe', 15)} OnlineFix</button>
       <button class="fx-tab ${fxTab === 'steamless' ? 'active' : ''}" data-fx-tab="steamless">${icon('zap', 15)} SteamLess</button>
     </div>
 
-    <div class="fx-catalog-bar">
+    <div class="fx-catalog-bar ${fxTab === 'apex' ? 'hidden' : ''}">
       <div class="search-box">
         ${icon('search', 16)}
         <input id="fx-search" type="search" placeholder="Search the ${esc(fxTab === 'onlinefix' ? 'OnlineFix' : 'Bypass')} catalogue…" value="${esc(fxQuery)}" spellcheck="false" autocomplete="off">
@@ -118,7 +120,8 @@ function renderFixes(el) {
   const refresh = el.querySelector('#fx-refresh');
   if (refresh) refresh.addEventListener('click', () => fxRefreshCatalog(refresh));
 
-  if (fxTab !== 'steamless') fxPaintCatalog();
+  if (fxTab === 'apex') apPaint(document.getElementById('fx-body'));
+  else if (fxTab !== 'steamless') fxPaintCatalog();
   else fxPaintSteamless();
 }
 
@@ -163,6 +166,11 @@ async function fxRefreshCatalog(btn) {
 // Catalogue body (Bypass / OnlineFix)
 // ---------------------------------------------------------------------------
 function fxPaintBody() {
+  if (fxTab === 'apex') {
+    const body = document.getElementById('fx-body');
+    if (body) apPaint(body);
+    return;
+  }
   if (fxTab === 'steamless') { fxPaintSteamless(); return; }
   fxPaintCatalog();
 }
@@ -190,14 +198,25 @@ async function fxPaintCatalog() {
     const shown = fxPublisher === 'ALL' ? items : items.filter((it) => it.publisher === fxPublisher);
     if (count) count.textContent = `${shown.length} of ${(fxBypass && fxBypass.total) || 0}`;
 
+    // Publishers lead the page the way a storefront's own shelves do: a centred
+    // row of marks, then the covers. "All" is the first mark, so the row reads
+    // as one choice rather than a filter plus a list.
     body.innerHTML = `
-      <div class="fx-chips">
-        <button class="fx-chip ${fxPublisher === 'ALL' ? 'active' : ''}" data-fx-pub="ALL">All publishers</button>
-        ${publishers.map((p) => `<button class="fx-chip ${fxPublisher === p ? 'active' : ''}" data-fx-pub="${esc(p)}">${esc(p)}</button>`).join('')}
-      </div>
-      ${fxBypass && fxBypass.error ? `<div class="lt-note warn">${icon('warning', 15)}<span>${esc(fxBypass.error)}</span></div>` : ''}
-      <div class="fx-list">
-        ${shown.length ? shown.map(fxBypassRow).join('') : `<div class="empty show">${icon('info', 30)}<p>No bypass entry matches that search.</p></div>`}
+      <div class="fx-shelf">
+        <div class="fx-pubs" role="group" aria-label="Publishers">
+          <button class="fx-pub-card ${fxPublisher === 'ALL' ? 'active' : ''}" data-fx-pub="ALL">
+            <span class="fx-pub-mark">${icon('shield', 24)}</span>
+            <span class="fx-pub-name">All</span>
+          </button>
+          ${publishers.map((p) => `<button class="fx-pub-card ${fxPublisher === p ? 'active' : ''}" data-fx-pub="${esc(p)}" title="${esc(p)}">
+            ${fxPubMark(p)}
+            <span class="fx-pub-name">${esc(p)}</span>
+          </button>`).join('')}
+        </div>
+        ${fxBypass && fxBypass.error ? `<div class="lt-note warn">${icon('warning', 15)}<span>${esc(fxBypass.error)}</span></div>` : ''}
+        <div class="grid fx-grid fx-grid-cards">
+          ${shown.length ? shown.map(fxBypassCard).join('') : `<div class="empty show">${icon('info', 30)}<p>No bypass entry matches that search.</p></div>`}
+        </div>
       </div>`;
     return;
   }
@@ -211,24 +230,66 @@ async function fxPaintCatalog() {
     </div>`;
 }
 
-function fxBypassRow(it) {
-  return `<div class="fx-row" data-fx-item="${esc(it.appId)}" data-fx-kind="bypass">
-    <div class="fx-row-main">
-      <div class="fx-row-title">
-        <strong>${esc(it.name)}</strong>
-        <span class="fx-appid">App ${esc(it.appId)}</span>
-        <span class="fx-pub">${esc(it.publisher)}</span>
+/**
+ * Two-letter mark for a publisher we have no glyph for: "Rockstar Games" -> RG,
+ * "EA" -> EA.
+ */
+function fxMonogram(name) {
+  const words = String(name || '').split(/[^A-Za-z0-9]+/).filter(Boolean);
+  if (!words.length) return '?';
+  if (words.length === 1) return words[0].slice(0, 2).toUpperCase();
+  return (words[0][0] + words[1][0]).toUpperCase();
+}
+
+/**
+ * Glyph and tint per publisher. The tints are the only borrowed thing here -
+ * a colour is a colour - while the glyph is Apex's own silhouette from
+ * icons.js, always read together with the name printed under it.
+ */
+const FX_PUB_MARKS = [
+  { re: /rockstar/i, glyph: 'star', tint: '#f5a623' },
+  { re: /ubisoft/i, glyph: 'ubisoft', tint: '#3b82f6' },
+  { re: /^ea$|electronic\s*arts/i, glyph: 'ea', tint: '#ff4d4d' },
+  { re: /denuvo/i, glyph: 'denuvo', tint: '#5ad1a0' },
+  { re: /playstation|sony/i, glyph: 'disc', tint: '#6b9bff' },
+  { re: /nintendo/i, glyph: 'gamepad', tint: '#ff5a5a' },
+  { re: /xbox|microsoft/i, glyph: 'xbox', tint: '#5ec46b' },
+  { re: /valve|steam/i, glyph: 'steam', tint: '#9fb4c8' },
+  { re: /epic/i, glyph: 'epic', tint: '#c9ccd1' },
+  { re: /cd\s*projekt|gog/i, glyph: 'gog', tint: '#a06bff' },
+  { re: /others|other|unknown/i, glyph: 'grid', tint: '#9aa3b2' }
+];
+
+function fxPubMark(publisher) {
+  const hit = FX_PUB_MARKS.find((m) => m.re.test(String(publisher || '')));
+  if (hit) {
+    return `<span class="fx-pub-mark" style="--pub:${hit.tint}">${icon(hit.glyph, 26)}</span>`;
+  }
+  return `<span class="fx-pub-mark fx-pub-letters">${esc(fxMonogram(publisher))}</span>`;
+}
+
+function fxBypassCard(it) {
+  const g = {
+    id: `bypass:${it.appId}`,
+    title: it.name,
+    developer: it.publisher,
+    genre: 'Bypass',
+    cover: it.image || null
+  };
+  return `<article class="card fx-card" data-fx-info="${esc(it.appId)}" data-fx-kind="bypass" title="Open ${esc(it.name)}">
+    <div class="card-art">
+      ${art(g, 'cover')}
+      <span class="plat plat-lightning fx-origin">${icon('shield', 12)}Bypass</span>
+    </div>
+    <div class="card-info">
+      <h4 title="${esc(it.name)}">${esc(it.name)}</h4>
+      <div class="card-dev">${esc(it.publisher)}</div>
+      <div class="card-meta"><span>App ${esc(it.appId)}</span></div>
+      <div class="actions">
+        <button class="btn primary sm" data-fx-apply="${esc(it.appId)}" data-fx-kind="bypass">${icon('download', 14)} Apply fix</button>
       </div>
-      ${it.comments ? `<div class="fx-comment">${icon('messageSquare', 13)} ${esc(it.comments)}</div>` : ''}
-      ${(it.required || []).length ? `<div class="fx-chips small">${it.required.map((r) => `<span class="fx-req">${icon('box', 12)} ${esc(r)}</span>`).join('')}</div>` : ''}
-      ${(it.errors || []).length ? `<div class="fx-errors">${icon('warning', 13)} ${esc(it.errors[0])}${it.errors.length > 1 ? ` <span class="fx-more">+${it.errors.length - 1} more</span>` : ''}</div>` : ''}
     </div>
-    <div class="fx-row-actions">
-      <span class="fx-launch">${it.launchSteam ? `<span class="fx-tag">${icon('gamepad', 12)} Steam</span>` : ''}${it.launchExe ? `<span class="fx-tag">${icon('cpu', 12)} EXE</span>` : ''}</span>
-      <button class="btn primary sm" data-fx-apply="${esc(it.appId)}" data-fx-kind="bypass">${icon('download', 14)} Apply fix</button>
-      <button class="btn secondary sm icon-only" data-fx-info="${esc(it.appId)}" data-fx-kind="bypass" title="Details">${icon('info', 15)}</button>
-    </div>
-  </div>`;
+  </article>`;
 }
 
 function fxOnlinefixCard(it) {

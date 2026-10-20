@@ -6,9 +6,10 @@
  */
 
 const content = document.getElementById('content');
-let current = 'store';
+let current = 'home';
 
 const VIEWS = {
+  home: () => renderHome(content),
   store: () => renderStore(content),
   library: () => renderLibrary(content),
   itch: () => renderItch(content),
@@ -18,7 +19,6 @@ const VIEWS = {
   search: () => renderSearch(content),
   detail: () => renderDetail(content),
   downloads: () => renderDownloads(content),
-  news: () => renderNews(content),
   profile: () => renderProfile(content),
   gallery: () => renderGallery(content),
   contact: () => renderContact(content),
@@ -28,6 +28,10 @@ const VIEWS = {
 
 function render(animate) {
   (VIEWS[current] || VIEWS.store)();
+  // Every view writes English, so the translation is applied to whatever the
+  // view just produced. One pass per render keeps translations out of the view
+  // code entirely - see src/js/i18n.js.
+  if (typeof applyI18n === 'function') applyI18n(content);
   if (animate) {
     content.classList.remove('fade', 'view-swap');
     void content.offsetWidth;
@@ -115,12 +119,56 @@ async function scanLibraries(showModal) {
     State.owned[id] = true;
   }
 
+  // --- titles the detector verified but the catalogue does not know ---------
+  // These used to stop at the scan modal, so a game that was plainly installed
+  // never reached the library and read as "not detected". Anything already on
+  // disk is taken in here, once; the modal keeps only what it could not verify.
+  State.local.detected = State.local.detected || {};
+  const detectKey = (d) => `${d.source || d.type || 'local'}:${
+    d.appId || d.uri || d.exe || String(d.name || '').toLowerCase().replace(/[^a-z0-9]+/g, '')
+  }`;
+  const linkFor = (d) => (d.type === 'steam'
+    ? { type: 'steam', appId: d.appId, name: d.name, path: d.path || null, source: 'steam' }
+    : { ...d });
+
+  const leftovers = [];
+  const picked = [];
+
+  for (const d of (res.unknown || [])) {
+    if (!d || !d.installed) { leftovers.push(d); continue; }
+
+    const key = detectKey(d);
+    // The same game can already be in the library because the user added it by
+    // hand before this map existed; a title match is enough to call it ours.
+    const titled = (State.custom || [])
+      .find((g) => String(g.title).toLowerCase() === String(d.name).toLowerCase());
+    const known = State.local.detected[key] || (titled && titled.id);
+
+    if (known) {
+      if (!(State.dismissed && State.dismissed[known])) {
+        State.local.detected[key] = known;
+        State.local.installs[known] = linkFor(d);   // an install that moved is re-pointed
+        State.installed[known] = true;
+        State.owned[known] = true;
+      }
+      continue;
+    }
+
+    const g = await addDetectedGame(d, { batch: true });
+    State.local.detected[key] = g.id;
+    picked.push(g);
+  }
+
   await persist();
   refreshActions();
   afterLibraryChange();
   // A store-handled install that has now appeared on disk is finished.
   reconcileHandoffs();
-  if (showModal) openDetectedModal(res, addDetectedGame);
+  if (picked.length) {
+    toast(`${picked.length} game${picked.length === 1 ? '' : 's'} found on this PC ${picked.length === 1 ? 'was' : 'were'} added to your library`, 'check');
+    if (typeof ensureArt === 'function') ensureArt(picked);
+  }
+  if (showModal) openDetectedModal({ ...res, unknown: leftovers }, addDetectedGame);
 
   if (unverified) {
     const names = Object.keys(State.verify)
@@ -188,7 +236,13 @@ async function createCustomGame(payload) {
   return g;
 }
 
-async function addDetectedGame(d) {
+/**
+ * Adds a title the detector found but the catalogue does not know about.
+ *
+ * `opts.batch` defers the repaint, the toast and the artwork lookup to the
+ * caller, so a first scan that adopts eight titles in one go paints once.
+ */
+async function addDetectedGame(d, opts = {}) {
   const store = d.source && storeById(d.source);
   const g = makeCustomGame({
     title: d.name,
@@ -214,12 +268,19 @@ async function addDetectedGame(d) {
     : { ...d };
 
   await persist();
-  afterLibraryChange();
-  toast(`${d.name} added to your library`, 'check');
 
-  // Dress it immediately rather than waiting for the next launch: anything the
-  // AppID/CDN chain cannot supply is looked up online (see coverart.js).
-  if (typeof ensureArt === 'function') ensureArt([g]);
+  // In a batch the caller paints once and dresses everything together, so a
+  // first scan that adopts eight games does not redraw the library eight times.
+  if (!opts.batch) {
+    afterLibraryChange();
+    toast(`${d.name} added to your library`, 'check');
+
+    // Dress it immediately rather than waiting for the next launch: anything the
+    // AppID/CDN chain cannot supply is looked up online (see coverart.js).
+    if (typeof ensureArt === 'function') ensureArt([g]);
+  }
+
+  return g;
 }
 
 // ---------------------------------------------------------------------------
@@ -1055,7 +1116,10 @@ document.querySelectorAll('#profile-wrap .menu a').forEach((a) => a.addEventList
     State.local = {
       installs: (s.local && s.local.installs) || {},
       roots: (s.local && s.local.roots) || {},
-      stores: (s.local && s.local.stores) || {}
+      stores: (s.local && s.local.stores) || {},
+      // Which storefront titles have already been adopted into the library, so
+      // a re-scan refreshes them instead of adding a second copy.
+      detected: (s.local && s.local.detected) || {}
     };
     State.profile = s.profile || { name: '', avatar: null, avatarUrl: null, bio: '' };
     State.news = (s.news && Array.isArray(s.news.items)) ? s.news : { items: [], fetchedAt: null, lang: 'fr' };
@@ -1078,6 +1142,18 @@ document.querySelectorAll('#profile-wrap .menu a').forEach((a) => a.addEventList
   } catch {
     /* fall back to empty state; the UI still renders */
   }
+
+  // Bring an existing install onto the Project Lightning shell exactly once.
+  // After that the theme in Settings is whatever the user chose, including a
+  // deliberate return to one of the older themes.
+  if (typeof migrateLook === 'function' && migrateLook()) {
+    try { await persist(); } catch { /* the next save writes it anyway */ }
+  }
+
+  // The chosen language arrives with the rest of the state. Translating the
+  // shell here - before the first render - means the sidebar, the title bar and
+  // the sign-in gate are already in the right language on the first paint.
+  if (typeof i18nBoot === 'function') i18nBoot(State.settings && State.settings.lang);
 
   // A custom profile picture is stored as a path; the renderer needs the bytes
   // back as a data URL because the CSP blocks `file:` images.
@@ -1105,6 +1181,18 @@ document.querySelectorAll('#profile-wrap .menu a').forEach((a) => a.addEventList
   renderDrawer(true);
   paintProfileChrome();
   render(false);
+
+  // Last news opens once per launch, over the home screen, instead of living in
+  // its own tab. It waits for the sign-in gate to open so it never covers it.
+  (function bootNews(waited = 0) {
+    if (typeof openNewsBoot !== 'function') return;
+    if (State.settings && State.settings.newsBoot === false) return;
+    if (document.body.classList.contains('auth-locked')) {
+      if (waited < 30000) setTimeout(() => bootNews(waited + 1500), 1500);
+      return;
+    }
+    setTimeout(() => { openNewsBoot().catch(() => {}); }, 350);
+  })();
 
   // Controller support: detection, connection notices and d-pad navigation.
   if (typeof startControllers === 'function') startControllers();
@@ -1191,6 +1279,15 @@ document.querySelectorAll('#profile-wrap .menu a').forEach((a) => a.addEventList
 
   // "What's new" waits for the splash to clear so it is not shown behind it.
   setTimeout(() => { maybeShowChangelog().catch(() => {}); }, 1800);
+
+  // Emulator builds move faster than the launcher does - KytyPS5 alone can
+  // publish several in a day - so the release pages are asked once in a while
+  // and a newer build is offered where the user is, not buried on a page they
+  // may never open. The check is throttled and costs nothing at all for someone
+  // who has never downloaded an emulator through Apex.
+  setTimeout(() => {
+    if (typeof emuBootUpdates === 'function') { try { emuBootUpdates(); } catch { /* the shelf can check later */ } }
+  }, 2600);
 })();
 
 // Global keyboard shortcuts

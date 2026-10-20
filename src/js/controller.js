@@ -373,27 +373,26 @@ function gpNavigate(pad) {
   if (!pad) return;
   const now = performance.now();
 
-  if (window.vkIsOpen && window.vkIsOpen()) {
-    const dir = padDirection(pad);
-    if (dir && dir !== GP.dir.dir) {
-      GP.dir = { dir, since: now, next: 0 };
-      if (window.vkNavigate) window.vkNavigate(dir);
-    } else if (dir && (GP.dir.next === 0 ? (now - GP.dir.since > GP.HOLD) : (now >= GP.dir.next))) {
-      if (window.vkNavigate) window.vkNavigate(dir);
-      GP.dir.next = now + GP.REPEAT;
-    }
-    return;
-  }
+  // The on-screen keyboard is the top layer while it is up: the d-pad drives it
+  // and the focus ring stays put behind it. The action buttons below must still
+  // run though — A types the highlighted key and B dismisses the keyboard.
+  // Returning early here swallowed both, so a pad user could move around the
+  // keyboard but never type on it and never close it.
+  const vk = !!(window.vkIsOpen && window.vkIsOpen());
+  const moveTo = (dir) => {
+    if (vk) { if (window.vkNavigate) window.vkNavigate(dir); }
+    else Focus.move(dir, 'pad');
+  };
 
   const dir = padDirection(pad);
   if (dir !== GP.dir.dir) {
     GP.dir = { dir, since: now, next: 0 };
-    if (dir) Focus.move(dir, 'pad');
+    if (dir) moveTo(dir);
   } else if (dir) {
     if (GP.dir.next === 0) {
-      if (now - GP.dir.since > GP.HOLD) { Focus.move(dir, 'pad'); GP.dir.next = now + GP.REPEAT; }
+      if (now - GP.dir.since > GP.HOLD) { moveTo(dir); GP.dir.next = now + GP.REPEAT; }
     } else if (now >= GP.dir.next) {
-      Focus.move(dir, 'pad');
+      moveTo(dir);
       GP.dir.next = now + GP.REPEAT;
     }
   }

@@ -1,6 +1,41 @@
 {
   "entries": [
     {
+      "version": "2.9.0",
+      "date": "2026-10-20",
+      "title": "Project Apex, a home screen, and tools with a face",
+      "summary": "The window has a name and a new shell, there is a real Home page, the news arrives once on launch instead of living in a tab, and the Tools view opens on a dashboard: clock, Steam helpers and your games in one place.",
+      "sections": [
+        {
+          "title": "New",
+          "items": [
+            "Project Apex: the 2.9.0 shell. Sections across the top as text with an underline, the page straight on the gradient, no rail, no floating card. It is the default and you can still switch back in Settings > Interface.",
+            "A Home page. The wordmark, four doors (Quick guide, Changelog, Legal notice, Discord), the community card and a Jump back in strip of whatever you played last.",
+            "Apex Tools. The Tools view now opens on a dashboard: a live clock, a Steam app-id lookup that opens the store page or SteamDB, Restart Steam, Add a Steam library folder, a drop zone that scans a folder and adds what it finds, and a paged cover grid with Recent / A-Z and search.",
+            "Last news. The gaming feed opens over the home screen once per launch, with a hero story and the next four, and closes with Esc or the X."
+          ]
+        },
+        {
+          "title": "Changed",
+          "items": [
+            "The News tab is gone. The same feed now appears where it is useful - at startup - and every story still opens on news.instant-gaming.com.",
+            "The Bypass catalogue leads with a centred row of publisher marks and a denser cover grid, instead of a list of rows.",
+            "Settings > Interface picks the shell separately from the theme, so either palette can be worn with either layout.",
+            "The Lightning Tools page is Apex Tools. The fix catalogues are the tabs behind it."
+          ]
+        },
+        {
+          "title": "Fixed",
+          "items": [
+            "An emulator with no download page no longer throws an invalid-URL error at boot when its update check comes back empty.",
+            "Publisher tiles with no glyph fall back to their initials instead of an empty box.",
+            "The active catalogue tab uses the theme accent, not the old blue gradient.",
+            "Long headlines in the startup panel stay on two lines, so the row of cards keeps one height."
+          ]
+        }
+      ]
+    },
+    {
       "version": "2.8.0",
       "date": "2026-10-18",
       "title": "A locked door, EA games, emulators, and a way to reach me",

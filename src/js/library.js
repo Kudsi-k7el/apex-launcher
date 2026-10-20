@@ -32,6 +32,22 @@ const FILTERS = [
 
 const isCustomGame = (g) => !!(g.custom || String(g.id).startsWith('custom:'));
 
+/**
+ * How many installed games came from each storefront.
+ *
+ * Built from what is on this PC rather than from a fixed list, so the chooser
+ * never offers a storefront with nothing behind it: a Steam-only machine shows
+ * one chip, and a machine with nothing but hand-added games shows none.
+ */
+function platformCounts() {
+  const counts = new Map();
+  for (const g of installedGames()) {
+    const key = platformTag(g);
+    if (key && PLATFORM_META[key]) counts.set(key, (counts.get(key) || 0) + 1);
+  }
+  return counts;
+}
+
 // ---------------------------------------------------------------------------
 // Collections
 // ---------------------------------------------------------------------------
@@ -96,6 +112,10 @@ function libraryList() {
   if (libFilter === 'favorites') list = list.filter((g) => State.favorites[g.id]);
   else if (libFilter === 'updates') list = list.filter((g) => State.updates[g.id]);
   else if (libFilter === 'custom') list = list.filter(isCustomGame);
+  else if (libFilter.startsWith('plat:')) {
+    const key = libFilter.slice(5);
+    list = list.filter((g) => platformTag(g) === key);
+  }
   else if (libFilter.startsWith('col:')) {
     const ids = new Set(gamesInCollection(libFilter.slice(4)));
     list = list.filter((g) => ids.has(g.id));
@@ -255,6 +275,22 @@ function renderLibrary(el) {
     ? ` ${pre.length} pre-ordered title${pre.length === 1 ? '' : 's'} waiting for release.`
     : '';
 
+  // Where the installed games came from, as its own row: All / Favorites /
+  // Updates answer "what kind of list", this answers "which storefront", and
+  // both axes can be used one after the other. A filter left over from a
+  // storefront that has since vanished falls back to All.
+  const plats = platformCounts();
+  if (libFilter.startsWith('plat:') && !plats.has(libFilter.slice(5))) libFilter = 'all';
+  const platChip = ([key, n]) => {
+    const m = PLATFORM_META[key];
+    return `<button class="chip plat-chip ${libFilter === `plat:${key}` ? 'active' : ''}"
+      data-filter="plat:${key}" title="${esc(m.label)} \u00b7 ${n} game${n === 1 ? '' : 's'}">${icon(m.ico, 14)} ${esc(m.label)} <em>${n}</em></button>`;
+  };
+  const platBar = plats.size > 1 ? `<div class="col-bar plat-bar">
+      <span class="col-label">${icon('store', 14)} Stores</span>
+      ${[...plats.entries()].sort((a, b) => PLATFORM_META[a[0]].label.localeCompare(PLATFORM_META[b[0]].label)).map(platChip).join('')}
+    </div>` : '';
+
   el.innerHTML = `
     <h1 class="page-title">Library</h1>
     <div class="page-intro"><p>${intro}${preNote}</p></div>
@@ -276,6 +312,7 @@ function renderLibrary(el) {
         </div>` : ''}
       </div>
     </div>
+    ${platBar}
     ${installed.length ? `<div class="col-bar">
       <span class="col-label">${icon('layers', 14)} Collections</span>
       ${cols.map(colChip).join('')}

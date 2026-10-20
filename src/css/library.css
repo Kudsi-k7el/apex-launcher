@@ -135,6 +135,14 @@
   font-size: 11.5px; color: var(--muted);
   text-transform: uppercase; letter-spacing: .07em; margin-right: 2px;
 }
+/* --- stores ---------------------------------------------------------------
+   The storefront row uses the collections geometry, so only the count and the
+   glyph need saying: the mark replaces the generic icon, and the number stays
+   a quiet tabular figure rather than a badge. */
+.plat-bar { margin-top: -6px; }
+.plat-chip em { font-variant-numeric: tabular-nums; }
+.plat-chip .ico { flex: 0 0 auto; }
+
 .chip.ghost { background: transparent; border-style: dashed; }
 .chip.ghost:hover {
   border-color: color-mix(in srgb, var(--accent) 55%, transparent);

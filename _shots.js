@@ -12,6 +12,13 @@ app.setPath('userData', userData);
 const out = path.join(os.tmpdir(), process.env.APEX_SHOTS_OUT || 'apex-shots6');
 fs.mkdirSync(out, { recursive: true });
 
+/*
+ * Which theme the captures are taken in. The marketing set is Neon so the site
+ * imagery matches its own palette; naming another theme here (APEX_SHOTS_THEME)
+ * is how a new shell gets reviewed without disturbing that set.
+ */
+const SHOT_THEME = process.env.APEX_SHOTS_THEME || 'neon';
+
 require(path.join(__dirname, 'main.js'));
 const newsMod = require(path.join(__dirname, 'news'));
 const itchMod = require(path.join(__dirname, 'net', 'itch'));
@@ -293,12 +300,22 @@ async function run() {
     State.settings.bigPictureFullscreen = false;
     // Marketing shots all use the Neon Accent theme, so the site imagery
     // matches its own neon palette instead of the default blue.
-    State.settings.theme = 'neon';
-    State.settings.accent = THEMES.neon.accent;
+    State.settings.theme = '${SHOT_THEME}';
+    State.settings.accent = THEMES['${SHOT_THEME}'].accent;
     applySettings();
     return true;
   `);
   await wait(3200);   // let the CDN art and news covers arrive
+
+  // 0. the startup panel, then close it so the rest of the set is the shell
+  await js(`
+    if (!document.querySelector('#news-boot')) await openNewsBoot();
+    await new Promise((r) => setTimeout(r, 400));
+    return true;`);
+  await wait(600);
+  await shoot(win, '00-last-news');
+  await js('closeNewsBoot(); await new Promise((r) => setTimeout(r, 320)); return true;');
+  await wait(400);
 
   // 1. Big Picture, news (article covers as tiles + hero backdrop)
   await js('BP.tab = "news"; BP.enter(); return true;');
@@ -310,10 +327,10 @@ async function run() {
   await wait(1500);
   await shoot(win, '02-bigpicture-library');
 
-  // 3. the normal news view
-  await js('BP.exit(); gotoView("news"); return true;');
+  // 3. Home
+  await js('BP.exit(); gotoView("home"); return true;');
   await wait(1600);
-  await shoot(win, '03-news');
+  await shoot(win, '03-home');
 
   // 4. Store: upcoming & pre-orders (GTA VI + TES VI)
   await js('gotoView("store"); return true;');
@@ -556,6 +573,31 @@ async function run() {
   await wait(1800);
   await shoot(win, '25-emulators');
 
+  // 25b. an update that was answered with "Later": the card keeps both choices,
+  // so the emulator is still playable and the newer build is one click away.
+  await js(`
+    emu.updates.retroarch = {
+      id: 'retroarch', name: 'RetroArch', version: 'v1.19.0', latest: 'v1.20.0',
+      size: 242221056, page: 'https://www.retroarch.com/?page=platforms',
+      systems: ['nes', 'snes']
+    };
+    emu.skipped.retroarch = 'v1.20.0';
+    emuSaveState();
+    emuPaintNav();
+    emuPaintAll(document.getElementById('content'));
+    const card = document.querySelector('#emu-grid-host .emuget[data-emucard="retroarch"]');
+    if (card) card.scrollIntoView({ block: 'center' });
+    return !!card;`);
+  await wait(900);
+  await shoot(win, '25b-emulators-update-later');
+  await js(`
+    delete emu.updates.retroarch;
+    delete emu.skipped.retroarch;
+    emuSaveState();
+    emuPaintNav();
+    document.getElementById('content').scrollTop = 0;
+    return true;`);
+
   // 26. the console table further down the same page
   await js(`
     const s = document.querySelector('#emu-grid-host .esources');
@@ -596,7 +638,7 @@ async function run() {
   await wait(1400);
   await shoot(win, '29-bigpicture-tools');
 
-  // 30. the Tools view: the three catalogues side by side
+  // 30. Apex Tools: the dashboard
   await js(`
     BP.exit();
     gotoView('tools');
@@ -604,7 +646,42 @@ async function run() {
     document.getElementById('content').scrollTop = 0;
     return true;`);
   await wait(1800);
-  await shoot(win, '30-tools');
+  await shoot(win, '30-apex-tools');
+
+  // 30a. the Bypass catalogue behind its tab
+  await js(`
+    document.querySelector('#content [data-fx-tab="bypass"]').click();
+    await new Promise((r) => setTimeout(r, 900));
+    document.getElementById('content').scrollTop = 0;
+    return true;`);
+  await wait(1200);
+  await shoot(win, '30a-bypass');
+
+  // 30b. Settings, Appearance: the theme grid and the 2.8.0 / 2.9.0 interface
+  await js(`
+    gotoView('settings');
+    await new Promise((r) => setTimeout(r, 700));
+    document.getElementById('content').scrollTop = 0;
+    return document.querySelectorAll('#content [data-ui-pick]').length;`);
+  await wait(900);
+  await shoot(win, '30b-settings-interface');
+
+  // 30c. the same window wearing the 2.8.0 shell, to show the switch moves the
+  // nav back to the left rail instead of only changing a preview card.
+  await js(`
+    document.querySelector('#content [data-ui-pick="2.8"]').click();
+    await new Promise((r) => setTimeout(r, 400));
+    gotoView('store');
+    await new Promise((r) => setTimeout(r, 900));
+    return document.documentElement.dataset.ui;`);
+  await wait(900);
+  await shoot(win, '30c-ui-28');
+  await js(`
+    gotoView('settings');
+    await new Promise((r) => setTimeout(r, 500));
+    document.querySelector('#content [data-ui-pick="2.9"]').click();
+    await new Promise((r) => setTimeout(r, 300));
+    return document.documentElement.dataset.ui;`);
 
   // 31. Big Picture: the Profile page (no shelf at all)
   await js(`

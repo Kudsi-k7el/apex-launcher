@@ -21,6 +21,7 @@ function toast(msg, type = 'info') {
   if (State.settings.notifications === false) return;
   const t = document.getElementById('toast');
   t.innerHTML = `${icon(TOAST_ICON[type] || 'info', 16)}<span>${esc(msg)}</span>`;
+  if (typeof applyI18n === 'function') applyI18n(t);
   t.dataset.type = type;
   t.classList.add('show');
   clearTimeout(toast.t);
@@ -439,14 +440,14 @@ function pill(id) {
  * a game the user added by hand is simply "Local".
  */
 const PLATFORM_META = {
-  steam: { label: 'Steam', ico: 'gamepad' },
+  steam: { label: 'Steam', ico: 'steam' },
   itch: { label: 'itch.io', ico: 'flame' },
-  epic: { label: 'Epic', ico: 'globe' },
-  gog: { label: 'GOG', ico: 'globe' },
-  ubisoft: { label: 'Ubisoft', ico: 'globe' },
-  ea: { label: 'EA App', ico: 'globe' },
-  battlenet: { label: 'Battle.net', ico: 'globe' },
-  xbox: { label: 'Microsoft', ico: 'box' },
+  epic: { label: 'Epic', ico: 'epic' },
+  gog: { label: 'GOG', ico: 'gog' },
+  ubisoft: { label: 'Ubisoft', ico: 'ubisoft' },
+  ea: { label: 'EA App', ico: 'ea' },
+  battlenet: { label: 'Battle.net', ico: 'battlenet' },
+  xbox: { label: 'Microsoft', ico: 'windows' },
   local: { label: 'Local', ico: 'hardDrive' },
   lightning: { label: 'Nexus', ico: 'zap' },
   apex: { label: 'Apex', ico: 'flame' }
@@ -584,7 +585,7 @@ function dlInline(id) {
     <div class="dl-inline-row">
       <small><span data-phase="${id}">${esc(st.phase)}</span> &middot; <span data-pct="${id}">${Math.floor(d.pct)}%</span><span data-detail="${id}">${st.detail ? ` &middot; ${esc(st.detail)}` : ''}</span></small>
       <span class="mini-actions">
-        <button class="icon-btn sm" data-act="${d.paused ? 'resume' : 'pause'}" data-id="${id}" title="${d.paused ? 'Resume' : 'Pause'}">${icon(d.paused ? 'play' : 'pause', 13)}</button>
+        <button class="icon-btn sm" data-act="${d.paused ? 'resume' : 'pause'}" data-id="${id}" data-dl-toggle="${id}" data-ico="13" title="${d.paused ? 'Resume' : 'Pause'}">${icon(d.paused ? 'play' : 'pause', 13)}</button>
         <button class="icon-btn sm" data-act="cancel" data-id="${id}" title="Cancel">${icon('close', 13)}</button>
       </span>
     </div>

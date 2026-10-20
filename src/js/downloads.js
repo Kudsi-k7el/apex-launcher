@@ -216,12 +216,28 @@ function failDownload(id, message) {
   if (typeof current !== 'undefined' && current === 'downloads') render(false);
 }
 
+/**
+ * Pausing only means anything while the engine is still moving bytes.
+ *
+ * Past the transfer the bar is running through verification, extraction or the
+ * install itself, and there is no socket to suspend - so offering Pause there
+ * would freeze the label while the work carried on behind it.
+ */
+function dlPausable(d) {
+  return !d.state || d.state === 'downloading' || d.state === 'paused';
+}
+
 function pauseDownload(id) {
   const d = DL[id];
   if (!d || d.paused) return;
+  if (!dlPausable(d)) {
+    toast('Pause only applies while the download is still running.', 'warn');
+    return;
+  }
   d.paused = true;
   d.speed = 0;
   d.phase = 'Paused';
+  d.state = 'paused';
   if (window.api && window.api.dlPause) window.api.dlPause(id).catch(() => {});
   drawerSig = '__init__';
   renderDrawer();
@@ -234,6 +250,7 @@ function resumeDownload(id) {
   if (!d || !d.paused) return;
   d.paused = false;
   d.phase = 'Downloading';
+  d.state = 'downloading';
   if (window.api && window.api.dlResume) window.api.dlResume(id).catch(() => {});
   drawerSig = '__init__';
   renderDrawer();
@@ -275,9 +292,14 @@ function stageText(d) {
   const phase = d.paused ? 'Paused' : (d.phase || 'Downloading');
   const moving = !d.paused && /download|prepar|copy/i.test(phase);
   const mbps = `${(Number(d.speed) || 0).toFixed(0)} MB/s`;
+  // The engine names its stages in English and the DOM pass cannot help here:
+  // these labels are rewritten on every progress tick, which would paint the
+  // English straight back over a translation. So they are translated at the
+  // source instead.
+  const label = (typeof t === 'function') ? t(phase) : phase;
   return {
-    phase,
-    speed: d.paused ? 'Paused' : moving ? mbps : '\u2014',
+    phase: label,
+    speed: d.paused ? label : moving ? mbps : '\u2014',
     eta: d.paused ? '--' : moving ? fmtEta(remainingSec(d)) : '\u2014',
     detail: moving ? `${mbps} \u00b7 ${fmtEta(remainingSec(d))} left` : ''
   };
@@ -297,6 +319,17 @@ function paint(id) {
   document.querySelectorAll(`[data-downloaded="${id}"]`).forEach((b) => {
     b.textContent = fmtSize(byId(id).size * (d.pct / 100));
   });
+
+  // The toggle is state, not just a label. A row is repainted on every progress
+  // tick, and without this a paused row kept offering "Pause" - a button that
+  // politely did nothing, which turned a pause into a stop you could not undo.
+  document.querySelectorAll(`[data-dl-toggle="${id}"]`).forEach((b) => {
+    const act = d.paused ? 'resume' : 'pause';
+    if (b.dataset.act === act) return;
+    b.dataset.act = act;
+    b.title = d.paused ? 'Resume' : 'Pause';
+    b.innerHTML = icon(d.paused ? 'play' : 'pause', Number(b.dataset.ico) || 14);
+  });
 }
 
 function dlRow(id) {
@@ -312,7 +345,7 @@ function dlRow(id) {
         <strong>${esc(g.title)}</strong>
         <span class="dl-kind">${icon(d.kind === 'update' ? 'refresh' : 'download', 13)} ${label}</span>
         <span class="dl-row-actions">
-          <button class="icon-btn sm" data-act="${d.paused ? 'resume' : 'pause'}" data-id="${id}" title="${d.paused ? 'Resume' : 'Pause'}">${icon(d.paused ? 'play' : 'pause', 14)}</button>
+          <button class="icon-btn sm" data-act="${d.paused ? 'resume' : 'pause'}" data-id="${id}" data-dl-toggle="${id}" data-ico="14" title="${d.paused ? 'Resume' : 'Pause'}">${icon(d.paused ? 'play' : 'pause', 14)}</button>
           <button class="icon-btn sm" data-act="cancel" data-id="${id}" title="Cancel">${icon('close', 14)}</button>
         </span>
       </div>
@@ -346,10 +379,16 @@ function renderDrawer(force) {
   if (force || sig !== drawerSig) {
     drawerSig = sig;
     const list = document.getElementById('drawer-list');
-    if (list) list.innerHTML = ids.map(dlRow).join('') + extras.map(handoffDrawerRow).join('');
+    if (list) {
+      list.innerHTML = ids.map(dlRow).join('') + extras.map(handoffDrawerRow).join('');
+      // The rows carry the stage names and the row buttons; the rest of the
+      // drawer is static markup and was translated once at start-up.
+      if (typeof applyI18n === 'function') applyI18n(list);
+    }
   }
   ids.forEach(paint);
   if (extras.length) paintHandoffs();
+  paintSummaryActions(ids);
 
   const agg = aggregate(ids);
   const bar = document.getElementById('d-agg-bar');
@@ -377,6 +416,25 @@ function renderDrawer(force) {
     if (sub) sub.textContent = 'Idle \u00b7 nothing in the queue';
     if (count) count.textContent = '';
   }
+}
+
+/**
+ * The page's bulk button follows the queue rather than the moment it was drawn.
+ *
+ * Once every download is held the useful button is "Resume all": a "Pause all"
+ * that cannot pause anything is a button that does nothing, which is how a
+ * paused queue ended up looking un-resumable.
+ */
+function paintSummaryActions(ids) {
+  const host = document.querySelector('.dl-summary-actions');
+  if (!host) return;
+  const btn = host.querySelector('[data-act="pause-all"], [data-act="resume-all"]');
+  if (!btn) return;
+  const held = ids.length > 0 && ids.every((id) => DL[id].paused);
+  const want = held ? 'resume-all' : 'pause-all';
+  if (btn.dataset.act === want) return;
+  btn.dataset.act = want;
+  btn.innerHTML = held ? `${icon('play', 14)} Resume all` : `${icon('pause', 14)} Pause all`;
 }
 
 /**
@@ -656,6 +714,23 @@ function initDrawer() {
 // ---------------------------------------------------------------------------
 // Full Downloads page
 // ---------------------------------------------------------------------------
+/**
+ * Keeps a delegated click handler singular across re-renders.
+ *
+ * A view re-renders by rewriting #content's innerHTML, and the #content element
+ * itself survives - so a plain addEventListener here stacked another copy of the
+ * same handler on every repaint, and the Downloads page repaints on every
+ * download event. One click then ran the handler several times over, and because
+ * these handlers read the button's own `data-act` - which an earlier copy had
+ * just rewritten - a click on Pause paused the download and a later copy
+ * resumed it again. The download could not be paused at all.
+ */
+function rebindClick(el, handler) {
+  if (el.__apexDlClick) el.removeEventListener('click', el.__apexDlClick);
+  el.__apexDlClick = handler;
+  el.addEventListener('click', handler);
+}
+
 function renderDownloads(el) {
   clearInterval(slideTimer);
   const ids = Object.keys(DL);
@@ -672,7 +747,9 @@ function renderDownloads(el) {
       </div>
       <div class="bar big"><div style="width:${agg.pct}%"></div></div>
       ${ids.length ? `<div class="dl-summary-actions">
-        <button class="btn secondary" data-act="pause-all">${icon('pause', 14)} Pause all</button>
+        ${ids.every((id) => DL[id].paused)
+          ? `<button class="btn secondary" data-act="resume-all">${icon('play', 14)} Resume all</button>`
+          : `<button class="btn secondary" data-act="pause-all">${icon('pause', 14)} Pause all</button>`}
         <button class="btn danger" data-act="cancel-all">${icon('trash', 15)} Cancel all</button>
       </div>` : ''}
     </div>
@@ -725,7 +802,7 @@ function renderDownloads(el) {
 
   hydrateIcons(el);
 
-  el.addEventListener('click', (e) => {
+  rebindClick(el, (e) => {
     if (e.target.closest('[data-restart-steam]')) { restartSteam(); return; }
     const undo = e.target.closest('[data-undo]');
     if (undo) { undoSeed(HANDOFFS.find((h) => h.id === undo.dataset.undo)); return; }
@@ -734,9 +811,17 @@ function renderDownloads(el) {
     const btn = e.target.closest('[data-act]');
     if (!btn) return;
     const { act } = btn.dataset;
-    if (act === 'pause-all') { Object.keys(DL).forEach(pauseDownload); }
+    if (act === 'pause-all') {
+      // Only the ones still moving: pausing a job in extraction would just
+      // toast at the user for every row.
+      Object.keys(DL).filter((id) => !DL[id].paused && dlPausable(DL[id])).forEach(pauseDownload);
+    } else if (act === 'resume-all') { Object.keys(DL).forEach(resumeDownload); }
     else if (act === 'cancel-all') { Object.keys(DL).forEach(cancelDownload); }
-    else handleDlAction(e);
+    // A row's own pause/resume/cancel is deliberately *not* handled here. The
+    // shared delegate in app.js already owns every `data-act` button inside
+    // #content, and it fires first; re-handling the same click here made the
+    // second pass read the `data-act` the first pass had just rewritten, so
+    // pressing Pause paused the download and then resumed it again.
   });
 }
 
