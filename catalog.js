@@ -250,4 +250,49 @@ function stripTags(html) {
     .trim();
 }
 
-module.exports = { search, details, artFor, money, stripTags, parseReleaseDate, cache };
+/**
+ * Real library artwork for one AppID.
+ *
+ * `appdetails` only returns the wide header, and the old predictable CDN path
+ * (`.../steam/apps/<id>/library_600x900.jpg`) 404s for anything published in
+ * the last couple of years. The storefront's own item service returns the
+ * hashed asset paths, including the portrait `library_capsule` the Steam client
+ * uses, so that is what this reads.
+ *
+ * @param {string|number} appId
+ * @returns {Promise<{ok:boolean, cover?:string, wide?:string, hero?:string, error?:string}>}
+ */
+async function assets(appId) {
+  const id = String(appId || '').replace(/[^0-9]/g, '');
+  if (!id) return { ok: false, error: 'No AppID given' };
+
+  return cached(`assets:${id}`, 30 * 60 * 1000, async () => {
+    const input = {
+      ids: [{ appid: Number(id) }],
+      context: { language: 'english', country_code: 'US', steam_realm: 1 },
+      data_request: { include_assets: true }
+    };
+    const url = 'https://api.steampowered.com/IStoreBrowseService/GetItems/v1/?input_json='
+      + encodeURIComponent(JSON.stringify(input));
+    const data = await getJson(url, { timeoutMs: 10000 });
+    const item = data && data.response && Array.isArray(data.response.store_items)
+      ? data.response.store_items[0]
+      : null;
+    const a = item && item.assets;
+    if (!a || !a.asset_url_format) return { ok: false, error: 'Steam has no artwork for this title' };
+
+    const base = 'https://shared.akamai.steamstatic.com/store_item_assets/';
+    const at = (file) => (file ? base + a.asset_url_format.replace('${FILENAME}', file) : null);
+
+    return {
+      ok: true,
+      appId: id,
+      name: item.name || null,
+      cover: at(a.library_capsule_2x || a.library_capsule),
+      wide: at(a.header_2x || a.header || a.main_capsule),
+      hero: at(a.library_hero_2x || a.library_hero || a.hero_capsule)
+    };
+  });
+}
+
+module.exports = { search, details, assets, artFor, money, stripTags, parseReleaseDate, cache };

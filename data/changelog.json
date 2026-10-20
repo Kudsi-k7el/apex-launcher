@@ -30,7 +30,8 @@
             "The title bar is text only - PROJECT heavy, APEX light, no flame mark.",
             "itch.io works out of the box. A key bundled with the build is used until you paste your own in Settings; your key always wins, and the bundled one is never shown in the window.",
             "Discord Rich Presence runs on Apex's own Discord application. The application id is fixed in the app, invisible in Settings and not editable.",
-            "App id of Steam adds the title to your Apex library (or opens its store page when Apex does not know it). Steam itself is never touched."
+            "App id of Steam adds the title to your Apex library (or opens its store page when Apex does not know it). Steam itself is never touched.",
+            "Install in Steam hands the typed app id to the Steam client (steam://install). Steam decides what to do with it: a title the account owns installs, anything else opens its store page. Apex still writes nothing into Steam, and LuaTools is not bundled or downloaded by the launcher."
           ]
         },
         {

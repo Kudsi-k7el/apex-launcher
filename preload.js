@@ -44,6 +44,7 @@ contextBridge.exposeInMainWorld('api', {
   // --- live store catalogue & news (metadata only) ---
   storeSearch: (term, opts) => ipcRenderer.invoke('store:search', term, opts),
   storeDetails: (appId, opts) => ipcRenderer.invoke('store:details', appId, opts),
+  storeAssets: (appId) => ipcRenderer.invoke('store:assets', appId),
   newsList: (opts) => ipcRenderer.invoke('news:list', opts),
   resolveArt: (spec) => ipcRenderer.invoke('art:resolve', spec),
   // Transparent wordmark for the hero: returns an image URL or nothing at all.

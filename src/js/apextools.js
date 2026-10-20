@@ -20,7 +20,33 @@
 const AP = { page: 1, sort: 'recent', query: '', scan: null, inspected: null };
 let apClock = null;
 
-/** Every app id found in a stplug-in folder, newest first, de-duplicated. */
+/**
+ * The app ids this launcher added from the App id box.
+ *
+ * SteamTools has its own store in `stplug-in`; an id typed into Apex is not in
+ * there, so it has to be remembered in the saved state or it would vanish from
+ * the shelf the moment the view repainted. Older builds only wrote a custom
+ * `Tracked` game, so those are lifted into the same list on read.
+ */
+function apTracked() {
+  const out = [];
+  const seen = new Set();
+
+  const push = (appid, title, at) => {
+    const id = String(appid || '').trim();
+    if (!/^\d{3,9}$/.test(id) || seen.has(id)) return;
+    seen.add(id);
+    out.push({ appid: id, title: title || null, at: at || 0, source: 'apex', file: '' });
+  };
+
+  for (const row of State.luaTracked || []) push(row.appid, row.title, row.at);
+  for (const g of State.custom || []) {
+    if (g && g.genre === 'Tracked' && g.steamAppId) push(g.steamAppId, g.title, 0);
+  }
+  return out;
+}
+
+/** Every app id on the shelf: what LuaTools applied first, then what Apex added. */
 function apApplied() {
   const out = [];
   const seen = new Set();
@@ -31,17 +57,29 @@ function apApplied() {
       for (const appid of file.appids || []) {
         if (!appid || seen.has(appid)) continue;
         seen.add(appid);
-        out.push({ appid: String(appid), file: file.name, dir: user.plugins, at: file.at || 0 });
+        out.push({
+          appid: String(appid), file: file.name, dir: user.plugins,
+          at: file.at || 0, source: 'steam'
+        });
       }
     }
+  }
+
+  for (const row of apTracked()) {
+    if (seen.has(row.appid)) continue;
+    seen.add(row.appid);
+    out.push(row);
   }
   return out;
 }
 
 /** The catalogue name for a Steam app id, when Apex already knows the game. */
 function apTitle(appid) {
+  const id = String(appid);
+  const tracked = apTracked().find((t) => t.appid === id);
+  if (tracked && tracked.title) return tracked.title;
   const hit = (typeof allGames === 'function' ? allGames() : [])
-    .find((g) => g && String(g.steamAppId) === String(appid));
+    .find((g) => g && String(g.steamAppId) === id);
   return hit ? hit.title : null;
 }
 
@@ -80,7 +118,8 @@ function apCardRow() {
   if (q) {
     rows = rows.filter((r) => {
       const title = apTitle(r.appid) || '';
-      return r.appid.includes(q) || title.toLowerCase().includes(q) || r.file.toLowerCase().includes(q);
+      return r.appid.includes(q) || title.toLowerCase().includes(q)
+        || String(r.file || '').toLowerCase().includes(q);
     });
   }
   if (AP.sort === 'az') {
@@ -95,10 +134,14 @@ function apCardRow() {
 function apTile(row) {
   const title = apTitle(row.appid);
   const when = row.at ? timeAgo(new Date(row.at).toISOString()) : '';
-  return `<button class="ap-tile" data-ap-info="${esc(row.appid)}" title="${esc(title || row.appid)}">
+  const apex = row.source === 'apex';
+  const meta = apex
+    ? `${icon('plus', 11)} ${esc(when || 'Added in Apex')}`
+    : `${icon('shield', 11)} ${esc(when || 'Applied')}`;
+  return `<button class="ap-tile${apex ? ' is-apex' : ''}" data-ap-info="${esc(row.appid)}" title="${esc(title || row.appid)}">
     <span class="ap-tile-art">${art(apGame(row.appid), 'cover')}</span>
     <span class="ap-tile-name">${esc(title || `App ${row.appid}`)}</span>
-    <span class="ap-tile-meta">${icon('shield', 11)} ${esc(when || 'Applied')}</span>
+    <span class="ap-tile-meta">${meta}</span>
   </button>`;
 }
 
@@ -116,11 +159,25 @@ function apPaintGrid() {
   const count = document.getElementById('ap-count');
   if (count) count.textContent = `${all.length} game${all.length === 1 ? '' : 's'}`;
 
+  // SteamTools' folder is where the shelf came from; say so plainly when it is
+  // missing, otherwise an "Add" here looks like it should change Steam too.
+  const note = document.getElementById('ap-note');
+  if (note) {
+    const users = (AP.scan && AP.scan.steam) || [];
+    const found = users.some((u) => u.hasPlugins);
+    note.hidden = !AP.scan || found;
+    note.innerHTML = note.hidden ? '' : `${icon('warning', 14)}
+      <span>SteamTools was not found in this Steam install (no <code>stplug-in</code>
+      folder). Games you add here stay in Apex &mdash; Steam is not changed.</span>`;
+  }
+
   grid.innerHTML = slice.length
     ? slice.map(apTile).join('')
     : `<div class="ap-empty">
-        <strong>No games found${all.length ? ' for that search' : ', add your first game to get started'}</strong>
-        <small>Apex lists what LuaTools put in Steam's stplug-in folder. Nothing is applied yet.</small>
+        <strong>No games found${all.length ? ' for that search' : ' yet'}</strong>
+        <small>Drop a LuaTools file on the import box to inspect it, or type a Steam
+        app id on the right. Games added there are listed here too &mdash; Steam
+        itself only shows the games you own or install.</small>
       </div>`;
 
   if (pager) {
@@ -196,14 +253,18 @@ function apPaint(host) {
           <input id="ap-appid" type="text" inputmode="numeric" placeholder="e.g. 1245620"
             spellcheck="false" autocomplete="off">
           <button class="ap-add" data-ap="add">${icon('plus', 16)} Add</button>
-          <p class="ap-hint">Enter the Steam App ID to add a game to your Apex library.
-            Steam itself is never changed.</p>
+          <p class="ap-hint">Adds the title to your Apex library and to the list below.
+            Steam itself is not changed &mdash; it only shows games you own or install,
+            and unlocking needs SteamTools plus a valid LuaTools file.</p>
+          <button class="ap-btn ap-install" data-ap="install">${icon('download', 14)} Install in Steam</button>
           <div class="ap-appid-actions">
             <button class="ap-btn" data-ap="restart">${icon('power', 14)} Restart Steam</button>
             <button class="ap-btn" data-ap="steamdb">${icon('external', 14)} SteamDB</button>
           </div>
         </section>
       </div>
+
+      <div class="ap-note" id="ap-note" hidden></div>
 
       <div class="ap-grid-head">
         <span class="ap-count" id="ap-count"></span>
@@ -293,6 +354,73 @@ async function apScanInto() {
   if (!res || !res.ok) return;
   AP.scan = res;
   apPaintGrid();
+  apResolveNames();
+}
+
+/** Puts the real Steam library capsule where art() looks for it. */
+function apCacheArt(appid, a) {
+  if (!a || !a.ok || !(a.cover || a.wide || a.hero)) return false;
+  State.artAuto = State.artAuto || {};
+  State.artAuto[`lua:${appid}`] = a.cover || a.wide || a.hero;
+  return true;
+}
+
+/**
+ * Old adds were saved as "Steam app 4954910" because store:details answers with
+ * `data.name`, not `game.name`. Fill those names in once, from the store.
+ * Their banners also need a lookup: the old predictable CDN path 404s for
+ * recent AppIDs, so the portrait capsule comes from store:assets.
+ */
+async function apResolveNames() {
+  if (AP.namesResolving) return;
+  const missing = apTracked().filter((t) => !t.title || /^Steam app \d+$/i.test(t.title)
+    || !(State.artAuto && State.artAuto[`lua:${t.appid}`]));
+  if (!missing.length) return;
+  AP.namesResolving = true;
+  let changed = false;
+
+  for (const t of missing) {
+    let rec = null;
+    if (!t.title || /^Steam app \d+$/i.test(t.title)) {
+      const res = await window.api.storeDetails(t.appid).catch(() => null);
+      rec = res && (res.data || res.game);
+    }
+
+    const art = await window.api.storeAssets(t.appid).catch(() => null);
+    const name = (rec && rec.name) || (art && art.name) || t.title;
+    if (art && art.ok) changed = apCacheArt(t.appid, art) || changed;
+
+    if (name) {
+      State.luaTracked = Array.isArray(State.luaTracked) ? State.luaTracked : [];
+      const row = State.luaTracked.find((x) => String(x.appid) === t.appid);
+      if (row) {
+        if (row.title !== name) { row.title = name; changed = true; }
+      } else {
+        State.luaTracked.push({ appid: t.appid, title: name, at: Date.now() });
+        changed = true;
+      }
+      const g = (State.custom || []).find((x) => String(x.steamAppId) === t.appid);
+      if (g) {
+        if (g.title !== name) { g.title = name; changed = true; }
+        if (art && art.ok) {
+          const cover = art.cover || art.wide || null;
+          const wide = art.wide || null;
+          const hero = art.hero || null;
+          if (g.cover !== cover || g.wide !== wide || g.hero !== hero) {
+            g.cover = cover; g.wide = wide; g.hero = hero;
+            changed = true;
+          }
+        }
+      }
+    }
+  }
+
+  AP.namesResolving = false;
+  if (changed) {
+    await persist();
+    if (typeof afterLibraryChange === 'function') afterLibraryChange();
+    apPaintGrid();
+  }
 }
 
 async function apInspect(file) {
@@ -312,33 +440,56 @@ async function apTrack(appid) {
   const id = String(appid || '').replace(/[^\d]/g, '');
   if (!/^\d{3,9}$/.test(id)) { toast('Type a numeric Steam app id first', 'warn'); return; }
 
+  let details = null;
+  try { details = await window.api.storeDetails(id).catch(() => null); } catch { details = null; }
+  // store:details answers with `data`; older code looked for `game` and so every
+  // title fell back to "Steam app <id>".
+  const rec = details && (details.data || details.game);
+  const art = await window.api.storeAssets(id).catch(() => null);
+  apCacheArt(id, art);
+
   const known = (typeof allGames === 'function' ? allGames() : [])
     .find((g) => g && String(g.steamAppId) === id);
+  const name = (rec && rec.name) || (art && art.name) || (known && known.title) || `Steam app ${id}`;
 
-  if (known) {
-    if (State.owned[known.id]) { toast(`${known.title} is already in your library`, 'info'); return; }
-    State.owned[known.id] = true;
-    await persist();
-    if (typeof afterLibraryChange === 'function') afterLibraryChange();
-    toast(`${known.title} added to your Apex library`, 'check');
-    return;
+  // The shelf reads this list, so an id added here has to be remembered or it
+  // disappears on the next repaint (stplug-in never contained it).
+  State.luaTracked = Array.isArray(State.luaTracked) ? State.luaTracked : [];
+  const tracked = State.luaTracked.find((t) => String(t.appid) === id);
+  if (tracked) {
+    tracked.title = name;
+    tracked.at = tracked.at || Date.now();
+  } else {
+    State.luaTracked.push({ appid: id, title: name, at: Date.now() });
   }
 
-  let details = null;
-  try { details = await window.api.storeDetails(id); } catch { details = null; }
-  const name = details && details.ok && details.game && details.game.name
-    ? details.game.name
-    : `Steam app ${id}`;
+  const added = !known || !State.owned[known.id];
+  if (known) {
+    State.owned[known.id] = true;
+    if (rec && rec.name) known.title = rec.name;
+  } else {
+    const g = makeCustomGame({ title: name, developer: 'Steam', genre: 'Tracked' });
+    g.steamAppId = id;
+    if (art && art.ok) {
+      g.cover = art.cover || art.wide || null;
+      g.wide = art.wide || null;
+      g.hero = art.hero || null;
+    }
+    State.custom = State.custom || [];
+    State.custom.push(g);
+    State.owned[g.id] = true;
+  }
 
-  const g = makeCustomGame({ title: name, developer: 'Steam', genre: 'Tracked' });
-  g.steamAppId = id;
-  State.custom = State.custom || [];
-  if (State.custom.some((x) => x.id === g.id)) { toast(`${name} is already tracked`, 'info'); return; }
-  State.custom.push(g);
-  State.owned[g.id] = true;
   await persist();
   if (typeof afterLibraryChange === 'function') afterLibraryChange();
-  toast(`${name} tracked in your Apex library`, 'check');
+  apPaintGrid();
+
+  const input = document.getElementById('ap-appid');
+  if (input) input.value = '';
+
+  toast(added
+    ? `${name} added to Apex \u2014 Steam is unchanged`
+    : `${name} is already in Apex \u2014 Steam is unchanged`, 'check');
 }
 
 async function apAction(act, root, btn) {
@@ -358,6 +509,15 @@ async function apAction(act, root, btn) {
   if (act === 'steamdb') {
     if (!/^\d{3,9}$/.test(id)) { toast('Type a numeric Steam app id first', 'warn'); return; }
     window.api.openExternal(`https://steamdb.info/app/${id}/`).catch(() => {});
+    return;
+  }
+
+  // Hands the id to the Steam client and lets Steam enforce ownership: it
+  // installs what the account owns and opens the store page for everything else.
+  if (act === 'install') {
+    if (!/^\d{3,9}$/.test(id)) { toast('Type a numeric Steam app id first', 'warn'); return; }
+    await window.api.openExternal(`steam://install/${id}`).catch(() => {});
+    toast(`Steam will install app ${id} if this account owns it`, 'info');
     return;
   }
 

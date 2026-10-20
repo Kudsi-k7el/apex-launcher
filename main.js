@@ -1685,6 +1685,13 @@ ipcMain.handle('store:details', async (_e, appId, opts) => {
   catch (err) { return { ok: false, error: (err && err.message) || 'Could not load details' }; }
 });
 
+// Real portrait/wide/hero artwork for one AppID. `appdetails` does not carry
+// the portrait library capsule, and the old CDN path 404s for recent titles.
+ipcMain.handle('store:assets', async (_e, appId) => {
+  try { return await catalog.assets(appId); }
+  catch (err) { return { ok: false, error: (err && err.message) || 'Could not load artwork' }; }
+});
+
 // Gaming news, read from news.instant-gaming.com in the main process.
 ipcMain.handle('news:list', async (_e, opts) => {
   try { return await news.list(opts || {}); }
