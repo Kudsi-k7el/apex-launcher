@@ -1,0 +1,4 @@
+{
+  "_note": "Bundled keys. Leave this file empty on GitHub. Put a real key in data/default-keys.local.json instead: that file is git-ignored, still ships inside the installer, and is read first. itchApiKey is used only when the person running Apex has not saved their own key in Settings. It is read in the main process and never handed to the renderer.",
+  "itchApiKey": ""
+}

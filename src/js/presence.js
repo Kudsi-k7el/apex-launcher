@@ -32,7 +32,7 @@ let presenceStartedAt = 0;
 /** True when the user has Rich Presence switched on in Settings. */
 function presenceEnabled() {
   const d = (typeof State !== 'undefined' && State.settings && State.settings.discord) || null;
-  return !!(d && d.enabled && d.clientId);
+  return !!(d && d.enabled);
 }
 
 /** Pushes one activity, skipping it when nothing actually changed. */

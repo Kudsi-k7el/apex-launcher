@@ -125,7 +125,7 @@ function renderSettings(el) {
   const itchKey = String((s.itch && s.itch.apiKey) || '');
   const itchUser = String((s.itch && s.itch.username) || '');
   const disc = (s.discord && typeof s.discord === 'object') ? s.discord : {};
-  const discOn = !!(disc.enabled && disc.clientId);
+  const discOn = !!(disc.enabled);
   const apiUrl = String((s.api && s.api.baseUrl) || '');
   // The token itself never reaches the renderer (see rendererState in main.js);
   // `signedIn` is the main process' answer to "is this session good?".
@@ -490,32 +490,34 @@ function renderSettings(el) {
       <h3>itch.io</h3>
       <p class="panel-note">Browsing itch.io needs no account at all &mdash; the itch.io tab reads the site's own
       public feeds and game pages. Downloading a build is the part that needs an identity, because itch.io only
-      hands out a file link to an account it can recognise. Paste your own API key below and Apex asks itch.io
-      on your behalf: the key is stored on this PC and is sent nowhere except itch.io.</p>
+      hands out a file link to an account it can recognise. Apex can use a built-in key for that, and any key
+      you paste here takes over from it: either way the key stays on this PC and is sent nowhere except itch.io.</p>
 
       <div class="setting-row col">
         <div class="s-text wide">
-          <h4>API key</h4>
-          <p>Generate one at <b>itch.io/user/settings/api-keys</b>. A paid title is only ever offered for
-          download when the account behind the key already owns it.</p>
+          <h4>Your own API key</h4>
+          <p>${itchKey ? 'Your key is in use.' : 'Your own key is optional &mdash; the build supplies one when it has it.'}
+          Generate your own at <b>itch.io/user/settings/api-keys</b> if you would rather use your account.
+          A paid title is only ever offered for download when the account behind the key already owns it.</p>
         </div>
         <div class="itch-key">
           <input type="password" id="itch-key" class="select" spellcheck="false" autocomplete="off"
-            placeholder="Paste your itch.io API key&hellip;" value="${esc(itchKey)}">
+            placeholder="Paste your own key to replace the built-in one&hellip;" value="${esc(itchKey)}">
           <button class="btn primary" id="itch-save">${icon('check', 15)} Save &amp; connect</button>
           <button class="btn secondary" id="itch-get">${icon('external', 15)} Get a key</button>
-          ${itchKey ? `<button class="btn danger" id="itch-clear">${icon('trash', 15)} Disconnect</button>` : ''}
+          ${itchKey ? `<button class="btn secondary" id="itch-clear">${icon('refresh', 15)} Use Apex&rsquo;s key</button>` : ''}
         </div>
         <div class="itch-conn ${itchUser ? 'ok' : ''}" id="itch-conn">
           ${itchUser
-            ? `${icon('checkCircle', 16)} Connected as <b>${esc(itchUser)}</b>`
-            : `${icon('info', 16)} Not connected &mdash; browsing works, installing from itch.io does not.`}
+            ? `${icon('checkCircle', 16)} Connected as <b>${esc(itchUser)}</b>${itchKey ? '' : ' &middot; built-in key'}`
+            : `${icon('info', 16)} Not connected yet.`}
         </div>
+        <div class="itch-conn" id="itch-builtin" hidden></div>
       </div>
     </section>
 
     <section class="panel">
-      <h3>Project Lightning tools</h3>
+      <h3>Apex Tools</h3>
       <p class="panel-note">The Bypass and OnlineFix catalogues ship with Apex and can be refreshed from the
       project's own GitHub. Applying a fix copies files you already have on disk (or a fix archive you point it
       at) onto a game's install folder; SteamLess swaps the Steamworks DLLs. Apex backs up everything it
@@ -562,9 +564,9 @@ function renderSettings(el) {
     <section class="panel">
       <h3>Discord Rich Presence</h3>
       <p class="panel-note">Shows what you are doing in Apex on your Discord profile &mdash; &ldquo;Browsing Apex Launcher&rdquo;,
-      or the game you are playing with a live timer. Apex only writes to the Discord client running on this PC;
-      nothing is sent to any server of ours. It needs your own Discord application: create one at
-      <b>discord.com/developers/applications</b> and paste its Application ID below.</p>
+      or the game you are playing with a live timer. Apex has its own Discord application, so there is nothing to
+      set up: flip the switch. Apex only writes to the Discord client running on this PC; nothing is sent to any
+      server of ours.</p>
 
       <div class="setting-row">
         <div class="s-ico">${icon('gamepad', 20)}</div>
@@ -572,21 +574,8 @@ function renderSettings(el) {
         <label class="switch"><input type="checkbox" id="discord-on" ${disc.enabled ? 'checked' : ''}><span class="slider"></span></label>
       </div>
 
-      <div class="setting-row col">
-        <div class="s-text wide">
-          <h4>Application ID</h4>
-          <p>From your own Discord app. Optional: upload an image named <b>apex</b> under Rich Presence &gt; Art Assets
-          and it becomes the card&rsquo;s artwork.</p>
-        </div>
-        <div class="itch-key">
-          <input type="text" id="discord-id" class="select" spellcheck="false" autocomplete="off"
-            placeholder="e.g. 123456789012345678" value="${esc(disc.clientId || '')}">
-          <button class="btn primary" id="discord-save">${icon('check', 15)} Save</button>
-          <button class="btn secondary" id="discord-portal">${icon('external', 15)} Create an app</button>
-        </div>
-        <div class="itch-conn" id="discord-conn">
-          ${discOn ? `${icon('info', 16)} Waiting for Discord&hellip;` : `${icon('info', 16)} Off &mdash; paste an Application ID and switch it on.`}
-        </div>
+      <div class="itch-conn" id="discord-conn">
+        ${discOn ? `${icon('info', 16)} Waiting for Discord&hellip;` : `${icon('info', 16)} Off &mdash; switch it on to appear on your profile.`}
       </div>
     </section>
 
@@ -1010,7 +999,6 @@ function renderSettings(el) {
   if (itchSaveBtn) itchSaveBtn.addEventListener('click', async () => {
     const input = el.querySelector('#itch-key');
     const key = String((input && input.value) || '').trim();
-    if (!key) { toast('Paste an itch.io API key first', 'warn'); return; }
 
     const prev = itchSaveBtn.innerHTML;
     itchSaveBtn.disabled = true;
@@ -1026,7 +1014,7 @@ function renderSettings(el) {
     State.settings.itch = { apiKey: key, username: res.username || '' };
     await persist();
     renderSettings(el);
-    toast(`Connected to itch.io as ${res.username}`, 'check');
+    toast(key ? `Connected to itch.io as ${res.username}` : `Using Apex's built-in itch.io key as ${res.username}`, 'check');
   });
 
   const itchKeyInput = el.querySelector('#itch-key');
@@ -1041,13 +1029,28 @@ function renderSettings(el) {
     }
   });
 
+  // Drops the personal key and falls back to the one the build ships with.
   const itchClearBtn = el.querySelector('#itch-clear');
   if (itchClearBtn) itchClearBtn.addEventListener('click', async () => {
-    State.settings.itch = { apiKey: '', username: '' };
+    const res = await window.api.itchConnect('').catch(() => null);
+    State.settings.itch = { apiKey: '', username: (res && res.ok && res.username) || '' };
     await persist();
     renderSettings(el);
-    toast('Disconnected from itch.io', 'info');
+    toast(res && res.ok ? `Switched to Apex's built-in key (${res.username})` : 'Switched to the built-in key', 'info');
   });
+
+  // The key itself never reaches the renderer: this only asks whether one exists.
+  const itchBuiltinSlot = el.querySelector('#itch-builtin');
+  if (itchBuiltinSlot && window.api && window.api.itchStatus) {
+    window.api.itchStatus().then((st) => {
+      if (!itchBuiltinSlot.isConnected || !st) return;
+      itchBuiltinSlot.hidden = false;
+      itchBuiltinSlot.className = `itch-conn ${st.builtIn ? 'ok' : ''}`;
+      itchBuiltinSlot.innerHTML = st.builtIn
+        ? `${icon('shield', 16)} Apex's built-in key is available${st.mine ? ' &mdash; your own key is winning' : ''}.`
+        : `${icon('info', 16)} This build has no built-in key &mdash; paste your own above.`;
+    }).catch(() => {});
+  }
 
   // --- Project Lightning tools ---------------------------------------------
   // The catalogues are metadata only; the folder pickers just remember where
@@ -1109,13 +1112,13 @@ function renderSettings(el) {
   const paintDiscordConn = async () => {
     if (!discordConn || !window.api || !window.api.presenceStatus) return;
     const st = await window.api.presenceStatus().catch(() => null);
-    const wanted = !!(State.settings.discord && State.settings.discord.enabled && State.settings.discord.clientId);
+    const wanted = !!(State.settings.discord && State.settings.discord.enabled);
     discordConn.className = `itch-conn ${st && st.connected ? 'ok' : ''}`;
     discordConn.innerHTML = (st && st.connected)
       ? `${icon('checkCircle', 16)} Connected to Discord`
       : wanted
         ? `${icon('info', 16)} ${esc((st && st.error) || 'Waiting for the Discord client\u2026')}`
-        : `${icon('info', 16)} Off &mdash; paste an Application ID and switch it on.`;
+        : `${icon('info', 16)} Off &mdash; switch it on to appear on your profile.`;
   };
 
   const applyDiscord = async (patch) => {
@@ -1133,23 +1136,6 @@ function renderSettings(el) {
     SFX.play('toggle');
     await applyDiscord({ enabled: discordOn.checked });
     toast(discordOn.checked ? 'Rich Presence on' : 'Rich Presence off', discordOn.checked ? 'check' : 'info');
-  });
-
-  const discordId = el.querySelector('#discord-id');
-  const discordSave = el.querySelector('#discord-save');
-  if (discordSave) discordSave.addEventListener('click', async () => {
-    await applyDiscord({ clientId: String((discordId && discordId.value) || '').trim() });
-    toast('Discord settings saved', 'check');
-  });
-  if (discordId) discordId.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') { e.preventDefault(); if (discordSave) discordSave.click(); }
-  });
-
-  const discordPortal = el.querySelector('#discord-portal');
-  if (discordPortal) discordPortal.addEventListener('click', () => {
-    if (window.api && window.api.openExternal) {
-      window.api.openExternal('https://discord.com/developers/applications').catch(() => {});
-    }
   });
 
   paintDiscordConn();

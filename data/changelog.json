@@ -11,7 +11,8 @@
           "items": [
             "Project Apex: the 2.9.0 shell. Sections across the top as text with an underline, the page straight on the gradient, no rail, no floating card. It is the default and you can still switch back in Settings > Interface.",
             "A Home page. The wordmark, four doors (Quick guide, Changelog, Legal notice, Discord), the community card and a Jump back in strip of whatever you played last.",
-            "Apex Tools. The Tools view now opens on a dashboard: a live clock, a Steam app-id lookup that opens the store page or SteamDB, Restart Steam, Add a Steam library folder, a drop zone that scans a folder and adds what it finds, and a paged cover grid with Recent / A-Z and search.",
+            "Apex Tools. The Tools view is one page in three columns: Import, a live clock, and App id of Steam with Add, Restart Steam and SteamDB. Under them sits the shelf of games LuaTools has applied to this account, with Recent / A-Z, search and Reload covers.",
+            "LuaTools, read side. Apex opens Steam's per-user stplug-in folder, parses every .lua and .acf it finds, and lists the app ids and depots each one targets. A file you drop on the import box is inspected and shown with its app id, its title when Apex knows it, and a Store page / Track in Apex choice. Removing a plugin file is an uninstall, and nothing in Apex writes a script, a manifest or an unlock into Steam.",
             "Last news. The gaming feed opens over the home screen once per launch, with a hero story and the next four, and closes with Esc or the X."
           ]
         },
@@ -22,9 +23,14 @@
             "The Bypass catalogue leads with a centred row of publisher marks and a denser cover grid, instead of a list of rows.",
             "Those tiles now carry the publishers' real marks - Ubisoft, EA, Rockstar, PlayStation, Steam, Epic and GOG - in their own colours (Simple Icons' CC0 paths). Denuvo, Xbox, Nintendo and the catch-all keep drawn glyphs.",
             "Bypass has banners: a wide featured strip for the first title on the shelf, and every card now leads with the game's 16:9 Steam art instead of a text placeholder. Missing art falls back to the drawn banner.",
-            "The corner credit reads Created by sexykudasai - v2.9.0.",
+            "The corner credit reads Created by ♥ sexykudasai - v2.9.0.",
             "Settings > Interface picks the shell separately from the theme, so either palette can be worn with either layout.",
-            "The Lightning Tools page is Apex Tools. The fix catalogues are the tabs behind it."
+            "The Lightning Tools page is Apex Tools. The fix catalogues are the tabs behind it.",
+            "Jump back in is quick launch: a cover on Home starts the game, with a play mark on hover, instead of opening its page.",
+            "The title bar is text only - PROJECT heavy, APEX light, no flame mark.",
+            "itch.io works out of the box. A key bundled with the build is used until you paste your own in Settings; your key always wins, and the bundled one is never shown in the window.",
+            "Discord Rich Presence runs on Apex's own Discord application. The application id is fixed in the app, invisible in Settings and not editable.",
+            "App id of Steam adds the title to your Apex library (or opens its store page when Apex does not know it). Steam itself is never touched."
           ]
         },
         {

@@ -228,6 +228,29 @@
   box-shadow: 0 16px 34px rgba(0, 0, 0, .45);
 }
 .home-tile-art { display: block; aspect-ratio: 2 / 3; position: relative; overflow: hidden; }
+/* Quick launch: the cover itself starts the game, so a play mark fades in. */
+.home-tile-play {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #fff;
+  background: rgba(0, 0, 0, .38);
+  opacity: 0;
+  transition: opacity .18s var(--ease);
+}
+.home-tile-play .ico {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 12px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 10px 26px rgba(0, 0, 0, .45);
+}
+.home-tile:hover .home-tile-play,
+.home-tile:focus-visible .home-tile-play { opacity: 1; }
 .home-tile-name {
   display: block;
   padding: 8px 10px 2px;

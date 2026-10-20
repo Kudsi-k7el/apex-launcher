@@ -26,6 +26,7 @@ const ICON_PATHS = {
   close: '<path d="M18 6L6 18"/><path d="M6 6l12 12"/>',
   plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
   folder: '<path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.7-.9l-.8-1.2A2 2 0 0 0 7.9 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2z"/>',
+  file: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>',
   trash: '<path d="M3 6h18"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
   check: '<path d="M20 6L9 17l-5-5"/>',
   checkCircle: '<circle cx="12" cy="12" r="10"/><path d="M9 12l2 2 4-4"/>',

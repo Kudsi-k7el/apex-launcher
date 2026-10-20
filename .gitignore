@@ -24,3 +24,6 @@ Downloads/
 Thumbs.db
 desktop.ini
 .DS_Store
+
+# Private build keys (ships in the installer, never in the repo)
+data/default-keys.local.json

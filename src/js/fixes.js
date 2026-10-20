@@ -74,11 +74,11 @@ function renderFixes(el) {
   el.innerHTML = `
     <h1 class="page-title">${icon('shield', 24)} Apex Tools</h1>
     <div class="page-intro">
-      <p>One page for the tools around your library: the Steam helpers and the clock at the top,
-      then the fix catalogues. Bypass and OnlineFix list what each title needs and apply a fix you
-      already have on disk; SteamLess swaps the Steamworks DLLs inside a game for your own copies.
-      Apex stores the catalogue metadata and the tooling &mdash; it never ships the fix files
-      themselves, and it backs up everything it replaces.</p>
+      <p>One page for the tools around your library: import a LuaTools file, read the Steam app id,
+      and see every game LuaTools has applied to this account &mdash; read straight out of Steam's
+      stplug-in folder. Bypass and OnlineFix list what each title needs and apply a fix you already
+      have on disk; SteamLess swaps the Steamworks DLLs inside a game for your own copies. Apex
+      stores metadata and tooling and never ships the fix files themselves.</p>
     </div>
 
     <div class="fx-tabs" role="tablist">

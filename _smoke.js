@@ -1601,11 +1601,11 @@ async function run() {
       const cfg = await window.api.presenceConfigure({ enabled: true, clientId: '1234567890' });
       window.api.presenceSet({ details: 'Smoke', state: 'Testing' });
       const st1 = await window.api.presenceStatus();
-      await window.api.presenceConfigure({ enabled: false, clientId: '' });
+      const forced = await window.api.presenceConfigure({ enabled: false, clientId: '' });
       const st2 = await window.api.presenceStatus();
       return { hasStatus: !!(st0 && 'connected' in st0), enabled: st1.enabled, id: st1.clientId, off: st2.enabled };`);
-    check('Discord Rich Presence configures through the bridge',
-      disc.hasStatus && disc.enabled === true && disc.id === '1234567890' && disc.off === false,
+    check('Discord Rich Presence runs on the launcher\'s own application id, not the renderer\'s',
+      disc.hasStatus && disc.enabled === true && disc.id === '1560819031571828836' && disc.off === false,
       JSON.stringify(disc));
 
     const scanIcon = await js(`
@@ -2098,16 +2098,18 @@ async function run() {
       const appid = !!document.querySelector('#ap-appid');
       const drop = !!document.querySelector('#ap-drop');
       const grid = !!document.getElementById('ap-grid');
+      const count = (document.querySelector('#ap-count') || {}).textContent || '';
       const barHidden = !!document.querySelector('#content .fx-catalog-bar.hidden');
       const hour = String(new Date().getHours()).padStart(2, '0');
       const dateText = (document.querySelector('#ap-clock-date') || {}).textContent || '';
-      return { title, tabNames, active, clock, appid, drop, grid, barHidden, hour, dateText };`);
+      return { title, tabNames, active, clock, appid, drop, grid, count, barHidden, hour, dateText };`);
     check('Apex Tools opens on its dashboard: clock, app id, drop zone, grid',
       /Apex Tools/.test(apexTools.title)
       && apexTools.tabNames.join(',') === 'apex,bypass,onlinefix,steamless'
       && apexTools.active === 'apex'
       && /^\d{2}:\d{2}$/.test(apexTools.clock) && apexTools.dateText.length > 3
-      && apexTools.appid && apexTools.drop && apexTools.grid && apexTools.barHidden,
+      && apexTools.appid && apexTools.drop && apexTools.grid && /^\d+ games?$/.test(apexTools.count)
+      && apexTools.barHidden,
       JSON.stringify(apexTools));
 
     const fxView = await js(`

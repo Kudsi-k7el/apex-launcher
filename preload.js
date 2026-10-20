@@ -28,6 +28,7 @@ contextBridge.exposeInMainWorld('api', {
   pickFolder: (current) => ipcRenderer.invoke('dialog:folder', current),
   pickExecutable: (current) => ipcRenderer.invoke('dialog:exe', current),
   pickImage: (current) => ipcRenderer.invoke('dialog:image', current),
+  pickLuaFile: () => ipcRenderer.invoke('dialog:lua'),
   readImage: (p) => ipcRenderer.invoke('file:dataUrl', p),
   openPath: (p) => ipcRenderer.invoke('shell:openPath', p),
   openExternal: (url) => ipcRenderer.invoke('shell:openExternal', url),
@@ -80,6 +81,7 @@ contextBridge.exposeInMainWorld('api', {
   itchSearch: (query) => ipcRenderer.invoke('itch:search', query),
   itchDetail: (url) => ipcRenderer.invoke('itch:detail', url),
   itchConnect: (key) => ipcRenderer.invoke('itch:connect', key),
+  itchStatus: () => ipcRenderer.invoke('itch:status'),
   itchUploads: (gameId) => ipcRenderer.invoke('itch:uploads', gameId),
   steamripSearch: (query) => ipcRenderer.invoke('steamrip:search', query),
   steamripDetails: (id) => ipcRenderer.invoke('steamrip:details', id),
@@ -174,6 +176,10 @@ contextBridge.exposeInMainWorld('api', {
   removeManifest: (file) => ipcRenderer.invoke('steam:removeManifest', file),
   steamLibraries: () => ipcRenderer.invoke('steam:libraries'),
   steamRestart: () => ipcRenderer.invoke('steam:restart'),
+  luaScan: () => ipcRenderer.invoke('lua:scan'),
+  luaInspect: (file) => ipcRenderer.invoke('lua:inspect', file),
+  luaRemove: (file, dir) => ipcRenderer.invoke('lua:remove', file, dir),
+  luaClear: (dir) => ipcRenderer.invoke('lua:clear', dir),
   steamRunning: () => ipcRenderer.invoke('steam:running'),
 
   // --- uninstall / remove (see uninstall.js) -------------------------------

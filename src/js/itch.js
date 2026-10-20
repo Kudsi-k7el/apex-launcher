@@ -332,8 +332,15 @@ async function itchFillInstalls(it, det) {
   const box = document.getElementById('itch-det-install');
   if (!box) return;
 
-  const key = String((State.settings.itch && State.settings.itch.apiKey) || '').trim();
-  if (!key) {
+  // A saved key, a remembered name, or the key the build ships with all mean
+  // "Apex can ask itch.io for a link". The key itself never reaches here.
+  const s = (State.settings && State.settings.itch) || {};
+  let keyed = !!String(s.apiKey || '').trim() || !!s.username;
+  if (!keyed && window.api && window.api.itchStatus) {
+    const st = await window.api.itchStatus().catch(() => null);
+    keyed = !!(st && (st.mine || st.builtIn));
+  }
+  if (!keyed) {
     box.innerHTML = `
       <div class="itch-need">
         <span class="itch-need-ico">${icon('flame', 22)}</span>

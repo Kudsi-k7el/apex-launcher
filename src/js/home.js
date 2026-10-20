@@ -24,8 +24,8 @@ function homeRecent(limit = 6) {
 
 function homeTile(g) {
   const played = State.stats && State.stats.lastPlayed && State.stats.lastPlayed[g.id];
-  return `<button class="home-tile" data-act="open" data-id="${esc(g.id)}" title="${esc(g.title)}">
-    <span class="home-tile-art">${art(g, 'cover')}</span>
+  return `<button class="home-tile" data-act="play" data-id="${esc(g.id)}" title="Launch ${esc(g.title)}">
+    <span class="home-tile-art">${art(g, 'cover')}<span class="home-tile-play">${icon('play', 20)}</span></span>
     <span class="home-tile-name">${esc(g.title)}</span>
     <span class="home-tile-meta">${played
       ? `${icon('clock', 11)} ${esc(timeAgo(new Date(played).toISOString()))}`

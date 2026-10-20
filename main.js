@@ -27,6 +27,7 @@ const logoart = require('./logoart');
 const installs = require('./installs');
 const uninstall = require('./uninstall');
 const perf = require('./perf');
+const luatools = require('./luatools');
 const shots = require('./shots');
 const steamapi = require('./steamapi');
 const lightningtools = require('./lightningtools');
@@ -48,6 +49,38 @@ const updater = require('./updater');
 
 const APP_NAME = 'Apex Launcher';
 app.setName(APP_NAME);
+
+// Discord application Apex talks to. It belongs to the launcher, so the ID is
+// fixed here: Settings never shows it, and nothing the renderer sends can
+// change it.
+const DISCORD_CLIENT_ID = '1560819031571828836';
+
+// Optional bundled itch.io key, read from data/default-keys.json so a build can
+// ship a working key without hard-coding it in source. A local, git-ignored
+// default-keys.local.json wins when present, so a private key can travel in the
+// installer without ever landing in the public repository. Never sent to the
+// renderer; a key the user saves in Settings always wins over both.
+let builtInItchCache;
+function builtInItchKey() {
+  if (builtInItchCache !== undefined) return builtInItchCache;
+  builtInItchCache = '';
+  for (const name of ['default-keys.local.json', 'default-keys.json']) {
+    try {
+      const file = path.join(__dirname, 'data', name);
+      if (!fs.existsSync(file)) continue;
+      const raw = JSON.parse(fs.readFileSync(file, 'utf8'));
+      const key = String((raw && raw.itchApiKey) || '').trim();
+      if (key) { builtInItchCache = key; break; }
+    } catch { /* unreadable file: fall through to the next one */ }
+  }
+  return builtInItchCache;
+}
+
+/** The key every itch.io call should use: the user's own, else the built-in. */
+function itchKey() {
+  const mine = String((load().settings.itch || {}).apiKey || '').trim();
+  return mine || builtInItchKey();
+}
 
 /** @type {BrowserWindow|null} */
 let win = null;
@@ -147,12 +180,12 @@ function defaults() {
         username: ''             // remembered so Settings can show who is connected
       },
       // --- Discord Rich Presence (see discord.js) ---------------------------
-      // Off until the user pastes the Application ID of their own Discord app
-      // (discord.com/developers). Nothing is sent anywhere: Apex writes to the
-      // local Discord client's IPC socket and nothing else.
+      // Apex has its own Discord application, so the ID is baked in and Settings
+      // only offers the on/off switch. Nothing is sent anywhere: Apex writes to
+      // the local Discord client's IPC socket and nothing else.
       discord: {
         enabled: false,
-        clientId: ''
+        clientId: DISCORD_CLIENT_ID
       },
       // --- backend account / cloud sync (see net/api.js) -------------------
       // Locked to the deployed Apex server. auth.DEFAULT_SERVER is the single
@@ -272,7 +305,13 @@ function load() {
         download: { ...d.settings.download, ...((raw.settings && raw.settings.download) || {}) },
         art: { ...d.settings.art, ...((raw.settings && raw.settings.art) || {}) },
         itch: { ...d.settings.itch, ...((raw.settings && raw.settings.itch) || {}) },
-        discord: { ...d.settings.discord, ...((raw.settings && raw.settings.discord) || {}) },
+        // The Discord application ID is not a user setting: it is the launcher's
+        // own app, so whatever an old state file says is replaced on every load.
+        discord: {
+          ...d.settings.discord,
+          ...((raw.settings && raw.settings.discord) || {}),
+          clientId: DISCORD_CLIENT_ID
+        },
         // The address is compiled into the build (auth.DEFAULT_SERVER), so
         // whatever an older install happened to leave in settings.json is
         // discarded here. This is the hard stop behind the missing UI: even
@@ -356,6 +395,9 @@ function rendererState() {
   api.signedIn = !!api.token;
   delete api.token;
   st.settings.api = api;
+  // The Discord application ID stays in the main process. The renderer only
+  // needs to know whether the switch is on.
+  st.settings.discord = { enabled: !!(st.settings.discord || {}).enabled };
   return st;
 }
 
@@ -1057,14 +1099,25 @@ ipcMain.handle('itch:detail', async (_e, url) => {
   catch (err) { return { ok: false, error: err.message }; }
 });
 ipcMain.handle('itch:connect', async (_e, key) => {
-  const clean = String(key || '').trim();
-  if (!clean) return { ok: false, error: 'Paste an itch.io API key first.' };
+  const mine = String(key || '').trim();
+  const use = mine || builtInItchKey();
+  if (!use) return { ok: false, error: 'Paste an itch.io API key first.' };
   try {
-    const who = await itch.profile(clean);
-    return { ok: true, username: who.username, displayName: who.displayName };
+    const who = await itch.profile(use);
+    return { ok: true, username: who.username, displayName: who.displayName, builtIn: !mine };
   } catch (err) {
     return { ok: false, error: err.message };
   }
+});
+// What the Settings panel needs to know without ever receiving the key itself.
+ipcMain.handle('itch:status', () => {
+  const s = load().settings.itch || {};
+  return {
+    ok: true,
+    mine: !!String(s.apiKey || '').trim(),
+    builtIn: !!builtInItchKey(),
+    username: String(s.username || '')
+  };
 });
 ipcMain.handle('steamrip:search', async (_e, query) => {
   const p = providers.get('steamrip');
@@ -1130,7 +1183,7 @@ handleAuthed('pl:steamlessReplace', async (_e, payload) => {
 });
 
 ipcMain.handle('itch:uploads', async (_e, gameId) => {
-  const key = String((load().settings.itch || {}).apiKey || '').trim();
+  const key = itchKey();
   if (!key) return { ok: false, error: 'no-key', uploads: [] };
   try {
     return { ok: true, uploads: await itch.uploads(key, gameId) };
@@ -1148,7 +1201,7 @@ ipcMain.handle('state:save', (_e, state) => {
   else if (tray && win && win.isVisible()) destroyTray();
   if (tray) tray.setImage(trayIcon(state.settings.accent));
   // Rich Presence follows the Settings toggle without a restart.
-  try { discord.configure(state.settings.discord || {}); } catch { /* never block a save */ }
+  try { discord.configure({ ...(state.settings.discord || {}), clientId: DISCORD_CLIENT_ID }); } catch { /* never block a save */ }
   return true;
 });
 ipcMain.handle('state:reset', () => {
@@ -1162,7 +1215,7 @@ ipcMain.handle('state:reset', () => {
 // The renderer owns the wording ("Browsing the Store", "Playing Halo"); the
 // main process owns the socket, the handshake and the reconnect loop.
 ipcMain.handle('presence:status', () => discord.status());
-ipcMain.handle('presence:configure', (_e, cfg) => discord.configure(cfg || {}));
+ipcMain.handle('presence:configure', (_e, cfg) => discord.configure({ ...(cfg || {}), clientId: DISCORD_CLIENT_ID }));
 ipcMain.on('presence:set', (_e, activity) => { try { discord.setActivity(activity || null); } catch { /* ignore */ } });
 ipcMain.on('presence:clear', () => { try { discord.clear(); } catch { /* ignore */ } });
 
@@ -1171,6 +1224,21 @@ ipcMain.handle('dialog:folder', async (_e, current) => {
     title: 'Choose a folder',
     properties: ['openDirectory', 'createDirectory'],
     defaultPath: current || app.getPath('home')
+  });
+  return res.canceled ? null : res.filePaths[0];
+});
+
+// One file, for the LuaTools import box. Only reads the path back to the
+// renderer; nothing is copied or written.
+ipcMain.handle('dialog:lua', async () => {
+  const res = await dialog.showOpenDialog(win, {
+    title: 'Pick a LuaTools file',
+    properties: ['openFile'],
+    filters: [
+      { name: 'LuaTools files', extensions: ['lua', 'acf', 'manifest', 'zip'] },
+      { name: 'All files', extensions: ['*'] }
+    ],
+    defaultPath: app.getPath('home')
   });
   return res.canceled ? null : res.filePaths[0];
 });
@@ -1454,6 +1522,29 @@ ipcMain.handle('steam:restart', async () => {
   } catch (err) {
     return { ok: false, error: err.message };
   }
+});
+
+// Lua tools: read SteamTools' per-user folder and remove files the user put
+// there. Nothing here writes a script or a manifest, and every delete has to
+// name a file inside a plugin folder that scan() itself found.
+ipcMain.handle('lua:scan', async () => {
+  try { return await luatools.scan(); }
+  catch (err) { return { ok: false, error: err.message, steam: [] }; }
+});
+
+ipcMain.handle('lua:inspect', async (_e, file) => {
+  try { return await luatools.inspect(file); }
+  catch (err) { return { ok: false, error: err.message }; }
+});
+
+handleAuthed('lua:remove', async (_e, file, dir) => {
+  try { return await luatools.remove(file, dir); }
+  catch (err) { return { ok: false, error: err.message }; }
+});
+
+handleAuthed('lua:clear', async (_e, dir) => {
+  try { return await luatools.clear(dir); }
+  catch (err) { return { ok: false, error: err.message }; }
 });
 
 // Just "is Steam open right now?" - cheap enough to poll while waiting for it

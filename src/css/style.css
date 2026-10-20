@@ -109,8 +109,9 @@ code { font-family: 'Cascadia Code', Consolas, monospace; }
 }
 
 .brand { padding-left: 14px; display: flex; align-items: center; gap: 9px; }
-.brand-text { font-size: 12px; letter-spacing: 2.6px; color: var(--muted); }
-.brand-text b { color: var(--accent); }
+.brand-text { font-size: 12px; font-weight: 600; letter-spacing: 2.4px; text-transform: uppercase; color: rgba(255, 255, 255, .88); }
+.brand-text b { font-weight: 800; color: #fff; }
+.brand-light { font-weight: 400; color: rgba(255, 255, 255, .88); }
 .logo { color: var(--accent); filter: drop-shadow(0 0 7px var(--accent)); }
 
 .title-right { display: flex; height: 100%; align-items: center; -webkit-app-region: no-drag; }

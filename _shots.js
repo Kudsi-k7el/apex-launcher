@@ -313,13 +313,41 @@ async function run() {
     await js(`
       closeNewsBoot();
       gotoView('tools');
-      await new Promise((r) => setTimeout(r, 900));
+      await new Promise((r) => setTimeout(r, 1400));
+      document.getElementById('content').scrollTop = 0;
+      return true;`);
+    await wait(1600);
+    await shoot(win, '30-apex-tools');
+    await js(`
       document.querySelector('#content [data-fx-tab="bypass"]').click();
       await new Promise((r) => setTimeout(r, 1400));
       document.getElementById('content').scrollTop = 0;
       return true;`);
     await wait(2200);
     await shoot(win, '30a-bypass');
+    app.exit(0);
+    return;
+  }
+
+  // APEX_SHOTS_ONLY=settings captures the two panels that changed in Settings.
+  if (process.env.APEX_SHOTS_ONLY === 'settings') {
+    await js(`
+      closeNewsBoot();
+      gotoView('settings');
+      await new Promise((r) => setTimeout(r, 900));
+      const el = document.querySelector('#itch-builtin');
+      if (el) el.scrollIntoView({ block: 'center' });
+      await new Promise((r) => setTimeout(r, 700));
+      return true;`);
+    await wait(1100);
+    await shoot(win, '31-settings-itch');
+    await js(`
+      const el = document.querySelector('#discord-on');
+      if (el) el.closest('.panel').scrollIntoView({ block: 'center' });
+      await new Promise((r) => setTimeout(r, 700));
+      return true;`);
+    await wait(900);
+    await shoot(win, '31b-settings-discord');
     app.exit(0);
     return;
   }
