@@ -530,6 +530,7 @@ code { font-family: 'Cascadia Code', Consolas, monospace; }
   color: rgba(255, 255, 255, .38);
   opacity: 1;
 }
+.stamp-heart { color: var(--accent); }
 
 /* --- the download drawer spans the width, like the rest of the page ------ */
 [data-ui="2.9"] #drawer {

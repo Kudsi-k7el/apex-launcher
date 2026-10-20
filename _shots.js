@@ -307,6 +307,23 @@ async function run() {
   `);
   await wait(3200);   // let the CDN art and news covers arrive
 
+  // Narrow runs: APEX_SHOTS_ONLY=tools captures just the Tools view, which is
+  // what a change to the catalogue needs reviewed. Everything else is skipped.
+  if (process.env.APEX_SHOTS_ONLY === 'tools') {
+    await js(`
+      closeNewsBoot();
+      gotoView('tools');
+      await new Promise((r) => setTimeout(r, 900));
+      document.querySelector('#content [data-fx-tab="bypass"]').click();
+      await new Promise((r) => setTimeout(r, 1400));
+      document.getElementById('content').scrollTop = 0;
+      return true;`);
+    await wait(2200);
+    await shoot(win, '30a-bypass');
+    app.exit(0);
+    return;
+  }
+
   // 0. the startup panel, then close it so the rest of the set is the shell
   await js(`
     if (!document.querySelector('#news-boot')) await openNewsBoot();

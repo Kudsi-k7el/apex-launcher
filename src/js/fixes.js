@@ -200,7 +200,9 @@ async function fxPaintCatalog() {
 
     // Publishers lead the page the way a storefront's own shelves do: a centred
     // row of marks, then the covers. "All" is the first mark, so the row reads
-    // as one choice rather than a filter plus a list.
+    // as one choice rather than a filter plus a list. Above the covers sits one
+    // wide banner for the first title on the shelf, which is the "what is this
+    // page" image the catalogue never carried.
     body.innerHTML = `
       <div class="fx-shelf">
         <div class="fx-pubs" role="group" aria-label="Publishers">
@@ -210,10 +212,11 @@ async function fxPaintCatalog() {
           </button>
           ${publishers.map((p) => `<button class="fx-pub-card ${fxPublisher === p ? 'active' : ''}" data-fx-pub="${esc(p)}" title="${esc(p)}">
             ${fxPubMark(p)}
-            <span class="fx-pub-name">${esc(p)}</span>
+            <span class="fx-pub-name">${esc(fxPubLabel(p))}</span>
           </button>`).join('')}
         </div>
         ${fxBypass && fxBypass.error ? `<div class="lt-note warn">${icon('warning', 15)}<span>${esc(fxBypass.error)}</span></div>` : ''}
+        ${fxBypassHero(shown[0])}
         <div class="grid fx-grid fx-grid-cards">
           ${shown.length ? shown.map(fxBypassCard).join('') : `<div class="empty show">${icon('info', 30)}<p>No bypass entry matches that search.</p></div>`}
         </div>
@@ -247,38 +250,89 @@ function fxMonogram(name) {
  * icons.js, always read together with the name printed under it.
  */
 const FX_PUB_MARKS = [
-  { re: /rockstar/i, glyph: 'star', tint: '#f5a623' },
-  { re: /ubisoft/i, glyph: 'ubisoft', tint: '#3b82f6' },
-  { re: /^ea$|electronic\s*arts/i, glyph: 'ea', tint: '#ff4d4d' },
-  { re: /denuvo/i, glyph: 'denuvo', tint: '#5ad1a0' },
-  { re: /playstation|sony/i, glyph: 'disc', tint: '#6b9bff' },
-  { re: /nintendo/i, glyph: 'gamepad', tint: '#ff5a5a' },
-  { re: /xbox|microsoft/i, glyph: 'xbox', tint: '#5ec46b' },
-  { re: /valve|steam/i, glyph: 'steam', tint: '#9fb4c8' },
-  { re: /epic/i, glyph: 'epic', tint: '#c9ccd1' },
-  { re: /cd\s*projekt|gog/i, glyph: 'gog', tint: '#a06bff' },
-  { re: /others|other|unknown/i, glyph: 'grid', tint: '#9aa3b2' }
+  { re: /rockstar/i, brand: 'rockstarBrand', glyph: 'star', tint: '#f5b21a', label: 'Rockstar' },
+  { re: /ubisoft/i, brand: 'ubisoftBrand', glyph: 'ubisoft', tint: '#4d9fff', label: 'Ubisoft' },
+  { re: /^ea$|electronic\s*arts/i, brand: 'eaBrand', glyph: 'ea', tint: '#ff3b3b', label: 'EA' },
+  { re: /denuvo/i, glyph: 'denuvo', tint: '#35d6a4', label: 'Denuvo' },
+  { re: /playstation|sony/i, brand: 'playstationBrand', glyph: 'disc', tint: '#5b8dff', label: 'PlayStation' },
+  { re: /nintendo/i, glyph: 'gamepad', tint: '#ff5a5a', label: 'Nintendo' },
+  { re: /xbox|microsoft/i, glyph: 'xbox', tint: '#5ec46b', label: 'Xbox' },
+  { re: /valve|steam/i, brand: 'steamBrand', glyph: 'steam', tint: '#9fb4c8', label: 'Steam' },
+  { re: /epic/i, brand: 'epicBrand', glyph: 'epic', tint: '#cfd3d8', label: 'Epic' },
+  { re: /cd\s*projekt|gog/i, brand: 'gogBrand', glyph: 'gog', tint: '#a06bff', label: 'GOG' },
+  { re: /others|other|unknown/i, glyph: 'grid', tint: '#9aa3b2', label: 'Others' }
 ];
+
+/**
+ * The short label under the mark. The catalogue's own names are long ("Rockstar
+ * Games"), and a tile is 100px wide, so the tile prints the shop name.
+ */
+function fxPubLabel(publisher) {
+  const hit = FX_PUB_MARKS.find((m) => m.re.test(String(publisher || '')));
+  return hit && hit.label ? hit.label : publisher;
+}
 
 function fxPubMark(publisher) {
   const hit = FX_PUB_MARKS.find((m) => m.re.test(String(publisher || '')));
   if (hit) {
-    return `<span class="fx-pub-mark" style="--pub:${hit.tint}">${icon(hit.glyph, 26)}</span>`;
+    const art = hit.brand ? brandIcon(hit.brand, 30) : icon(hit.glyph, 26);
+    return `<span class="fx-pub-mark" style="--pub:${hit.tint}">${art}</span>`;
   }
   return `<span class="fx-pub-mark fx-pub-letters">${esc(fxMonogram(publisher))}</span>`;
 }
 
+/**
+ * Steam's own CDN serves the wide art for any app id, and a catalogue entry is
+ * a game with an app id. The cards try the 16:9 library hero first, then the
+ * header, then the catalogue's own custom image, then the drawn banner.
+ */
+const FX_STEAM_CDN = 'https://cdn.cloudflare.steamstatic.com/steam/apps/';
+
+function fxSteamArt(appId) {
+  const id = String(appId || '').replace(/[^\d]/g, '');
+  if (!id) return {};
+  return {
+    hero: `${FX_STEAM_CDN}${id}/library_hero.jpg`,
+    wide: `${FX_STEAM_CDN}${id}/header.jpg`,
+    cover: `${FX_STEAM_CDN}${id}/library_600x900.jpg`
+  };
+}
+
+/**
+ * The wide banner above the shelf: the first title's Steam hero art, with the
+ * title, publisher and the same Apply fix action as its card. If the art 404s
+ * the gradient underneath is the fallback, and the text still reads.
+ */
+function fxBypassHero(it) {
+  if (!it) return '';
+  const steam = fxSteamArt(it.appId);
+  const src = it.image || steam.hero || '';
+  const alt = steam.wide || '';
+  return `<div class="fx-hero" data-fx-info="${esc(it.appId)}" data-fx-kind="bypass">
+    ${src ? `<img class="fx-hero-img" src="${esc(src)}"${alt ? ` data-alt="${esc(alt)}"` : ''} alt="" draggable="false">` : ''}
+    <div class="fx-hero-scrim"></div>
+    <div class="fx-hero-body">
+      <span class="fx-hero-kicker">${icon('shield', 13)} Featured</span>
+      <h3>${esc(it.name)}</h3>
+      <p>${esc(it.publisher || '')}${it.appId ? ` &middot; App ${esc(it.appId)}` : ''}</p>
+      <button class="btn primary sm" data-fx-apply="${esc(it.appId)}" data-fx-kind="bypass">${icon('download', 14)} Apply fix</button>
+    </div>
+  </div>`;
+}
+
 function fxBypassCard(it) {
+  const steam = fxSteamArt(it.appId);
   const g = {
     id: `bypass:${it.appId}`,
     title: it.name,
     developer: it.publisher,
     genre: 'Bypass',
-    cover: it.image || null
+    banner: it.image || steam.hero || null,
+    cover: steam.wide || it.image || null
   };
-  return `<article class="card fx-card" data-fx-info="${esc(it.appId)}" data-fx-kind="bypass" title="Open ${esc(it.name)}">
+  return `<article class="card fx-card fx-card-wide" data-fx-info="${esc(it.appId)}" data-fx-kind="bypass" title="Open ${esc(it.name)}">
     <div class="card-art">
-      ${art(g, 'cover')}
+      ${art(g, 'banner')}
       <span class="plat plat-lightning fx-origin">${icon('shield', 12)}Bypass</span>
     </div>
     <div class="card-info">

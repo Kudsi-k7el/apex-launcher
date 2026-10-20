@@ -20,6 +20,9 @@
           "items": [
             "The News tab is gone. The same feed now appears where it is useful - at startup - and every story still opens on news.instant-gaming.com.",
             "The Bypass catalogue leads with a centred row of publisher marks and a denser cover grid, instead of a list of rows.",
+            "Those tiles now carry the publishers' real marks - Ubisoft, EA, Rockstar, PlayStation, Steam, Epic and GOG - in their own colours (Simple Icons' CC0 paths). Denuvo, Xbox, Nintendo and the catch-all keep drawn glyphs.",
+            "Bypass has banners: a wide featured strip for the first title on the shelf, and every card now leads with the game's 16:9 Steam art instead of a text placeholder. Missing art falls back to the drawn banner.",
+            "The corner credit reads Created by sexykudasai - v2.9.0.",
             "Settings > Interface picks the shell separately from the theme, so either palette can be worn with either layout.",
             "The Lightning Tools page is Apex Tools. The fix catalogues are the tabs behind it."
           ]

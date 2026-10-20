@@ -1247,7 +1247,7 @@ document.querySelectorAll('#profile-wrap .menu a').forEach((a) => a.addEventList
     const info = await window.api.appInfo();
     if (info && info.version) {
       if (chip) chip.textContent = `v${info.version}`;
-      if (stamp) stamp.textContent = `apexlauncher developer build ${info.version}`;
+      if (stamp) stamp.innerHTML = `Created by <span class="stamp-heart">&hearts;</span> sexykudasai - v${info.version}`;
     }
   } catch { /* the chip simply stays empty; the stamp keeps its bundled text */ }
 

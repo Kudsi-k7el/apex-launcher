@@ -1039,8 +1039,8 @@ async function run() {
       contact.cards === 2 && contact.handles.includes('z1.f') && contact.handles.includes('@kudsoo')
       && contact.marks === 2 && contact.copy === 2 && contact.open === 2 && contact.nav,
       JSON.stringify(contact));
-    check('the build stamp names the exact build small in the bottom-right corner, out of the sidebar',
-      /^apexlauncher developer build \d+\.\d+\.\d+$/.test(contact.stamp)
+    check('the corner credit names the author and the exact build, small and bottom-right',
+      /^Created by \u2665 sexykudasai - v\d+\.\d+\.\d+$/.test(contact.stamp)
       && contact.position === 'fixed' && contact.right < 40 && contact.bottom < 40
       && contact.size <= 10 && !contact.sideBrand,
       JSON.stringify({ stamp: contact.stamp, position: contact.position, right: contact.right, bottom: contact.bottom, size: contact.size, sideBrand: contact.sideBrand }));
@@ -2100,12 +2100,13 @@ async function run() {
       const grid = !!document.getElementById('ap-grid');
       const barHidden = !!document.querySelector('#content .fx-catalog-bar.hidden');
       const hour = String(new Date().getHours()).padStart(2, '0');
-      return { title, tabNames, active, clock, appid, drop, grid, barHidden, hour };`);
+      const dateText = (document.querySelector('#ap-clock-date') || {}).textContent || '';
+      return { title, tabNames, active, clock, appid, drop, grid, barHidden, hour, dateText };`);
     check('Apex Tools opens on its dashboard: clock, app id, drop zone, grid',
       /Apex Tools/.test(apexTools.title)
       && apexTools.tabNames.join(',') === 'apex,bypass,onlinefix,steamless'
       && apexTools.active === 'apex'
-      && /^\d{2}:\d{2}$/.test(apexTools.clock) && apexTools.clock.startsWith(apexTools.hour)
+      && /^\d{2}:\d{2}$/.test(apexTools.clock) && apexTools.dateText.length > 3
       && apexTools.appid && apexTools.drop && apexTools.grid && apexTools.barHidden,
       JSON.stringify(apexTools));
 
@@ -2120,10 +2121,14 @@ async function run() {
       const marks = document.querySelectorAll('#content .fx-pub-card .fx-pub-mark .ico').length;
       const letters = document.querySelectorAll('#content .fx-pub-card .fx-pub-letters').length;
       const title = (document.querySelector('#content .page-title') || {}).textContent || '';
-      return { tabs, active, bypassRows, chips, marks, letters, title };`);
-    check('the Tools view switches to Bypass and renders its catalogue',
+      const hero = !!document.querySelector('#content .fx-hero .fx-hero-body h3');
+      const heroImg = !!document.querySelector('#content .fx-hero-img');
+      const cardImg = !!document.querySelector('#content .fx-card .card-art img');
+      return { tabs, active, bypassRows, chips, marks, letters, title, hero, heroImg, cardImg };`);
+    check('the Tools view switches to Bypass and renders its catalogue with banners',
       fxView.tabs === 4 && fxView.active === 'bypass' && fxView.bypassRows === 1
-      && fxView.chips >= 2 && /Apex Tools/.test(fxView.title),
+      && fxView.chips >= 2 && /Apex Tools/.test(fxView.title)
+      && fxView.hero && fxView.heroImg && fxView.cardImg,
       JSON.stringify(fxView));
     check('every publisher tile carries a mark: a drawn glyph, else its letters',
       fxView.marks >= 2 && fxView.marks + fxView.letters === fxView.chips,
