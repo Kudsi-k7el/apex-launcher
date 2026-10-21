@@ -1755,7 +1755,13 @@ if (!gotTheLock) {
   app.on('second-instance', () => showWin());
 
   app.whenReady().then(() => {
-    try { app.setAppUserModelId('com.apex.launcher'); } catch { /* ignore */ }
+    // Installed builds answer to the Apex identity, so the Start Menu shortcut
+    // supplies the taskbar name and icon. A dev run gets its own id: otherwise
+    // Windows groups it with the installed copy and shows that copy's icon,
+    // which is how a freshly rebuilt mark ends up hidden behind the old one.
+    try {
+      app.setAppUserModelId(app.isPackaged ? 'com.apex.launcher' : 'com.apex.launcher.dev');
+    } catch { /* ignore */ }
     createSplash();
     createWindow();
     const boot = load();
