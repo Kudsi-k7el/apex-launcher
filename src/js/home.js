@@ -69,7 +69,7 @@ function homeLegal() {
 /** The Discord/community card, matching the hero's right-hand block. */
 function homeSocialCard() {
   return `<div class="home-social">
-    <span class="home-orb sm">${icon('flame', 20)}</span>
+    <img class="home-mark sm" src="img/apex-mark.png" alt="" draggable="false">
     <div class="home-social-txt">
       <strong>PROJECT APEX</strong>
       <small>Join the community</small>
@@ -105,9 +105,7 @@ function renderHome(el) {
         </div>
 
         <div class="home-art" aria-hidden="true">
-          <div class="home-glow"></div>
-          <div class="home-orb">${icon('flame', 72)}</div>
-          <div class="home-art-word">APEX</div>
+          <img class="home-mark" src="img/apex-mark.png" alt="" draggable="false">
         </div>
       </div>
 

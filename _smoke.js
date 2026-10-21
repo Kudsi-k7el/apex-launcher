@@ -360,14 +360,14 @@ async function run() {
       const word = (document.querySelector('.home-title .home-word') || {}).textContent || '';
       const doors = document.querySelectorAll('.home-btn').length;
       const join = !!document.querySelector('.home-social .home-join');
-      const orb = !!document.querySelector('.home-art .home-orb svg');
+      const orb = (document.querySelector('.home-art img.home-mark') || {}).getAttribute?.('src') || '';
       const tab = (document.querySelector('#sidebar .tab.active') || {}).dataset?.view;
       const newsTab = !!document.querySelector('#sidebar .tab[data-view="news"]');
       const toolsLabel = (document.querySelector('#sidebar .tab[data-view="tools"] span:last-child') || {}).textContent || '';
       return { landing: current, word, doors, join, orb, tab, newsTab, toolsLabel };`);
     check('home is the landing page, with the wordmark, four doors and a community card',
       home.landing === 'home' && home.word === 'PROJECT APEX' && home.doors === 4
-      && home.join && home.orb && home.tab === 'home'
+      && home.join && /apex-mark\.png$/.test(home.orb) && home.tab === 'home'
       && home.newsTab === false && /Apex Tools/.test(home.toolsLabel),
       JSON.stringify(home));
 

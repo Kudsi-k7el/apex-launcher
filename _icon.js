@@ -1,7 +1,7 @@
 'use strict';
-/* Generates build/icon.png from Apex's own brand mark (the splash-screen flame
-   on the #00a8ff -> #6a3de8 gradient tile), plus a preview sheet showing how it
-   reads at taskbar sizes. Run with: npx electron _icon.js */
+/* Generates build/icon.png from Apex's white A mark (src/img/apex-mark.png) on
+   a charcoal tile, plus a preview sheet showing how it reads at taskbar sizes.
+   Run with: npx electron _icon.js */
 const { app, BrowserWindow } = require('electron');
 const fs = require('fs');
 const path = require('path');
@@ -9,17 +9,14 @@ const path = require('path');
 const outDir = path.join(__dirname, 'build');
 fs.mkdirSync(outDir, { recursive: true });
 
-const FLAME = 'M12 3s5 4.5 5 9a5 5 0 0 1-10 0c0-2 1-3.6 1-3.6S9 11 10.5 11C12 11 12 8.5 12 3z';
+const markPath = path.join(__dirname, 'src', 'img', 'apex-mark.png');
+const mark = `data:image/png;base64,${fs.readFileSync(markPath).toString('base64')}`;
 
 /** The tile at any size. Kept as a function so every size renders natively. */
 function tile(size) {
-  const radius = Math.round(size * 0.235);
-  const glyph = Math.round(size * 0.56);
-  const ring = Math.max(1, Math.round(size * 0.019));
+  const radius = Math.round(size * 0.225);
   return `<div class="tile" style="width:${size}px;height:${size}px;border-radius:${radius}px">
-      <svg viewBox="0 0 24 24" style="width:${glyph}px;height:${glyph}px;stroke-width:${(1.95 / (glyph / 24)).toFixed(3)}">
-        <path d="${FLAME}"/>
-      </svg>
+      <img src="${mark}" alt="" style="width:${(size * 0.58).toFixed(2)}px">
     </div>`;
 }
 
@@ -27,15 +24,21 @@ const BASE_CSS = `
   html,body{margin:0;background:transparent;overflow:hidden}
   .tile{
     position:relative;display:flex;align-items:center;justify-content:center;
-    background:linear-gradient(135deg,#00a8ff,#6a3de8);
+    background:linear-gradient(148deg,#1d1e23 0%,#101114 42%,#060607 100%);
     overflow:hidden;
   }
-  .tile::after{
-    content:"";position:absolute;inset:0;border-radius:inherit;
-    background:radial-gradient(130% 120% at 24% -6%, rgba(255,255,255,.34), transparent 60%);
+  .tile::before{
+    content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.075), inset 0 -18% 34% rgba(0,0,0,.5);
   }
-  .tile svg{position:relative;stroke:#fff;fill:none;stroke-linecap:round;stroke-linejoin:round;
-    filter:drop-shadow(0 ${'6'}px ${'14'}px rgba(0,0,0,.34));}
+  .tile::after{
+    content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;
+    background:radial-gradient(120% 110% at 22% -8%, rgba(255,255,255,.11), transparent 58%);
+  }
+  .tile img{
+    position:relative;height:auto;display:block;
+    filter:drop-shadow(0 6% 10% rgba(0,0,0,.55));
+  }
 `;
 
 const page = (body, w, h, bg) => `<!DOCTYPE html><html><head><meta charset="utf-8">
@@ -70,29 +73,28 @@ app.whenReady().then(async () => {
   fs.writeFileSync(path.join(outDir, 'icon.png'), icon.toPNG());
 
   // Preview sheet: the mark at real taskbar sizes on the dark bar it will sit in.
-  const strip = [256, 128, 64, 48, 32, 24, 16]
+  const strip = [128, 96, 64, 48, 32, 24, 16]
     .map((s) => `<div class="wrap"><span class="cap">${s}</span>${tile(s)}</div>`)
     .join('');
   const sheet = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>${BASE_CSS}
-    html,body{margin:0;width:760px;height:420px;background:#0c0f14;overflow:hidden;
+    html,body{margin:0;width:760px;height:500px;background:#0c0f14;overflow:hidden;
       font-family:"Segoe UI",system-ui,sans-serif}
     .head{color:#5c6678;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;
       padding:18px 22px 0}
     .big{display:flex;align-items:center;justify-content:center;padding:14px 0 6px}
-    .row{display:flex;align-items:flex-end;justify-content:center;gap:26px;padding:10px 0 26px}
+    .row{display:flex;align-items:flex-end;justify-content:center;gap:26px;padding:10px 0 22px}
     .wrap{display:flex;flex-direction:column;align-items:center;gap:9px}
     .cap{color:#4c5566;font-size:11px}
     .taskbar{margin:0 22px;height:46px;border-radius:10px;background:rgba(255,255,255,.05);
       border:1px solid rgba(255,255,255,.07);display:flex;align-items:center;gap:14px;padding:0 16px}
-    .taskbar .tile{outline:1px solid rgba(0,168,255,.35)}
   </style></head><body>
     <div class="head">Apex Launcher &mdash; application icon</div>
-    <div class="big">${tile(160)}</div>
+    <div class="big">${tile(192)}</div>
     <div class="row">${strip}</div>
     <div class="head" style="padding:0 22px 8px">on the Windows taskbar</div>
     <div class="taskbar">${tile(32)}${tile(32)}${tile(32)}</div>
   </body></html>`;
-  const preview = await shot(sheet, 760, 420, 'preview');
+  const preview = await shot(sheet, 760, 500, 'preview');
   fs.writeFileSync(path.join(outDir, 'icon-preview.png'), preview.toPNG());
 
   console.log('icon bytes:', fs.statSync(path.join(outDir, 'icon.png')).size);

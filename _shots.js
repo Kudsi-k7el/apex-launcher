@@ -352,6 +352,19 @@ async function run() {
     return;
   }
 
+  // APEX_SHOTS_ONLY=home captures the landing page on its own, for brand work.
+  if (process.env.APEX_SHOTS_ONLY === 'home') {
+    await js(`
+      closeNewsBoot();
+      gotoView('home');
+      await new Promise((r) => setTimeout(r, 1200));
+      return true;`);
+    await wait(1400);
+    await shoot(win, '03-home');
+    app.exit(0);
+    return;
+  }
+
   // 0. the startup panel, then close it so the rest of the set is the shell
   await js(`
     if (!document.querySelector('#news-boot')) await openNewsBoot();

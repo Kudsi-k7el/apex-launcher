@@ -443,6 +443,17 @@ function trayIcon(accent) {
   return nativeImage.createFromBitmap(buf, { width: size, height: size });
 }
 
+// The packaged exe carries build/icon.png. Use the same file for the window in
+// dev, so the taskbar and the installer show one mark instead of Electron's
+// default icon.
+function appIcon() {
+  try {
+    const img = nativeImage.createFromPath(path.join(__dirname, 'build', 'icon.png'));
+    if (!img.isEmpty()) return img;
+  } catch { /* fall through to the drawn tray mark */ }
+  return trayIcon(load().settings.accent);
+}
+
 function showWin() {
   if (!win) return;
   if (win.isMinimized()) win.restore();
@@ -551,12 +562,15 @@ function createWindow() {
     frame: false,
     backgroundColor: '#0b0d12',
     title: APP_NAME,
-    icon: trayIcon('#00a8ff'),
+    icon: appIcon(),
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false
+      sandbox: false,
+      // The animated wallpaper is a muted YouTube embed behind the UI; without
+      // this Electron waits for a user gesture the page never gets.
+      autoplayPolicy: 'no-user-gesture-required'
     }
   });
 
