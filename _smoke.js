@@ -2103,10 +2103,10 @@ async function run() {
       const hour = String(new Date().getHours()).padStart(2, '0');
       const dateText = (document.querySelector('#ap-clock-date') || {}).textContent || '';
       return { title, tabNames, active, clock, appid, drop, grid, count, barHidden, hour, dateText };`);
-    check('Apex Tools opens on its dashboard: clock, app id, drop zone, grid',
+    check('Apex Tools opens on its app-id dashboard: clock, app id, drop zone, grid',
       /Apex Tools/.test(apexTools.title)
-      && apexTools.tabNames.join(',') === 'apex,bypass,onlinefix,steamless'
-      && apexTools.active === 'apex'
+      && apexTools.tabNames.join(',') === 'luatools,bypass,onlinefix,steamless'
+      && apexTools.active === 'luatools'
       && /^\d{2}:\d{2}$/.test(apexTools.clock) && apexTools.dateText.length > 3
       && apexTools.appid && apexTools.drop && apexTools.grid && /^\d+ games?$/.test(apexTools.count)
       && apexTools.barHidden,

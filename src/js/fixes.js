@@ -19,7 +19,7 @@
 // ---------------------------------------------------------------------------
 // State
 // ---------------------------------------------------------------------------
-let fxTab = 'apex';           // apex | bypass | onlinefix | steamless
+let fxTab = 'luatools';       // luatools | bypass | onlinefix | steamless
 let fxMeta = null;           // catalogs() summary
 let fxBypass = null;         // { items, publishers, total }
 let fxOnlinefix = null;      // { items, total }
@@ -74,21 +74,21 @@ function renderFixes(el) {
   el.innerHTML = `
     <h1 class="page-title">${icon('shield', 24)} Apex Tools</h1>
     <div class="page-intro">
-      <p>One page for the tools around your library: import a LuaTools file, read the Steam app id,
-      and see every game LuaTools has applied to this account &mdash; read straight out of Steam's
+      <p>One page for the tools around your library: import an app-id file, read the Steam app id,
+      and see every game applied to this Steam account &mdash; read straight out of Steam's
       stplug-in folder. Bypass and OnlineFix list what each title needs and apply a fix you already
       have on disk; SteamLess swaps the Steamworks DLLs inside a game for your own copies. Apex
       stores metadata and tooling and never ships the fix files themselves.</p>
     </div>
 
     <div class="fx-tabs" role="tablist">
-      <button class="fx-tab ${fxTab === 'apex' ? 'active' : ''}" data-fx-tab="apex">${icon('cpu', 15)} Apex Tools</button>
+      <button class="fx-tab ${fxTab === 'luatools' ? 'active' : ''}" data-fx-tab="luatools">${icon('file', 15)} App IDs</button>
       <button class="fx-tab ${fxTab === 'bypass' ? 'active' : ''}" data-fx-tab="bypass">${icon('shield', 15)} Bypass</button>
       <button class="fx-tab ${fxTab === 'onlinefix' ? 'active' : ''}" data-fx-tab="onlinefix">${icon('globe', 15)} OnlineFix</button>
       <button class="fx-tab ${fxTab === 'steamless' ? 'active' : ''}" data-fx-tab="steamless">${icon('zap', 15)} SteamLess</button>
     </div>
 
-    <div class="fx-catalog-bar ${fxTab === 'apex' ? 'hidden' : ''}">
+    <div class="fx-catalog-bar ${fxTab === 'luatools' ? 'hidden' : ''}">
       <div class="search-box">
         ${icon('search', 16)}
         <input id="fx-search" type="search" placeholder="Search the ${esc(fxTab === 'onlinefix' ? 'OnlineFix' : 'Bypass')} catalogue…" value="${esc(fxQuery)}" spellcheck="false" autocomplete="off">
@@ -120,7 +120,7 @@ function renderFixes(el) {
   const refresh = el.querySelector('#fx-refresh');
   if (refresh) refresh.addEventListener('click', () => fxRefreshCatalog(refresh));
 
-  if (fxTab === 'apex') apPaint(document.getElementById('fx-body'));
+  if (fxTab === 'luatools') apPaint(document.getElementById('fx-body'));
   else if (fxTab !== 'steamless') fxPaintCatalog();
   else fxPaintSteamless();
 }
@@ -166,7 +166,7 @@ async function fxRefreshCatalog(btn) {
 // Catalogue body (Bypass / OnlineFix)
 // ---------------------------------------------------------------------------
 function fxPaintBody() {
-  if (fxTab === 'apex') {
+  if (fxTab === 'luatools') {
     const body = document.getElementById('fx-body');
     if (body) apPaint(body);
     return;
