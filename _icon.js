@@ -72,6 +72,56 @@ app.whenReady().then(async () => {
   const icon = await shot(page(tile(512), 512, 512, 'transparent'), 512, 512, 'icon');
   fs.writeFileSync(path.join(outDir, 'icon.png'), icon.toPNG());
 
+  // Every size Windows asks for gets rendered natively, then packed into one
+  // .ico so Explorer, the installer and alt-tab all start from a crisp bitmap.
+  const sizes = [16, 24, 32, 48, 64, 128, 256];
+  const frames = [];
+  for (const size of sizes) {
+    // eslint-disable-next-line no-await-in-loop
+    const shotImg = await shot(page(tile(size), size, size, 'transparent'), size, size, `ico-${size}`);
+    frames.push({ size, png: shotImg.toPNG() });
+  }
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(1, 2);           // type: icon
+  header.writeUInt16LE(frames.length, 4);
+  const entries = Buffer.alloc(16 * frames.length);
+  let offset = 6 + entries.length;
+  frames.forEach((f, i) => {
+    const at = i * 16;
+    entries[at] = f.size >= 256 ? 0 : f.size;      // width (0 means 256)
+    entries[at + 1] = f.size >= 256 ? 0 : f.size;  // height
+    entries[at + 2] = 0;                            // palette
+    entries[at + 3] = 0;                            // reserved
+    entries.writeUInt16LE(1, at + 4);               // colour planes
+    entries.writeUInt16LE(32, at + 6);              // bits per pixel
+    entries.writeUInt32LE(f.png.length, at + 8);    // bytes in resource
+    entries.writeUInt32LE(offset, at + 12);         // offset
+    offset += f.png.length;
+  });
+  fs.writeFileSync(path.join(outDir, 'icon.ico'), Buffer.concat([header, entries, ...frames.map((f) => f.png)]));
+
+  // The tray sits at 16-32px. A tile at that size swallows the mark, so the
+  // tray is the mark itself on transparency, rendered natively at 32px.
+  const trayPage = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>
+    html,body{margin:0;width:32px;height:32px;background:transparent;overflow:hidden}
+    body{display:flex;align-items:center;justify-content:center}
+    img{width:29px;height:auto;display:block}
+  </style></head><body><img src="${mark}" alt=""></body></html>`;
+  const trayFile = path.join(outDir, '_tray.html');
+  fs.writeFileSync(trayFile, trayPage, 'utf8');
+  const trayWin = new BrowserWindow({
+    width: 32, height: 32, useContentSize: true, show: false, frame: false,
+    resizable: false, transparent: true, backgroundColor: '#00000000',
+    webPreferences: { backgroundThrottling: false, offscreen: false }
+  });
+  await trayWin.loadFile(trayFile);
+  await new Promise((r) => setTimeout(r, 500));
+  const tray = await trayWin.webContents.capturePage({ x: 0, y: 0, width: 32, height: 32 });
+  trayWin.destroy();
+  try { fs.unlinkSync(trayFile); } catch { /* ignore */ }
+  fs.mkdirSync(path.join(__dirname, 'src', 'img'), { recursive: true });
+  fs.writeFileSync(path.join(__dirname, 'src', 'img', 'apex-tray.png'), tray.toPNG());
+
   // Preview sheet: the mark at real taskbar sizes on the dark bar it will sit in.
   const strip = [128, 96, 64, 48, 32, 24, 16]
     .map((s) => `<div class="wrap"><span class="cap">${s}</span>${tile(s)}</div>`)
@@ -98,6 +148,8 @@ app.whenReady().then(async () => {
   fs.writeFileSync(path.join(outDir, 'icon-preview.png'), preview.toPNG());
 
   console.log('icon bytes:', fs.statSync(path.join(outDir, 'icon.png')).size);
+  console.log('ico bytes:', fs.statSync(path.join(outDir, 'icon.ico')).size);
+  console.log('tray bytes:', fs.statSync(path.join(__dirname, 'src', 'img', 'apex-tray.png')).size);
   console.log('preview bytes:', fs.statSync(path.join(outDir, 'icon-preview.png')).size);
   app.exit(0);
 }).catch((e) => { console.log('ERR', (e && e.stack) || e); app.exit(1); });

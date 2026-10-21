@@ -424,8 +424,18 @@ function hexToRgb(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255];
 }
 
+let trayImage = null;
+
 // Draws a small accent rounded square with a white play glyph (BGRA bitmap).
+// The shipped tray is the app mark itself (see _icon.js), because a tile at
+// 16px swallows the drawing; the square stays as the fallback for a tree that
+// has not run the icon job.
 function trayIcon(accent) {
+  if (trayImage) return trayImage;
+  try {
+    const img = nativeImage.createFromPath(path.join(__dirname, 'src', 'img', 'apex-tray.png'));
+    if (!img.isEmpty()) { trayImage = img; return trayImage; }
+  } catch { /* fall through to the drawn mark */ }
   const size = 32;
   const buf = Buffer.alloc(size * size * 4);
   const [r, g, b] = hexToRgb(accent);
