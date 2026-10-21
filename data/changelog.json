@@ -31,7 +31,9 @@
             "itch.io works out of the box. A key bundled with the build is used until you paste your own in Settings; your key always wins, and the bundled one is never shown in the window.",
             "Discord Rich Presence runs on Apex's own Discord application. The application id is fixed in the app, invisible in Settings and not editable.",
             "App id of Steam adds the title to your Apex library (or opens its store page when Apex does not know it). Steam itself is never touched.",
-            "Install in Steam hands the typed app id to the Steam client (steam://install). Steam decides what to do with it: a title the account owns installs, anything else opens its store page. Apex still writes nothing into Steam, and LuaTools is not bundled or downloaded by the launcher."
+            "Install in Steam hands the typed app id to the Steam client (steam://install). Steam decides what to do with it: a title the account owns installs, anything else opens its store page. Apex still writes nothing into Steam, and LuaTools is not bundled or downloaded by the launcher.",
+            "The first tab of Apex Tools is App IDs, not LuaTools. It reads Steam app ids and the stplug-in folder; naming it after the third-party client made it look like Apex ships that client. The intro copy says the same thing now.",
+            "A title can show in Steam's library from an app-id file and still refuse to download. Steam needs a licence for the account and depot manifests to fetch; without them the tile stays at update required. Apex does not seed manifests or fetch depot content, so it cannot turn that tile into a download."
           ]
         },
         {
