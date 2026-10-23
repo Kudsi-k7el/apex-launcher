@@ -109,6 +109,19 @@ if (capture('git', ['ls-remote', '--tags', 'origin', `refs/tags/${tag}`]).out) {
   say(`  ok  tagged and pushed ${tag}`);
 }
 
+// --- 3b. the release itself, before anything is uploaded --------------------
+// electron-builder gives each artifact its own publish task, and with no
+// release to attach to, every task tries to create one. On 2.10.0 that produced
+// two releases wearing the same tag, one of them short an asset, with GitHub's
+// "latest" free to resolve to the incomplete one. Creating the release here
+// means the publish tasks find it already there and simply upload to it.
+if (capture('gh', ['release', 'view', tag, '--json', 'tagName']).code !== 0) {
+  if (run('gh', ['release', 'create', tag, '--title', version, '--notes', '', '--latest']) !== 0) {
+    die(`Could not create release ${tag}.`);
+  }
+  say(`  ok  created release ${tag}`);
+}
+
 // --- 4. build + publish -----------------------------------------------------
 if (!fs.existsSync(BUILDER_CLI)) die(`electron-builder is missing at ${BUILDER_CLI}. Run npm install.`);
 
