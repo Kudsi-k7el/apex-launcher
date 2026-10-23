@@ -1,6 +1,21 @@
 {
   "entries": [
     {
+      "version": "2.10.1",
+      "date": "2026-10-23",
+      "title": "Apex Launcher starts again",
+      "summary": "2.10.0 refused to open once installed: the LuaTools module needs extract-zip to unpack a plugin, and that package was only present as a build-time dependency, so the packaged app went looking for a module that was never shipped. It is a declared dependency now and the installed build finds it.",
+      "sections": [
+        {
+          "title": "Fixed",
+          "items": [
+            "The installed app no longer dies on launch with `Cannot find module 'extract-zip'` in luatools.js. The module was in node_modules only because Electron pulls it in for its own build, which meant electron-builder never packaged it - a dev run had it by accident, an installation did not.",
+            "Both LuaTools modules now declare what they need, so the plugin unzip path works from the installer and not only from a source checkout."
+          ]
+        }
+      ]
+    },
+    {
       "version": "2.10.0",
       "date": "2026-10-21",
       "title": "The Steam engine, a live autumn and the Lightning v5 look",
