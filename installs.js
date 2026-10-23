@@ -23,6 +23,7 @@ const crypto = require('crypto');
 const { Transfer } = require('./net/download');
 const { USER_AGENT } = require('./net/http');
 const archives = require('./net/archives');
+const detect = require('./detect');
 const { SourceRegistry, fileUrlToPath } = require('./net/sources');
 const itch = require('./net/itch');
 const providers = require('./net/providers');
@@ -79,6 +80,51 @@ function safeSlug(id) {
   return `${slug || 'game'}-${hash}`;
 }
 
+/** Extensions the launcher is allowed to start directly. */
+const LAUNCHABLE_EXT = new Set(['.exe', '.bat', '.cmd', '.lnk', '.url']);
+
+/**
+ * Works out what to start after a download finishes.
+ *
+ * The engine knows the real install folder, but the renderer used to receive
+ * only that path - no executable - so a freshly installed game had nothing to
+ * launch and its first Play press failed verification. Picking the executable
+ * here means the link is persisted together with the completed download.
+ *
+ * @param {string|null} dest  installed folder, or a single installed file
+ * @param {string} title
+ * @returns {{type:string, exe:string|null, cwd:string, path:string, name:string, source:string}|null}
+ */
+function launchFor(dest, title) {
+  if (!dest) return null;
+  try {
+    const st = fs.statSync(dest);
+    if (st.isFile()) {
+      if (!LAUNCHABLE_EXT.has(path.extname(dest).toLowerCase())) return null;
+      return {
+        type: 'exe',
+        exe: dest,
+        cwd: path.dirname(dest),
+        path: path.dirname(dest),
+        name: title || null,
+        source: 'download'
+      };
+    }
+    if (st.isDirectory()) {
+      const exe = detect.pickExe(dest, [title || '', path.basename(dest)], 4);
+      return {
+        type: 'exe',
+        exe: exe || null,
+        cwd: exe ? path.dirname(exe) : dest,
+        path: dest,
+        name: title || null,
+        source: 'download'
+      };
+    }
+  } catch { /* an install that vanished between done and inspection */ }
+  return null;
+}
+
 /** Public, serialisable view of a job for the renderer. */
 function view(job) {
   return {
@@ -98,6 +144,7 @@ function view(job) {
     error: job.error || null,
     dest: job.destPath || null,
     file: job.filePath || null,
+    launch: job.launch || null,
     connections: job.connections || 1
   };
 }
@@ -747,6 +794,7 @@ async function installsPipeline(job) {
       job.received = job.total;
       job.speedBps = 0;
       job.destPath = finalDir;
+      job.launch = launchFor(finalDir, job.title);
       job.log('info', `Installed to ${finalDir}`);
       emit({ job });
       return;
@@ -1007,6 +1055,7 @@ async function installsPipeline(job) {
     job.speedBps = 0;
     job.destPath = placed;
     job.filePath = job.filePath || null; // set above only for single-file items
+    job.launch = launchFor(job.filePath || placed, job.title);
     job.log('info', `Installed to ${placed}`);
     emit({ job });
   } catch (err) {

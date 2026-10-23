@@ -1303,6 +1303,36 @@ ipcMain.handle('games:detect', async (_e, hints) => {
 });
 
 /**
+ * Finds a launch target inside a folder Apex installed itself.
+ *
+ * The download engine records the install folder; this turns that folder into
+ * the `{ exe, cwd, path }` descriptor `game:launch` needs. It is also the repair
+ * path for installs completed by older builds, which saved the folder but never
+ * saved a link.
+ */
+ipcMain.handle('game:findLaunch', async (_e, dir, title) => {
+  try {
+    if (!dir || !fs.existsSync(dir)) return null;
+    const st = fs.statSync(dir);
+    if (st.isFile()) {
+      const ext = path.extname(dir).toLowerCase();
+      if (!['.exe', '.bat', '.cmd', '.lnk', '.url'].includes(ext)) return null;
+      return { type: 'exe', exe: dir, cwd: path.dirname(dir), path: path.dirname(dir), name: title || null };
+    }
+    const exe = detect.pickExe(dir, [String(title || ''), path.basename(dir)], 4);
+    return {
+      type: 'exe',
+      exe: exe || null,
+      cwd: exe ? path.dirname(exe) : dir,
+      path: dir,
+      name: title || null
+    };
+  } catch {
+    return null;
+  }
+});
+
+/**
  * Real file verification.
  *
  * `records` is `{ [gameId]: targetDescriptor }` — the same descriptors the

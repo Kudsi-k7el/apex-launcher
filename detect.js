@@ -250,12 +250,18 @@ function parseRegDump(text) {
  * Deliberately targeted (not a bare /crash/ or /helper/) so real titles like
  * "Crash Bandicoot" are not filtered out.
  */
-const BAD_EXE = /(unins|vcredist|vc_redist|dxsetup|dxwebsetup|crashhandler|crashreport|crashreporter|ue4prereq|prereqsetup|eossdk|epicwebhelper|installer|_setup|setup$|launcher_helper)/i;
+const BAD_EXE = /(unins|vcredist|vc_redist|redist|visualcpp|dotnet|oalinst|dxsetup|dxwebsetup|directx|prereq|prereqsetup|eossdk|epicwebhelper|installer|_setup|setup$|launcher_helper)/i;
 
 /** Picks the most plausible launcher executable in a game folder. */
 function pickExe(dir, hints = [], maxDepth = 3) {
   if (!dir || !exists(dir)) return null;
-  const want = hints.map(norm).filter((h) => h.length > 2);
+  // Catalogue names carry words the executable never does ("Free Download",
+  // "PC", "Repack"). Drop them so "Geometry Dash Free Download" still matches
+  // a binary called GeometryDash.exe.
+  const want = hints
+    .map((h) => String(h || '').replace(/\b(free|download|downloads|pc|game|repack|pre-?installed|edition)\b/gi, ' '))
+    .map(norm)
+    .filter((h) => h.length > 2);
   let best = null;
   let bestScore = -1;
   const walk = (d, depth) => {
@@ -264,7 +270,7 @@ function pickExe(dir, hints = [], maxDepth = 3) {
       const full = path.join(d, ent.name);
       if (ent.isDirectory()) {
         // Skip the folders that never hold the game binary.
-        if (/^(support|redist|redistributables|directx|__installer|installer|docs?|manual|tools?|editor|sdk)$/i.test(ent.name)) continue;
+        if (/^(support|redist|redistributables|_?commonredist|directx|vcredist|dotnet|prereq|__installer|installer|docs?|manual|tools?|editor|sdk)$/i.test(ent.name)) continue;
         walk(full, depth + 1);
         continue;
       }
@@ -272,7 +278,7 @@ function pickExe(dir, hints = [], maxDepth = 3) {
       const base = norm(path.basename(ent.name, '.exe'));
       if (BAD_EXE.test(base)) continue;
       let score = 0;
-      if (want.some((w) => base.includes(w))) score += 6;
+      if (want.some((w) => base.includes(w) || w.includes(base))) score += 6;
       if (/^(game|play|launch|start|client|runtime)$/.test(base)) score += 2;
       try { score += Math.min(fs.statSync(full).size / (64 * 1024 * 1024), 2); } catch { /* keep score */ }
       if (score > bestScore) { bestScore = score; best = full; }

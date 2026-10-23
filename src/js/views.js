@@ -405,9 +405,14 @@ function localLink(id) {
 function launchTarget(id) {
   const g = byId(id) || {};
   const link = localLink(id);
+  if (!link) return null;
+  // A download may record only its folder. That is useful for verification,
+  // but it is not something we can start: return null so the Launch flow can
+  // find the exe or ask the user, instead of sending an empty target to main.
+  if (!link.exe && !link.uri && !link.appId) return null;
   // The id/name travel with the target so the main process can register the
   // spawned process and stop it again from the renderer.
-  return link ? { ...link, id, name: g.title } : null;
+  return { ...link, id, name: g.title };
 }
 
 function sourceTag(id) {

@@ -192,7 +192,16 @@ async function scanLibraries(showModal) {
  */
 async function verifyGame(id, opts = {}) {
   const g = byId(id);
-  const target = localLink(id) || {};
+  const link = localLink(id) || {};
+  // A download records its install folder before (or even without) an exe.
+  // Verify that folder instead of reporting "nothing is linked" for a game
+  // whose files are plainly on disk.
+  const knownDir = State.installDirs && State.installDirs[id];
+  const target = { ...link };
+  if (!target.exe && !target.path && !target.uri && knownDir) {
+    target.type = target.type || 'exe';
+    target.path = knownDir;
+  }
   const record = { ...target, name: (g && g.title) || target.name || id };
 
   let reports = null;
@@ -208,14 +217,73 @@ async function verifyGame(id, opts = {}) {
   State.verify = State.verify || {};
   State.verify[id] = { ...report, checkedAt: Date.now() };
 
-  // Verification is authoritative: it can both clear and restore the
-  // installed flag, so the UI never keeps a stale PLAY button.
-  if (!report.ok && report.missing) delete State.installed[id];
-  else if (report.ok) State.installed[id] = true;
+  // Verification may confirm that a game is installed, but it must never take
+  // one out of the Library. A missing link or a half-finished install is a
+  // launch problem to repair (Locate / pick the exe), not an uninstall.
+  if (report.ok) State.installed[id] = true;
 
   await persist();
   refreshActions();
   return report;
+}
+
+/** The folder part of an executable path, without Node's `path` module. */
+function folderOf(p) {
+  const s = String(p || '');
+  const cut = s.replace(/[\\/][^\\/]*$/, '');
+  return cut && cut !== s ? cut : s;
+}
+
+/** Builds the persistent descriptor used by State.local.installs. */
+function launchLinkFor(id, found, source = 'manual') {
+  const g = byId(id) || {};
+  const exe = (found && found.exe) ? String(found.exe) : null;
+  const dir = (found && found.cwd) || (exe ? folderOf(exe) : null) || (found && found.path) || null;
+  return {
+    type: 'exe',
+    exe,
+    cwd: dir,
+    path: (found && found.path) || dir,
+    name: g.title || null,
+    source
+  };
+}
+
+/**
+ * Restores installs that were completed before the launcher saved a launch
+ * link. The folder was recorded, the files are still there, but the Library
+ * entry was dropped by the old verification path. Nothing is deleted here: a
+ * folder is only re-adopted when it still exists.
+ */
+async function repairInstallLinks() {
+  const dirs = State.installDirs || {};
+  let changed = false;
+  for (const id of Object.keys(dirs)) {
+    if (!dirs[id] || isInstalled(id)) {
+      // An entry repaired on an earlier run can still carry the old
+      // "Nothing is linked" report. It is stale once a launch link exists.
+      const link = State.local && State.local.installs && State.local.installs[id];
+      const stale = State.verify && State.verify[id];
+      if (link && (link.exe || link.path) && stale && /Nothing is linked/i.test(stale.reason || '')) {
+        delete State.verify[id];
+        changed = true;
+      }
+      continue;
+    }
+    try {
+      if (window.api.pathExists && !(await window.api.pathExists(dirs[id]))) continue;
+      const g = byId(id) || {};
+      const found = window.api.findLaunch ? await window.api.findLaunch(dirs[id], g.title) : null;
+      State.local = State.local || { installs: {}, roots: {} };
+      State.local.installs[id] = launchLinkFor(id, found || { path: dirs[id] }, 'repair');
+      State.installed[id] = true;
+      State.owned[id] = true;
+      if (State.verify) delete State.verify[id];
+      changed = true;
+    } catch { /* leave that entry alone */ }
+  }
+  if (changed) await persist();
+  return changed;
 }
 
 async function createCustomGame(payload) {
@@ -319,19 +387,29 @@ async function launchGame(id) {
     return;
   }
 
-  // File gate: a game is only started if its files are really on disk. This
-  // runs the fast checks (folder exists, folder isn't empty, the store still
-  // considers it complete) so it costs nothing noticeable before a launch.
-  if (isInstalled(id)) {
-    const report = await verifyGame(id, { silent: true });
-    if (report && !report.ok) {
-      toast(`${g.title} can't start \u2014 ${report.reason}`, 'warn');
-      afterLibraryChange();
-      return;
+  let target = launchTarget(id);
+
+  // A finished download records its install folder. Turn that folder into a
+  // real executable before concluding there is nothing to launch. This also
+  // repairs installs made by older builds, which saved no link at all.
+  if (!target) {
+    const link = localLink(id) || {};
+    const dir = (State.installDirs && State.installDirs[id]) || link.path || (link.exe ? folderOf(link.exe) : null);
+    if (dir && window.api.findLaunch) {
+      try {
+        const found = await window.api.findLaunch(dir, g.title);
+        if (found && found.exe) {
+          State.local = State.local || { installs: {}, roots: {} };
+          State.local.installs[id] = launchLinkFor(id, found, 'download');
+          State.installed[id] = true;
+          State.owned[id] = true;
+          if (State.verify) delete State.verify[id];
+          await persist();
+          target = launchTarget(id);
+        }
+      } catch { /* fall through to detection / the picker */ }
     }
   }
-
-  let target = launchTarget(id);
 
   // No link yet: try a quick targeted detection before giving up.
   if (!target) {
@@ -341,6 +419,8 @@ async function launchGame(id) {
         State.local = State.local || { installs: {}, roots: {} };
         State.local.installs[id] = res.matched[id];
         if (res.roots) State.local.roots = { ...State.local.roots, ...res.roots };
+        State.installed[id] = true;
+        State.owned[id] = true;
         target = { ...res.matched[id], id, name: g.title };
         await persist();
       }
@@ -349,13 +429,19 @@ async function launchGame(id) {
 
   if (!target) {
     // Nothing linked yet: ask for the executable right away so Launch works.
+    // The game stays in the Library even if the user cancels the picker.
     toast(`${g.title} has no linked executable \u2014 choose one to launch it`, 'warn');
-    const picked = await window.api.pickExecutable(undefined);
+    const startDir = (State.installDirs && State.installDirs[id]) || undefined;
+    const picked = await window.api.pickExecutable(startDir);
     if (!picked) return;
     State.local = State.local || { installs: {}, roots: {} };
-    State.local.installs[id] = { type: 'exe', exe: picked, cwd: null, name: g.title, source: 'manual' };
+    State.local.installs[id] = launchLinkFor(id, { exe: picked, cwd: folderOf(picked), path: folderOf(picked) }, 'manual');
+    State.installed[id] = true;
+    State.owned[id] = true;
+    if (State.verify) delete State.verify[id];
     await persist();
     refreshActions();
+    afterLibraryChange();
     return launchGame(id);
   }
 
@@ -367,7 +453,22 @@ async function launchGame(id) {
   if (!res || !res.ok) {
     endSession(id);
     refreshActions();
-    toast(`Could not launch ${g.title}: ${(res && res.error) || 'unknown error'}`, 'warn');
+    const err = (res && res.error) || 'unknown error';
+    toast(`Could not launch ${g.title}: ${err}`, 'warn');
+
+    // A stale path is repairable; never punish the Library entry for it.
+    if (target.type === 'exe' && /executable not found|invalid executable|target is not a file|blocked file type/i.test(err)) {
+      const picked = await window.api.pickExecutable(target.exe || target.path || undefined);
+      if (!picked) return;
+      State.local = State.local || { installs: {}, roots: {} };
+      State.local.installs[id] = launchLinkFor(id, { exe: picked, cwd: folderOf(picked), path: folderOf(picked) }, 'manual');
+      State.installed[id] = true;
+      State.owned[id] = true;
+      if (State.verify) delete State.verify[id];
+      await persist();
+      afterLibraryChange();
+      return launchGame(id);
+    }
     return;
   }
 
@@ -1180,6 +1281,10 @@ document.querySelectorAll('#profile-wrap .menu a').forEach((a) => a.addEventList
     try { State.bgUrl = await window.api.readImage(State.settings.background); }
     catch { State.bgUrl = null; }
   }
+
+  // Re-adopt downloads that recorded a folder but lost their Library entry
+  // when an old build's launch check found no link. This never deletes files.
+  try { await repairInstallLinks(); } catch { /* the normal render still runs */ }
 
   hydrateIcons();
   applySettings();

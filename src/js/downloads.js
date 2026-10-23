@@ -157,7 +157,7 @@ function applyDownloadEvent(evt) {
     return rec;
   };
 
-  if (evt.state === 'done') { ensureRecord(); finishDownload(id, evt.dest); return; }
+  if (evt.state === 'done') { ensureRecord(); finishDownload(id, evt.dest, evt.launch); return; }
   if (evt.state === 'cancelled') { if (DL[id]) cancelLocal(id); return; }
   if (evt.state === 'error') { ensureRecord(); failDownload(id, evt.error || 'Download failed'); return; }
 
@@ -174,7 +174,7 @@ function applyDownloadEvent(evt) {
   renderDownloadModal();
 }
 
-function finishDownload(id, dest) {
+function finishDownload(id, dest, launch) {
   const d = DL[id];
   if (!d) return;
   const g = byId(id);
@@ -189,11 +189,52 @@ function finishDownload(id, dest) {
   // re-verify point at the real install rather than the default games folder.
   if (dest && State.installDirs) State.installDirs[id] = dest;
 
+  // Persist the launch link discovered by the engine. A completed download used
+  // to record only its folder, so the first Play press verified a game with no
+  // executable, failed, and dropped it out of the Library.
+  const link = launch && (launch.exe || launch.uri || launch.appId) ? launch : null;
+  if (link) {
+    State.local = State.local || { installs: {}, roots: {} };
+    State.local.installs[id] = { ...link, name: g.title, source: link.source || 'download' };
+  } else if (dest) {
+    // No executable was obvious (a launcher-less archive, for example). Keep
+    // the folder linked so verification sees real files, and fill in the exe
+    // below; Launch falls back to the file picker if it still cannot find one.
+    State.local = State.local || { installs: {}, roots: {} };
+    State.local.installs[id] = {
+      type: 'exe', exe: null, cwd: dest, path: dest, name: g.title, source: 'download'
+    };
+  }
+  if (State.verify) delete State.verify[id];
+
   HISTORY.unshift({ id, kind: d.kind, at: Date.now() });
   if (HISTORY.length > 12) HISTORY.pop();
   DL_RESULT[id] = 'done';
   delete DL_ERROR[id];
   persist();
+
+  // Older engine builds only sent the folder. Ask the main process for the
+  // executable now and upgrade the link in place.
+  if (dest && !(link && link.exe) && window.api && window.api.findLaunch) {
+    window.api.findLaunch(dest, g.title)
+      .then((found) => {
+        if (!found || !found.exe) return;
+        State.local = State.local || { installs: {}, roots: {} };
+        State.local.installs[id] = {
+          type: 'exe',
+          exe: found.exe,
+          cwd: found.cwd || dest,
+          path: found.path || dest,
+          name: g.title,
+          source: 'download'
+        };
+        State.installed[id] = true;
+        if (State.verify) delete State.verify[id];
+        persist();
+        refreshActions();
+      })
+      .catch(() => { /* Launch will offer the picker instead */ });
+  }
 
   toast(`${g.title} ${d.kind === 'update' ? 'updated' : 'installed'}`, 'check');
   drawerSig = '__init__';

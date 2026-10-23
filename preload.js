@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // --- local game detection & launching ---
   detectGames: (hints) => ipcRenderer.invoke('games:detect', hints),
+  findLaunch: (dir, title) => ipcRenderer.invoke('game:findLaunch', dir, title),
   verifyGames: (records, opts) => ipcRenderer.invoke('games:verify', records, opts),
   launchGame: (target) => ipcRenderer.invoke('game:launch', target),
 

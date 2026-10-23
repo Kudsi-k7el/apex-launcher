@@ -1,6 +1,23 @@
 {
   "entries": [
     {
+      "version": "2.10.2",
+      "date": "2026-10-23",
+      "title": "Downloaded games actually start",
+      "summary": "A completed download recorded its folder but no executable, so the first Play press verified a game with nothing to link, failed, and dropped it from the Library. Downloads now save a real launch target, and a failed check or launch never removes a game - it offers to locate the executable instead.",
+      "sections": [
+        {
+          "title": "Fixed",
+          "items": [
+            "Finished downloads now pick the game's real executable and save it with the install, so Play starts the game instead of failing with `Nothing is linked for this game on this PC`.",
+            "A failed verification or launch no longer deletes the Library entry or the install. A missing link opens the executable picker, and cancelling it leaves the game and its files alone.",
+            "Installs made by older builds are repaired on the next launch: a recorded folder that still exists is re-adopted and its executable discovered, so the game returns to the Library.",
+            "Executable detection skips `_CommonRedist`, DirectX and .NET setup binaries, and matches catalogue names such as `Geometry Dash Free Download` to `GeometryDash.exe`."
+          ]
+        }
+      ]
+    },
+    {
       "version": "2.10.1",
       "date": "2026-10-23",
       "title": "Apex Launcher starts again",
