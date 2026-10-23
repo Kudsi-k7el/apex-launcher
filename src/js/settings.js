@@ -30,6 +30,7 @@ const State = {
 
 const THEMES = {
   lightning: { label: 'Project Apex', desc: 'Black into deep red, with a warm red accent', accent: '#ff3355' },
+  autumn: { label: 'Samurai Autumn', desc: 'Charcoal dusk and maple-ember accent - made for the Samurai Autumn live wallpaper', accent: '#ff8a1f' },
   dark: { label: 'Dark', desc: 'Balanced dark grey', accent: '#00a8ff' },
   oled: { label: 'Pitch Black OLED', desc: 'True black for OLED panels', accent: '#00a8ff' },
   neon: { label: 'Neon Accent', desc: 'Violet glow, vivid highlights', accent: '#ff2fd0' }
@@ -50,20 +51,93 @@ function applySettings() {
   root.setAttribute('data-theme', theme);
   // Which shell the window wears. The palette and the shell are separate
   // choices: 2.8.0 is the sidebar rail, 2.9.0 the Project Lightning layout, and
-  // either one can be worn with any theme.
-  root.setAttribute('data-ui', s.ui === '2.8' ? '2.8' : '2.9');
+  // either one can be worn with any theme. 5.0 is the Lightning v5 chrome.
+  root.setAttribute('data-ui', ['2.8', '5.0'].includes(s.ui) ? s.ui : '2.9');
   root.style.setProperty('--accent', s.accent || THEMES[theme].accent);
   root.classList.toggle('reduce-motion', !!s.reduceMotion);
 
-  // Custom background picture (path persisted, bytes held as a data URL).
-  const hasBg = !!(s.background && State.bgUrl);
-  root.classList.toggle('has-bg', hasBg);
-  root.style.setProperty('--bg-image', hasBg ? `url("${State.bgUrl}")` : 'none');
+  // Custom background picture (path persisted, bytes held as a data URL),
+  // and the animated wallpaper - a YouTube video living behind everything.
+  // Both share the same opacity/blur sliders; the video wins when only it is set.
+  const hasImage = !!(s.background && State.bgUrl);
+  const hasVideo = !!s.bgVideo;
+  root.classList.toggle('has-bg', hasImage || hasVideo);
+  root.classList.toggle('has-video', hasVideo);
+  if (!hasImage) root.style.setProperty('--bg-image', 'none');
   root.style.setProperty('--bg-image-opacity', String((Number(s.backgroundOpacity) || 0) / 100));
   root.style.setProperty('--bg-image-blur', `${Number(s.backgroundBlur) || 0}px`);
+  syncVideoBg();
 
   // Frosted-glass sidebar: the wallpaper stays visible (blurred) through it.
   root.classList.toggle('glass-side', s.glassSidebar !== false);
+}
+
+/**
+ * The animated wallpaper. Two sources:
+ *   - 'local'          the samurai autumn loop bundled in src/wallpaper,
+ *                      kept in sync with the .webm that ships with installs
+ *   - anything YouTube the id parsed out of the link, muted and looping
+ * Both live inside #bg-layer, both are dropped when the setting is cleared.
+ */
+function syncVideoBg() {
+  const layer = document.getElementById('bg-layer');
+  if (!layer) return;
+  const s = State.settings || {};
+  const id = youTubeId(s.bgVideo);
+  const frame = layer.querySelector('iframe[data-apex-bg]');
+  const clip = layer.querySelector('video[data-apex-bg]');
+
+  if (id) {
+    if (clip) clip.remove();
+    const src = `https://www.youtube-nocookie.com/embed/${id}?autoplay=1&mute=1&`
+      + `loop=1&playlist=${id}&controls=0&modestbranding=1&showinfo=0&`
+      + `iv_load_policy=3&disablekb=1&fs=0&playsinline=1&rel=0&start=0`;
+    if (frame && frame.dataset.apexBg === id) return; // already playing it
+    if (frame) frame.remove();
+    const next = document.createElement('iframe');
+    next.setAttribute('data-apex-bg', id);
+    next.setAttribute('allow', 'autoplay; encrypted-media');
+    next.setAttribute('title', 'Apex animated wallpaper');
+    next.src = src;
+    layer.appendChild(next);
+  } else if (s.bgVideo === 'local') {
+    if (clip) return; // already playing the bundled loop
+    if (frame) frame.remove();
+    const next = document.createElement('video');
+    next.setAttribute('data-apex-bg', 'local');
+    next.setAttribute('title', 'Apex animated wallpaper');
+    // Prefer the absolute file path the main process resolved (app.asar.unpacked
+    // in installed builds); the relative source still works when running from
+    // plain source, where no archive sits in the way.
+    next.src = State.bgLocalUrl || 'wallpaper/samurai-autumn.webm';
+    next.autoplay = true;
+    next.muted = true;
+    next.defaultMuted = true;
+    next.loop = true;
+    next.setAttribute('playsinline', '');
+    const again = () => { try { next.play().catch(() => {}); } catch { /* ignore */ } };
+    next.addEventListener('loadeddata', again);
+    layer.appendChild(next);
+    again();
+  } else {
+    if (frame) frame.remove();
+    if (clip) clip.remove();
+  }
+}
+
+/**
+ * The 11-character video id out of anything YouTube-shaped: a watch URL, a
+ * youtu.be short link, an embed path, or the id typed on its own. Null when
+ * nothing video-like can be parsed.
+ */
+function youTubeId(input) {
+  const s = String(input || '').trim();
+  if (!s) return null;
+  if (/^[A-Za-z0-9_-]{11}$/.test(s)) return s;
+  let m = s.match(/(?:youtu\.be\/|\/embed\/|\/shorts\/|[?&]v=)([A-Za-z0-9_-]{11})/);
+  if (m) return m[1];
+  m = s.match(/([A-Za-z0-9_-]{11})(?:\?|&|$)/);
+  return m ? m[1] : null;
 }
 
 async function persist() {
@@ -90,6 +164,42 @@ function migrateLook() {
   s.theme = 'lightning';
   s.ui = '2.9';
   if (!s.accent || String(s.accent).toLowerCase() === '#00a8ff') s.accent = '';
+  return true;
+}
+
+/**
+ * One-time seed of the animated wallpaper: the Samurai Autumn live wallpaper
+ * plays behind the launcher, with the theme painted to match it. Runs once
+ * (flagged in state), so removing the video afterwards is final and not
+ * re-seeded. Only engages when no custom picture background is set - an
+ * existing image choice wins.
+ */
+function seedVideoLook() {
+  const s = State.settings || (State.settings = {});
+  // Embeds of the samurai video are blocked by the uploader ("Error 153"), so
+  // any install seeded with the YouTube link moves onto the bundled file the
+  // moment this runs - before the seed flag says "already done".
+  if (s.bgVideo && s.bgVideo !== 'local' && (s.bgVideoId === 'fKcF32dmcDk'
+    || String(s.bgVideo).includes('fKcF32dmcDk'))) s.bgVideo = 'local';
+  if (s.seedVideo === 'autumn') return false;
+  s.seedVideo = 'autumn';
+  if (s.background) return false; // their picture wins; video stays off
+  if (!s.bgVideo) {
+    // The samurai autumn loop ships inside the launcher (src/wallpaper), so
+    // the background needs no network and no embed player - older installs
+    // seeded the YouTube id instead of this, and 'local' replaces it.
+    s.bgVideo = 'local';
+    s.bgVideoId = 'fKcF32dmcDk';
+  }
+  if (s.backgroundOpacity == null) s.backgroundOpacity = 100; // a video wants to be seen clearly
+  if (s.backgroundBlur == null) s.backgroundBlur = 4;
+  // The theme is part of the seed, not an option on top: whatever older theme
+  // the install was on, the wallpaper is dressed in autumn from here on.
+  s.theme = 'autumn';
+  // The v5 shell is the point of the look; the 2.9 chrome is replaced once.
+  if (!s.ui || s.ui === '2.9') s.ui = '5.0';
+  if (!s.accent || String(s.accent).toLowerCase() === '#00a8ff'
+    || String(s.accent).toLowerCase() === '#ff3355') s.accent = '';
   return true;
 }
 
@@ -211,17 +321,22 @@ function renderSettings(el) {
         </div>
       </div>
       <div class="setting-row col">
-        <div class="s-text wide"><h4>Interface</h4><p>Pick the shell: 2.8.0 keeps the sidebar on the left, 2.9.0 is the Project Apex layout with the sections across the top</p></div>
+        <div class="s-text wide"><h4>Interface</h4><p>Pick the shell: 2.8.0 keeps the sidebar on the left, 2.9.0 is the Project Apex layout with the sections across the top, 5.0 is the Project Lightning v5 look</p></div>
         <div class="ui-pick" role="group" aria-label="Interface version">
           <button class="ui-card ${s.ui === '2.8' ? 'active' : ''}" data-ui-pick="2.8">
             <span class="ui-preview ui-28"><i class="ui-rail"></i><i class="ui-page"></i></span>
             <span class="ui-text"><strong>2.8.0 UI</strong><small>Sidebar on the left</small></span>
             <span class="tp-check">${s.ui === '2.8' ? icon('check', 15) : ''}</span>
           </button>
-          <button class="ui-card ${s.ui !== '2.8' ? 'active' : ''}" data-ui-pick="2.9">
+          <button class="ui-card ${s.ui !== '2.8' && s.ui !== '5.0' ? 'active' : ''}" data-ui-pick="2.9">
             <span class="ui-preview ui-29"><i class="ui-top"></i><i class="ui-page"></i></span>
             <span class="ui-text"><strong>2.9.0 UI</strong><small>Sections across the top</small></span>
-            <span class="tp-check">${s.ui !== '2.8' ? icon('check', 15) : ''}</span>
+            <span class="tp-check">${s.ui !== '2.8' && s.ui !== '5.0' ? icon('check', 15) : ''}</span>
+          </button>
+          <button class="ui-card ${s.ui === '5.0' ? 'active' : ''}" data-ui-pick="5.0">
+            <span class="ui-preview ui-50"><i class="ui-brand"></i><i class="ui-tabs"></i><i class="ui-hero"></i></span>
+            <span class="ui-text"><strong>Lightning v5 UI</strong><small>Ember top nav, v5 chrome</small></span>
+            <span class="tp-check">${s.ui === '5.0' ? icon('check', 15) : ''}</span>
           </button>
         </div>
       </div>
@@ -418,6 +533,33 @@ function renderSettings(el) {
             <label class="bg-range"><span>Blur <b id="bg-blur-val">${bgBlur}px</b></span>
               <input type="range" id="bg-blur" min="0" max="24" step="1" value="${bgBlur}"></label>
             <code id="bg-path">${esc(s.background || 'No image selected')}</code>
+          </div>
+        </div>
+      </div>
+      <div class="setting-row col">
+        <div class="s-text wide"><h4>Animated wallpaper&nbsp;&mdash;&nbsp;the bundled video</h4>
+          <p>The Samurai&nbsp;Autumn loop ships inside the launcher and plays behind
+            everything at once&nbsp;&mdash; no internet, no YouTube player. Or paste another
+            YouTube link instead. The video and the picture above share the
+            opacity and blur sliders, and picking one drives in a theme that fits it.</p></div>
+        <div class="bg-picker">
+          <div class="bg-preview ${s.bgVideo ? 'has is-video' : ''}" id="bg-video-preview">
+            ${(s.bgVideoId || youTubeId(s.bgVideo))
+              ? `<img src="https://i.ytimg.com/vi/${esc(s.bgVideoId || youTubeId(s.bgVideo))}/hqdefault.jpg" alt="">`
+              : `${icon('tv', 26)}<span>No video set yet</span>`}
+          </div>
+          <div class="bg-controls">
+            <div class="bg-buttons">
+              <button class="btn secondary" id="bg-video-local" ${s.bgVideo === 'local' ? 'disabled' : ''}>${icon('play', 15)} Use the bundled video</button>
+              <button class="btn secondary" id="bg-video-apply">${icon('check', 15)} Use this YouTube link</button>
+              <button class="btn danger" id="bg-video-clear" ${s.bgVideo ? '' : 'disabled'}>${icon('trash', 15)} Remove</button>
+            </div>
+            <input type="text" id="bg-video-url" class="select" inputmode="url"
+              placeholder="https://www.youtube.com/watch?v=..."
+              value="${s.bgVideo && s.bgVideo !== 'local' ? esc(s.bgVideo) : ''}" spellcheck="false" autocomplete="off">
+            <code id="bg-video-path">${s.bgVideo === 'local'
+              ? 'Now looping: Samurai Autumn (bundled, src/wallpaper)'
+              : (s.bgVideo ? esc(`Now looping: ${s.bgVideo}`) : 'Pick the bundled loop above, or paste any YouTube link')}</code>
           </div>
         </div>
       </div>
@@ -649,7 +791,7 @@ function renderSettings(el) {
     <section class="panel">
       <h3>About</h3>
       <div class="about">
-        <span class="logo-lg" data-icon="flame" data-size="22"></span>
+        <span class="logo-lg" data-icon="apexMark" data-size="22"></span>
         <div class="about-text">
           <strong>Apex Launcher</strong>
           <small id="about-ver">version&hellip;</small>
@@ -890,7 +1032,9 @@ function renderSettings(el) {
     applySettings();
     await persist();
     renderSettings(el);
-    toast(State.settings.ui === '2.8' ? 'The 2.8.0 interface is on' : 'The 2.9.0 interface is on', 'check');
+    toast(State.settings.ui === '2.8' ? 'The 2.8.0 interface is on'
+      : State.settings.ui === '5.0' ? 'The Lightning v5 interface is on'
+      : 'The 2.9.0 interface is on', 'check');
   }));
 
   // theme picker
@@ -955,6 +1099,53 @@ function renderSettings(el) {
     await persist();
     renderSettings(el);
     toast('Background removed', 'info');
+  });
+
+  // animated wallpaper (YouTube). Applying one also drives in the theme it was
+  // painted for, unless the user has already picked a custom theme of their own.
+  const videoLocalBtn = el.querySelector('#bg-video-local');
+  if (videoLocalBtn) videoLocalBtn.addEventListener('click', async () => {
+    State.settings.bgVideo = 'local';
+    State.settings.bgVideoId = 'fKcF32dmcDk';
+    if (!State.settings.accent
+      || String(State.settings.accent).toLowerCase() === '#00a8ff'
+      || State.settings.theme === 'lightning') {
+      State.settings.theme = 'autumn';
+      State.settings.accent = '';
+    }
+    applySettings();
+    await persist();
+    renderSettings(el);
+    toast('Bundled wallpaper set - Samurai Autumn theme applied', 'check');
+  });
+
+  const videoApplyBtn = el.querySelector('#bg-video-apply');
+  if (videoApplyBtn) videoApplyBtn.addEventListener('click', async () => {
+    const input = el.querySelector('#bg-video-url');
+    const id = youTubeId(input ? input.value : '');
+    if (!id) { toast('That does not look like a YouTube video link', 'warn'); return; }
+    State.settings.bgVideo = `https://www.youtube.com/watch?v=${id}`;
+    State.settings.bgVideoId = id;
+    if (!State.settings.accent
+      || String(State.settings.accent).toLowerCase() === '#00a8ff'
+      || State.settings.theme === 'lightning') {
+      State.settings.theme = 'autumn';
+      State.settings.accent = '';
+    }
+    applySettings();
+    await persist();
+    renderSettings(el);
+    toast('Animated wallpaper set - Samurai Autumn theme applied', 'check');
+  });
+
+  const videoClearBtn = el.querySelector('#bg-video-clear');
+  if (videoClearBtn) videoClearBtn.addEventListener('click', async () => {
+    State.settings.bgVideo = null;
+    State.settings.bgVideoId = null;
+    applySettings();
+    await persist();
+    renderSettings(el);
+    toast('Animated wallpaper removed', 'info');
   });
 
   const opRange = el.querySelector('#bg-opacity');

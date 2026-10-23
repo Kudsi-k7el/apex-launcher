@@ -295,4 +295,47 @@ async function assets(appId) {
   });
 }
 
-module.exports = { search, details, assets, artFor, money, stripTags, parseReleaseDate, cache };
+// ---------------------------------------------------------------------------
+// Names for AppIDs that have no storefront page
+// ---------------------------------------------------------------------------
+/** Steam's complete app list, refetched at most once a day. This is the only
+ *  Steam source that answers for AppIDs without a store page (dev builds,
+ *  config apps, region-locked entries), which otherwise stay nameless. */
+let appList = null;
+let appListAt = 0;
+async function appListMap() {
+  if (appList && Date.now() - appListAt < 24 * 60 * 60 * 1000) return appList;
+  const data = await getJson('https://api.steampowered.com/ISteamApps/GetAppList/v2/', { timeoutMs: 30000 });
+  const rows = (data && data.applist && data.applist.apps) || [];
+  const map = new Map();
+  for (const r of rows) map.set(String(r.appid), r.name);
+  appList = map;
+  appListAt = Date.now();
+  return map;
+}
+
+/**
+ * The best name for one AppID, from as many Steam sources as it takes:
+ * the storefront first (proper localized name), then the global app list.
+ * @param {string|number} appId
+ * @returns {Promise<{ok:boolean, name?:string, source?:string, error?:string}>}
+ */
+async function nameFor(appId) {
+  const id = String(appId || '').replace(/[^0-9]/g, '');
+  if (!id) return { ok: false, error: 'No AppID given' };
+
+  const d = await details(id).catch(() => null);
+  if (d && d.ok && d.data && d.data.name) return { ok: true, name: d.data.name, source: 'store' };
+
+  const a = await assets(id).catch(() => null);
+  if (a && a.ok && a.name) return { ok: true, name: a.name, source: 'store-assets' };
+
+  try {
+    const name = (await appListMap()).get(id);
+    if (name) return { ok: true, name, source: 'applist' };
+  } catch { /* offline — nothing else to try */ }
+
+  return { ok: false, error: 'Steam has no name for this AppID' };
+}
+
+module.exports = { search, details, assets, artFor, money, stripTags, parseReleaseDate, cache, nameFor };

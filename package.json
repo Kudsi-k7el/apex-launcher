@@ -1,7 +1,7 @@
 {
   "name": "apex-launcher",
   "productName": "Apex Launcher",
-  "version": "2.9.0",
+  "version": "2.10.0",
   "description": "Apex Launcher - your games, one place. A modern, frameless desktop game launcher.",
   "author": "Apex Launcher",
   "license": "MIT",
@@ -28,6 +28,7 @@
     "productName": "Apex Launcher",
     "copyright": "Copyright (c) 2026 Apex Launcher",
     "asar": true,
+    "asarUnpack": ["src/wallpaper/**"],
     "npmRebuild": false,
     "directories": {
       "output": "dist",

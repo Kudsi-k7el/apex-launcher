@@ -1494,7 +1494,7 @@ BP.renderOverlay = function () {
   menu.innerHTML = `
     <div class="bp-power-card" role="dialog" aria-modal="true">
       <header class="bp-power-head">
-        <span class="bp-power-logo">${icon('flame', 20)}</span>
+        <span class="bp-power-logo">${icon('apexMark', 20)}</span>
         <div><strong>Apex Launcher</strong><small>Signed in as ${esc(name)}</small></div>
       </header>
       <div class="bp-power-rows">

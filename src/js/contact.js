@@ -116,7 +116,7 @@ function renderContact(el) {
     </section>
 
     <div class="cc-sign">
-      ${icon('flame', 14)}
+      ${icon('apexMark', 14)}
       <span>built by <b>kudasai</b> &middot; <b>@kudsoo</b></span>
     </div>`;
 

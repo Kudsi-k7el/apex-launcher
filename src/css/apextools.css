@@ -1,5 +1,5 @@
 /* =========================================================================
-   Apex Tools - the dashboard that opens the Tools view
+   LuaTools - the dashboard on the LuaTools tab of the Apex Tools view
    -------------------------------------------------------------------------
    Three columns over a shelf, the way the reference page reads: import on the
    left, the clock in the middle, the Steam app id on the right. Under them the
@@ -240,6 +240,14 @@
   font-size: 11px;
 }
 
+/* --- generic button moods ------------------------------------------------- */
+.ap-btn.is-primary {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: color-mix(in srgb, var(--accent) 16%, transparent);
+  color: #fff;
+}
+.ap-btn.is-primary:hover { background: color-mix(in srgb, var(--accent) 24%, transparent); }
+
 .ap-grid-head {
   display: flex;
   align-items: center;
@@ -322,6 +330,33 @@
 }
 .ap-tile:hover .ap-tile-art { transform: translateY(-3px); border-color: rgba(255, 255, 255, .22); }
 .ap-tile-art img { width: 100%; height: 100%; object-fit: cover; display: block; }
+/* The delete chip: hidden until the tile is hovered, red on its own hover. */
+.ap-tile { position: relative; }
+.ap-tile-del {
+  position: absolute;
+  top: 7px;
+  right: 7px;
+  z-index: 3;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  color: #ffb3b3;
+  background: rgba(20, 12, 12, .72);
+  border: 1px solid rgba(255, 120, 120, .35);
+  opacity: 0;
+  transform: translateY(-2px);
+  transition: opacity .15s ease, transform .15s ease, background .15s ease, color .15s ease;
+}
+.ap-tile:hover .ap-tile-del,
+.ap-tile-del:focus-visible { opacity: 1; transform: translateY(0); }
+.ap-tile-del:hover {
+  background: rgba(140, 30, 30, .85);
+  color: #fff;
+  border-color: rgba(255, 140, 140, .6);
+}
 .ap-tile-name {
   font-size: 12px;
   font-weight: 600;
@@ -358,6 +393,271 @@
 }
 .ap-empty strong { font-size: 13px; color: #fff; }
 .ap-empty small { font-size: 11.5px; color: var(--muted); max-width: 380px; line-height: 1.5; }
+
+.ap-btn.is-danger {
+  border-color: rgba(255, 110, 110, .4);
+  color: #ffc9c9;
+}
+.ap-btn.is-danger:hover { background: rgba(255, 110, 110, .14); }
+.ap-btn.apx-mini {
+  padding: 4px 9px;
+  font-size: 10.5px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.ap-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* --- LuaTools feature ports: download queue ------------------------------ */
+.ap-dl {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.apx-dl {
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, .09);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .03);
+}
+.apx-dl.is-ok { border-color: rgba(127, 224, 160, .3); }
+.apx-dl.is-bad { border-color: rgba(255, 110, 110, .35); }
+.apx-dl-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  font-weight: 700;
+  color: #fff;
+  justify-content: space-between;
+}
+.apx-dl-title > span:first-child, .apx-dl-title svg { margin-right: auto; }
+.apx-bar {
+  height: 5px;
+  margin: 9px 0 7px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, .08);
+  overflow: hidden;
+}
+.apx-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--accent, #ffb45c);
+  transition: width .4s ease;
+}
+.apx-dl-sub {
+  display: flex;
+  justify-content: space-between;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+.apx-err { display: block; margin-top: 4px; color: #ffabab; font-size: 10.5px; }
+
+/* --- LuaTools feature ports: applied files + depots ---------------------- */
+.ap-depots-wrap, .ap-modes-section {
+  margin-top: 22px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, .08);
+}
+.ap-sec-head {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.ap-sec-head .ap-kicker { color: #fff; }
+.ap-sec-sub { font-size: 11px; color: var(--muted); line-height: 1.5; }
+.ap-sec-sub code { padding: 1px 4px; border-radius: 4px; background: rgba(0,0,0,.3); font-size: 10.5px; }
+
+.apx-file {
+  border: 1px solid rgba(255, 255, 255, .07);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, .02);
+}
+.apx-file + .apx-file { margin-top: 8px; }
+.apx-file.is-open { border-color: rgba(255, 255, 255, .14); }
+.apx-file-head {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  width: 100%;
+  padding: 9px 12px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.apx-file-head:hover { background: rgba(255, 255, 255, .04); }
+.apx-file-head strong { font-size: 12px; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 42%; }
+.apx-file-meta { flex: 1; font-size: 10.5px; color: var(--muted); white-space: nowrap; }
+.apx-file-time { font-size: 10.5px; color: var(--muted); }
+.apx-chev { color: var(--muted); display: inline-flex; }
+
+.apx-detail { padding: 4px 12px 12px; display: flex; flex-direction: column; gap: 7px; }
+.apx-note {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #7fe0a0;
+  font-size: 10.5px;
+}
+.apx-row {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, .03);
+  flex-wrap: wrap;
+}
+.apx-row.apx-base { background: none; border: 1px dashed rgba(255,255,255,.14); }
+.apx-base strong { font-size: 12px; color: #fff; }
+.apx-id {
+  min-width: 72px;
+  font-size: 11.5px;
+  font-weight: 700;
+  color: var(--accent, #ffb45c);
+  font-variant-numeric: tabular-nums;
+}
+.apx-badge {
+  padding: 2px 7px;
+  border-radius: 20px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  border: 1px solid rgba(255, 255, 255, .16);
+  color: var(--muted);
+  white-space: nowrap;
+}
+.apx-badge.is-ok { color: #7fe0a0; border-color: rgba(127, 224, 160, .4); }
+.apx-badge.is-warn { color: #ffd9a0; border-color: rgba(255, 210, 140, .4); }
+
+.apx-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 7px;
+  border-radius: 20px;
+  border: 1px solid rgba(127, 224, 160, .35);
+  color: #9fe6ba;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.apx-tag.muted { border-color: rgba(255,255,255,.14); color: var(--muted); }
+.apx-muted { color: var(--muted); font-size: 10.5px; }
+
+.apx-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  font: inherit;
+}
+.apx-switch span {
+  width: 26px;
+  height: 15px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .14);
+  position: relative;
+  transition: background .18s ease;
+  flex: 0 0 auto;
+}
+.apx-switch span::after {
+  content: '';
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform .18s ease;
+}
+.apx-switch.is-on span { background: color-mix(in srgb, var(--accent, #ffb45c) 75%, #4a7); }
+.apx-switch.is-on span::after { transform: translateX(11px); }
+.apx-switch small { font-size: 10.5px; min-width: 44px; text-align: left; color: var(--muted); }
+.apx-switch.is-on small { color: #d9ecff; }
+
+.apx-pin { display: inline-flex; align-items: center; gap: 6px; }
+.apx-pin-input, .apx-in {
+  width: 190px;
+  padding: 4px 8px;
+  border: 1px solid rgba(255, 255, 255, .12);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, .28);
+  color: #fff;
+  font-size: 11px;
+  font-family: inherit;
+  font-variant-numeric: tabular-nums;
+}
+.apx-pin-input:focus, .apx-in:focus { outline: none; border-color: color-mix(in srgb, var(--accent, #ffb45c) 55%, transparent); }
+.apx-pin-input::placeholder, .apx-in::placeholder { color: rgba(255,255,255,.28); }
+
+.apx-forms { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 4px; }
+.apx-form { display: inline-flex; align-items: center; gap: 5px; }
+.apx-form small { display: block; width: 100%; font-size: 9.5px; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; color: var(--muted); }
+.apx-form .apx-in { width: 130px; }
+
+.apx-empty, .apx-busy {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px dashed rgba(255, 255, 255, .12);
+  color: var(--muted);
+  font-size: 11.5px;
+  text-align: center;
+}
+
+/* --- LuaTools feature ports: unlocker modes ------------------------------- */
+.ap-modes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+}
+@media (max-width: 900px) { .ap-modes { grid-template-columns: 1fr; } }
+.apx-mode {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 12px 13px;
+  border: 1px solid rgba(255, 255, 255, .08);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .025);
+}
+.apx-mode.is-active { border-color: color-mix(in srgb, var(--accent, #ffb45c) 45%, transparent); background: color-mix(in srgb, var(--accent, #ffb45c) 6%, transparent); }
+.apx-mode-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.apx-mode-head strong { font-size: 12.5px; color: #fff; }
+.apx-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: .4px;
+  text-transform: uppercase;
+  color: var(--muted);
+  border: 1px solid rgba(255, 255, 255, .16);
+  white-space: nowrap;
+}
+.apx-pill.is-on { color: #7fe0a0; border-color: rgba(127, 224, 160, .4); }
+.apx-pill.is-warn { color: #ffd9a0; border-color: rgba(255, 210, 140, .4); }
+.apx-mode small { flex: 1; font-size: 11px; line-height: 1.5; color: var(--muted); }
+.apx-mode-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.apx-actions { display: inline-flex; gap: 6px; }
+
 
 .ap-pager {
   display: flex;

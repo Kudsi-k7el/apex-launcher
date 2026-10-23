@@ -82,7 +82,7 @@ function renderFixes(el) {
     </div>
 
     <div class="fx-tabs" role="tablist">
-      <button class="fx-tab ${fxTab === 'luatools' ? 'active' : ''}" data-fx-tab="luatools">${icon('file', 15)} App IDs</button>
+      <button class="fx-tab ${fxTab === 'luatools' ? 'active' : ''}" data-fx-tab="luatools">${icon('file', 15)} Apex Tools</button>
       <button class="fx-tab ${fxTab === 'bypass' ? 'active' : ''}" data-fx-tab="bypass">${icon('shield', 15)} Bypass</button>
       <button class="fx-tab ${fxTab === 'onlinefix' ? 'active' : ''}" data-fx-tab="onlinefix">${icon('globe', 15)} OnlineFix</button>
       <button class="fx-tab ${fxTab === 'steamless' ? 'active' : ''}" data-fx-tab="steamless">${icon('zap', 15)} SteamLess</button>

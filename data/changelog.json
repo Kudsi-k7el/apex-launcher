@@ -1,6 +1,46 @@
 {
   "entries": [
     {
+      "version": "2.10.0",
+      "date": "2026-10-21",
+      "title": "The Steam engine, a live autumn and the Lightning v5 look",
+      "summary": "Apex Tools now does the whole job: real unlocks written where Steam reads them, depot content straight off the CDN, one-chip deletion, self-healing manifests - and behind everything there is a bundled samurai autumn wallpaper with a new v5 shell to match.",
+      "sections": [
+        {
+          "title": "New",
+          "items": [
+            "Apex Tools applies for real. The lua, the pinned manifests and the depot content now land where Steam actually reads them - <Steam>\\config\\stplug-in and <Steam>\\depotcache at the root - so an applied title shows in Steam's own library, not only on Apex's shelf.",
+            "Real depot downloads. When Steam cannot fetch a depot itself, Apex runs DepotDownloaderMod straight against the CDN with your credentials and the tile fills on its own. When a pinned manifest cannot be found, the download still runs, just without the manifest argument.",
+            "Delete on a chip. Hovering an applied game shows a trash chip: one click comments out the lua lines, removes the appmanifests Apex seeded and prunes the depotcache manifests that belong to that title alone. Files Apex did not seed are guarded and left alone.",
+            "The Mode page. Three ways for the depot content to arrive - Steam fetches it, Apex fetches it warm, Apex fetches it cold - each with its own notes and a live Steam-running check.",
+            "A lua editor. Open any plugin, edit it against the depot keys it targets, and a backup of the original is written before the first save.",
+            "Repair manifests. When Steam prunes the pinned manifests, they come back by themselves the next time the launcher runs with Steam closed, and a button in Apex Tools does the same on demand.",
+            "Names without guessing. An unknown app id resolves through the store's details endpoint, then the asset CDN, then a day-cached full app list - so a bare number like 4496490 shows its real title everywhere Apex lists it.",
+            "The Samurai Autumn live wallpaper. A 1440p60 autumn loop ships inside the launcher - no network, no embed, no player that can flag it - picked in Settings > Background among the bundled loop, a YouTube link and plain off, sharing the opacity and blur sliders with the picture choice.",
+            "Lightning v5 UI. The third shell in Settings > Interface: a warm near-black pane with an ember haze rising behind the top, a taller title line, and the active section carried by a rounded, glowing underline instead of a flat border. Installs seeded by the wallpaper come with it."
+          ]
+        },
+        {
+          "title": "Changed",
+          "items": [
+            "Steam paths live at the root now. Older installs that kept their lua and manifests inside a per-user Steam folder have them copied up once, automatically, on the first run.",
+            "The clear glass. The live wallpaper sits behind a light vignette instead of the dark scrim wall a photo gets, so the background reads crisp at full strength.",
+            "The corner stamp read Created by ♥ sexykudasai - v2.10.0.",
+            "The brand mark is the white A: the home hero and the community card show it straight, with no red disc, no glow and no ghost word behind it. The same drawing is the window, taskbar and installer icon on a charcoal tile, and the bare mark in the system tray where 16 pixels is all there is. A seven-size icon.ico ships with it, so Explorer and alt-tab stay crisp.",
+            "Nothing in Project Lightning's own window - its XAML, icons, fonts or video - is copied. The v5 chrome is measured from watching it and rebuilt from Apex's own markup."
+          ]
+        },
+        {
+          "title": "Fixed",
+          "items": [
+            "The seed that dresses the wallpaper could run too early and leave installs on the dark theme with no wallpaper behind them. Existing states migrate once, in the right order, on their next launch.",
+            "A stray byte-order mark in the saved state file no longer stops the launcher from reading its own settings.",
+            "Steam currently running no longer lets the manifest repair fight the client over its depotcache: the automatic pass waits for Steam to be closed."
+          ]
+        }
+      ]
+    },
+    {
       "version": "2.9.0",
       "date": "2026-10-20",
       "title": "Project Apex, a home screen, and tools with a face",

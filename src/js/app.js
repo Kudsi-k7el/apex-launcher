@@ -1150,6 +1150,18 @@ document.querySelectorAll('#profile-wrap .menu a').forEach((a) => a.addEventList
     try { await persist(); } catch { /* the next save writes it anyway */ }
   }
 
+  // The animated wallpaper: seeded once, then owned by the user.
+  if (typeof seedVideoLook === 'function' && seedVideoLook()) {
+    try { await persist(); } catch { /* the next save writes it anyway */ }
+  }
+
+  // The bundled wallpaper clip is unpacked out of app.asar in installed builds;
+  // the renderer needs its absolute file path for the media element.
+  if (window.api && window.api.wallpaperPath) {
+    try { State.bgLocalUrl = await window.api.wallpaperPath(); }
+    catch { State.bgLocalUrl = null; }
+  }
+
   // The chosen language arrives with the rest of the state. Translating the
   // shell here - before the first render - means the sidebar, the title bar and
   // the sign-in gate are already in the right language on the first paint.

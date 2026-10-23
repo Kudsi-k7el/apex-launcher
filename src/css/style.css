@@ -41,6 +41,62 @@
 }
 
 /*
+ * Samurai Autumn: the palette the Samurai Autumn live wallpaper was painted
+ * for. Deep maple dusk instead of black, an ember-orange accent that matches
+ * the falling leaves, and warmed parchment text. Made for video backgrounds,
+ * so panels sit slightly more translucent to let it read through.
+ */
+[data-theme="autumn"] {
+  --accent: #ff8a1f;
+  --bg: #120a06;
+  --bg2: #0b0503;
+  --panel: #221410;
+  --side: #1a100c;
+  --hover: #2c1c15;
+  --border: #37231a;
+  --text: #f8efe6;
+  --muted: #b09a8c;
+}
+
+/*
+ * Samurai Autumn, deeper: the wallpaper wears the theme through the whole
+ * component layer - warm selections, ember rail glows, maple-tinted surfaces.
+ * Everything var-driven above cascades first; these are the touches a variable
+ * alone cannot carry.
+ */
+[data-theme="autumn"] ::selection { background: rgba(255, 138, 31, .32); color: #fff7ee; }
+[data-theme="autumn"] ::-webkit-scrollbar-thumb { background: #3d2519; }
+[data-theme="autumn"] ::-webkit-scrollbar-thumb:hover { background: #56331f; }
+
+[data-theme="autumn"] .panel,
+[data-theme="autumn"] .card,
+[data-theme="autumn"] .scard {
+  border-color: color-mix(in srgb, var(--accent) 16%, var(--border));
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--accent) 9%, transparent);
+}
+[data-theme="autumn"] .panel:hover {
+  border-color: color-mix(in srgb, var(--accent) 34%, var(--border));
+  box-shadow: 0 10px 34px rgba(255, 110, 20, .07);
+}
+
+[data-theme="autumn"] #sidebar,
+[data-theme="autumn"] .lt-rail {
+  box-shadow: inset -1px 0 0 color-mix(in srgb, var(--accent) 14%, transparent),
+    inset -22px 0 60px -30px color-mix(in srgb, var(--accent) 25%, transparent);
+}
+[data-theme="autumn"] .tab.active { text-shadow: 0 0 14px color-mix(in srgb, var(--accent) 55%, transparent); }
+
+[data-theme="autumn"] .btn.primary {
+  box-shadow: 0 2px 18px color-mix(in srgb, var(--accent) 40%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, .2);
+}
+[data-theme="autumn"] .btn.secondary {
+  border-color: color-mix(in srgb, var(--accent) 30%, var(--border));
+}
+
+[data-theme="autumn"] .logo { filter: drop-shadow(0 0 9px color-mix(in srgb, var(--accent) 70%, transparent)); }
+
+/*
  * Lightning: the palette Project Lightning's WPF window is built on. Black
  * falls into deep red behind a single translucent card; the rail is the same
  * near-black the original uses (#1E1E1E) with #333 hovers. The accent is
@@ -373,20 +429,76 @@ code { font-family: 'Cascadia Code', Consolas, monospace; }
     linear-gradient(180deg, color-mix(in srgb, var(--bg) 62%, transparent), color-mix(in srgb, var(--bg) 84%, transparent));
 }
 
+/* --- animated wallpaper: a cover-cropped 16:9 video behind everything -----
+   The iframe is centre-anchored and sized to exceed the viewport on either
+   axis, so no letterbox bars survive at any window shape. It shares the
+   layer's opacity and blur vars with the picture background. */
+#bg-layer { overflow: hidden; }
+
+#bg-layer iframe[data-apex-bg] {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 100vw;
+  height: 56.25vw;      /* 16:9 relative to the viewport width  */
+  min-width: 177.78vh;  /* 16:9 relative to the viewport height */
+  min-height: 100vh;
+  transform: translate(-50%, -50%);
+  border: 0;
+  pointer-events: none;
+  filter: saturate(1.05);
+}
+
+/* The bundled loop: a real <video>, cover-fitted like a wallpaper. */
+#bg-layer video[data-apex-bg] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  filter: saturate(1.05);
+}
+
 .has-bg #bg-layer,
 .has-bg #bg-scrim { display: block; }
 .has-bg body { background: var(--bg2); }
 
-/* Let the wallpaper read through the big surfaces without hurting contrast. */
+/* Let the wallpaper read through the big surfaces without hurting contrast.
+   Video keeps a touch more translucency than an image does, and the autumn
+   theme already ships warmer panels, so this stays palette-driven. */
 .has-bg .panel,
 .has-bg .card,
 .has-bg .scard,
 .has-bg .dt-panel,
 .has-bg .dt-barbar,
 .has-bg .store-row .scard,
-.has-bg .dl-summary {
+.has-bg .dl-summary,
+.has-video .panel,
+.has-video .card,
+.has-video .scard {
   background-color: color-mix(in srgb, var(--panel) 84%, transparent);
   backdrop-filter: blur(3px);
+}
+.has-video .panel,
+.has-video .card,
+.has-video .scard,
+.has-video .dt-panel {
+  background-color: color-mix(in srgb, var(--panel) 74%, transparent);
+  backdrop-filter: blur(5px);
+}
+
+/* The video wants to be seen. The still-picture scrim wall (62-84% bg) is
+   right for a photo, but over a live wallpaper it reads as a dark stain, so
+   the video case swaps it for a light vignette: a hint of tint at the very
+   top and a soft falloff at the bottom edge, clear glass in between. */
+.has-video #bg-scrim {
+  background:
+    linear-gradient(180deg,
+      color-mix(in srgb, var(--bg) 26%, transparent) 0%,
+      transparent 30%,
+      transparent 66%,
+      color-mix(in srgb, var(--bg2) 42%, transparent) 100%);
 }
 
 /* =========================================================================
@@ -417,33 +529,33 @@ code { font-family: 'Cascadia Code', Consolas, monospace; }
 /* --- title line ----------------------------------------------------------
    Brand at the left, search in the middle, the window's own controls at the
    right, all straight on the gradient with no bar behind them. */
-[data-ui="2.9"] #titlebar {
+:is([data-ui="2.9"], [data-ui="5.0"]) #titlebar {
   height: 42px;
   background: transparent;
   border-bottom: none;
   box-shadow: none;
   padding-right: 6px;
 }
-[data-ui="2.9"] .brand { padding-left: 16px; }
-[data-ui="2.9"] .brand-text { font-size: 12.5px; letter-spacing: 1.5px; color: rgba(255, 255, 255, .9); }
-[data-ui="2.9"] .brand-text b { color: #fff; }
-[data-ui="2.9"] .logo { color: currentColor; filter: none; }
-[data-ui="2.9"] .title-search input {
+:is([data-ui="2.9"], [data-ui="5.0"]) .brand { padding-left: 16px; }
+:is([data-ui="2.9"], [data-ui="5.0"]) .brand-text { font-size: 12.5px; letter-spacing: 1.5px; color: rgba(255, 255, 255, .9); }
+:is([data-ui="2.9"], [data-ui="5.0"]) .brand-text b { color: #fff; }
+:is([data-ui="2.9"], [data-ui="5.0"]) .logo { color: currentColor; filter: none; }
+:is([data-ui="2.9"], [data-ui="5.0"]) .title-search input {
   background: rgba(0, 0, 0, .45);
   border-color: rgba(255, 255, 255, .12);
   color: #fff;
 }
-[data-ui="2.9"] .clock {
+:is([data-ui="2.9"], [data-ui="5.0"]) .clock {
   background: transparent;
   border-color: rgba(255, 255, 255, .14);
 }
-[data-ui="2.9"] .win-controls button:hover { background: rgba(255, 255, 255, .14); }
+:is([data-ui="2.9"], [data-ui="5.0"]) .win-controls button:hover { background: rgba(255, 255, 255, .14); }
 
 /* --- the section row -----------------------------------------------------
    The nav is the one Apex already has, laid on its side: one centred run of
    items, no rail, no card under them. It scrolls sideways on a narrow window
    rather than wrapping, which is what keeps the title line from moving. */
-[data-ui="2.9"] #layout {
+:is([data-ui="2.9"], [data-ui="5.0"]) #layout {
   display: flex;
   flex-direction: column;
   margin: 0;
@@ -454,7 +566,7 @@ code { font-family: 'Cascadia Code', Consolas, monospace; }
   overflow: visible;
 }
 
-[data-ui="2.9"] #sidebar {
+:is([data-ui="2.9"], [data-ui="5.0"]) #sidebar {
   position: static;
   flex: 0 0 auto;
   flex-direction: row;
@@ -471,15 +583,15 @@ code { font-family: 'Cascadia Code', Consolas, monospace; }
   overflow-y: hidden;
   scrollbar-width: none;
 }
-[data-ui="2.9"] #sidebar::-webkit-scrollbar { display: none; }
+:is([data-ui="2.9"], [data-ui="5.0"]) #sidebar::-webkit-scrollbar { display: none; }
 
 /* The rail's own furniture has no place in a top row. */
-[data-ui="2.9"] .side-brand,
-[data-ui="2.9"] .side-label,
-[data-ui="2.9"] .side-foot,
-[data-ui="2.9"] .spacer { display: none; }
+:is([data-ui="2.9"], [data-ui="5.0"]) .side-brand,
+:is([data-ui="2.9"], [data-ui="5.0"]) .side-label,
+:is([data-ui="2.9"], [data-ui="5.0"]) .side-foot,
+:is([data-ui="2.9"], [data-ui="5.0"]) .spacer { display: none; }
 
-[data-ui="2.9"] .tab {
+:is([data-ui="2.9"], [data-ui="5.0"]) .tab {
   flex: 0 0 auto;
   padding: 0 17px;
   border-radius: 0;
@@ -491,19 +603,19 @@ code { font-family: 'Cascadia Code', Consolas, monospace; }
   transition: color .15s, border-color .15s;
 }
 /* The reference window is text only: the underline carries the state. */
-[data-ui="2.9"] .tab .ico { display: none; }
-[data-ui="2.9"] .tab:hover { background: none; color: #fff; transform: none; }
-[data-ui="2.9"] .tab:active { background: none; }
-[data-ui="2.9"] .tab.active {
+:is([data-ui="2.9"], [data-ui="5.0"]) .tab .ico { display: none; }
+:is([data-ui="2.9"], [data-ui="5.0"]) .tab:hover { background: none; color: #fff; transform: none; }
+:is([data-ui="2.9"], [data-ui="5.0"]) .tab:active { background: none; }
+:is([data-ui="2.9"], [data-ui="5.0"]) .tab.active {
   background: none;
   color: #fff;
   font-weight: 500;
   border-bottom-color: var(--accent);
 }
-[data-ui="2.9"] .tab.active .ico { color: var(--accent); filter: none; }
-[data-ui="2.9"] .tab.active::before { display: none; }
+:is([data-ui="2.9"], [data-ui="5.0"]) .tab.active .ico { color: var(--accent); filter: none; }
+:is([data-ui="2.9"], [data-ui="5.0"]) .tab.active::before { display: none; }
 
-[data-ui="2.9"] .tab-badge {
+:is([data-ui="2.9"], [data-ui="5.0"]) .tab-badge {
   position: static;
   margin-left: 2px;
   min-width: 18px;
@@ -514,15 +626,15 @@ code { font-family: 'Cascadia Code', Consolas, monospace; }
 }
 
 /* --- the page sits straight on the gradient ------------------------------ */
-[data-ui="2.9"] #content {
+:is([data-ui="2.9"], [data-ui="5.0"]) #content {
   flex: 1;
   min-height: 0;
   padding: 16px 30px 30px;
 }
-[data-ui="2.9"] .page-title { font-size: 26px; letter-spacing: -.3px; }
+:is([data-ui="2.9"], [data-ui="5.0"]) .page-title { font-size: 26px; letter-spacing: -.3px; }
 
 /* --- the build stamp, bottom right --------------------------------------- */
-[data-ui="2.9"] .build-stamp {
+:is([data-ui="2.9"], [data-ui="5.0"]) .build-stamp {
   right: 18px;
   bottom: 10px;
   font-family: 'Segoe UI', system-ui, sans-serif;
@@ -534,7 +646,7 @@ code { font-family: 'Cascadia Code', Consolas, monospace; }
 .stamp-heart { color: var(--accent); }
 
 /* --- the download drawer spans the width, like the rest of the page ------ */
-[data-ui="2.9"] #drawer {
+:is([data-ui="2.9"], [data-ui="5.0"]) #drawer {
   left: 0;
   right: 0;
   bottom: 0;
@@ -543,3 +655,91 @@ code { font-family: 'Cascadia Code', Consolas, monospace; }
   border-bottom: none;
   background: #191414;
 }
+
+/* =========================================================================
+   Lightning v5 shell (Settings > Interface > "Lightning v5 UI")
+   -------------------------------------------------------------------------
+   Chrome read from the v5.0.8 window: a warm near-black pane with a low ember
+   haze rising behind the top of the page, a slightly taller section row, and
+   the active section carried by a rounded, ember-glowing underline rather
+   than a flat border. It reuses every selector of the 2.9 shell above, so
+   only what v5 does differently is restated here.
+
+   The measurements are from reading captures of that window - as numbers,
+   not as code. None of its XAML, icons, fonts or video is copied.
+   ========================================================================= */
+
+/* The haze: accent-tinted so it follows the theme (autumn warm, lightning
+   red...), but only when no wallpaper is on - video wins the background. */
+[data-ui="5.0"]:not(.has-bg) body {
+  background:
+    radial-gradient(95% 62% at 50% -12%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 66%),
+    linear-gradient(180deg, #170e08 0%, #100906 52%, #0b0605 100%);
+}
+
+/* The neon frame stays but calmer: v5's window has no glowing border. */
+[data-ui="5.0"] #frame {
+  border-color: color-mix(in srgb, var(--accent) 26%, transparent);
+  box-shadow: inset 0 0 20px color-mix(in srgb, var(--accent) 8%, transparent);
+}
+
+/* --- title line ---------------------------------------------------------- */
+[data-ui="5.0"] #titlebar { height: 46px; }
+[data-ui="5.0"] .brand { padding-left: 20px; }
+[data-ui="5.0"] .brand-text { font-size: 12px; letter-spacing: 2px; }
+[data-ui="5.0"] .brand-light { color: color-mix(in srgb, var(--accent) 72%, #fff); }
+[data-ui="5.0"] .brand-light::before { content: "\26A1 "; font-size: 11px; }
+
+/* --- the section row ------------------------------------------------------ */
+[data-ui="5.0"] #sidebar {
+  height: 48px;
+  padding: 0 26px;
+  gap: 5px;
+  border-bottom-color: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+[data-ui="5.0"] .tab {
+  font-size: 13.5px;
+  padding: 0 19px;
+  color: #a8a09a;
+  border-bottom: 3px solid transparent;
+}
+[data-ui="5.0"] .tab:hover { color: #f5efe8; }
+
+/* The v5 active plate: a rounded ember underline floating just under the
+   text, with the glow both above and below it. */
+[data-ui="5.0"] .tab.active {
+  border-bottom-color: transparent;
+  color: #fff;
+  text-shadow: 0 0 16px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+[data-ui="5.0"] .tab.active::after {
+  content: '';
+  position: absolute;
+  left: 13px;
+  right: 13px;
+  bottom: 0;
+  height: 3px;
+  border-radius: 3px 3px 0 0;
+  background: linear-gradient(90deg, transparent, var(--accent) 18%, var(--accent) 82%, transparent);
+  box-shadow: 0 -3px 16px color-mix(in srgb, var(--accent) 60%, transparent),
+    0 4px 14px color-mix(in srgb, var(--accent) 35%, transparent);
+}
+
+/* --- the page ------------------------------------------------------------ */
+[data-ui="5.0"] #content {
+  padding: 20px 32px 34px;
+}
+[data-ui="5.0"] .page-title { font-size: 24px; }
+
+/* The home row of doors reads like v5's action strip: small caps, spaced. */
+[data-ui="5.0"] .home-btn {
+  text-transform: uppercase;
+  letter-spacing: 1.2px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* The drawer keeps the shared shell shape; v5 darkens the wood slightly. */
+[data-ui="5.0"] #drawer { background: color-mix(in srgb, var(--bg2) 82%, #000); }
+

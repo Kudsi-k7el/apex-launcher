@@ -1551,6 +1551,11 @@ ipcMain.handle('steam:restart', async () => {
 // Lua tools: read SteamTools' per-user folder and remove files the user put
 // there. Nothing here writes a script or a manifest, and every delete has to
 // name a file inside a plugin folder that scan() itself found.
+ipcMain.handle('lua:app', async () => {
+  try { return await luatools.appInfo(); }
+  catch (err) { return { ok: false, error: err.message, installed: false, exe: null }; }
+});
+
 ipcMain.handle('lua:scan', async () => {
   try { return await luatools.scan(); }
   catch (err) { return { ok: false, error: err.message, steam: [] }; }
@@ -1569,6 +1574,164 @@ handleAuthed('lua:remove', async (_e, file, dir) => {
 handleAuthed('lua:clear', async (_e, dir) => {
   try { return await luatools.clear(dir); }
   catch (err) { return { ok: false, error: err.message }; }
+});
+
+// Lua tools: write side - put a game into Steam's library like LuaTools does.
+async function luaApplyHandler(_e, ...args) {
+  try {
+    let payload = args[0];
+    if (args.length > 1 && (typeof payload === 'string' || typeof payload === 'number')) {
+      payload = { appid: payload, dir: args[1] };
+    } else if (args.length > 2) {
+      payload = { appid: args[0], dir: args[1], library: args[2] };
+    }
+    return await luatools.apply(payload);
+  }
+  catch (err) { return { ok: false, error: err.message }; }
+}
+for (const name of ['apply','install','write','add','put','create','applyFile','installFile','import','importLua','installApp','applyApp','addApp','trackSteam','writeLua','enable','applyLua','installLua','installGame','applyGame','addGame','writeGame','putGame','createGame','installLuaFile','writeLuaFile','addLuaFile','applyManifest','activate','unlock','addGameToSteam','putGameInSteam','makeShow','showInSteam','showInLibrary','download','downloadGame','downloadInSteam','steamDownload','startDownload','installAndDownload']) {
+  ipcMain.handle(`lua:${name}`, async (_e, ...args) => luaApplyHandler(_e, ...args));
+}
+// Bulk download: seed a manifest for every app id already recorded in Steam's
+// stplug-in folders, so Steam can fetch them directly.
+for (const name of ['downloadAll','downloadLibrary','downloadAllGames','seedAll','seedAllManifests','downloadInstalled','downloadLuaGames']) {
+  ipcMain.handle(`lua:${name}`, async (_e, ...args) => {
+    try {
+      let payload = args[0];
+      if (args.length > 1 && (typeof payload === 'string' || typeof payload === 'number')) {
+        payload = { library: args[1] };
+      }
+      return await luatools.downloadAll(payload || {});
+    } catch (err) { return { ok: false, error: err.message }; }
+  });
+}
+
+// Install the LuaTools Steam plugin (injector) into Steam.
+for (const name of ['inject','injectLuaTools','installPlugin','installInjector','installLoader','addInjector']) {
+  ipcMain.handle(`lua:${name}`, async (_e, ...args) => {
+    try { return await luatools.inject(args[0] || {}); }
+    catch (err) { return { ok: false, error: err.message }; }
+  });
+}
+
+// Download and launch the official LuaTools installer.
+for (const name of ['installLuaTools','getLuaTools','downloadLuaTools','setupLuaTools']) {
+  ipcMain.handle(`lua:${name}`, async (_e, ...args) => {
+    try { return await luatools.installLuaTools(args[0] || {}); }
+    catch (err) { return { ok: false, error: err.message }; }
+  });
+}
+
+// Some callers pass positional args (file, dir).
+ipcMain.handle('lua:applyPositional', async (_e, file, dir) => {
+  try { return await luatools.apply({ file, dir }); }
+  catch (err) { return { ok: false, error: err.message }; }
+});
+
+ipcMain.handle('lua:backups', async () => {
+  try { return await luatools.backups(); }
+  catch (err) { return { ok: false, error: err.message, backups: [] }; }
+});
+handleAuthed('lua:restore', async (_e, id) => {
+  try { return await luatools.restore(id); }
+  catch (err) { return { ok: false, error: err.message }; }
+});
+
+// -------------------------------------------------------------------
+// LuaTools app feature ports (luatoolsplus): the lua editor, the CDN
+// depot downloader and the unlocker modes. Every event these run
+// streams out on lua:event so the tab can paint progress live.
+// -------------------------------------------------------------------
+const luatoolsPlus = require('./luatoolsplus');
+
+const sendLuaEvent = (evt) => {
+  try { if (win && !win.isDestroyed()) win.webContents.send('lua:event', evt); }
+  catch { /* the window can be gone mid-download; progress dying silently is fine */ }
+};
+
+ipcMain.handle('lua:read', async (_e, file) => {
+  try { return await luatoolsPlus.readLua(file); }
+  catch (err) { return { ok: false, error: err.message }; }
+});
+
+handleAuthed('lua:edit', async (_e, opts) => {
+  try { return await luatoolsPlus.editLua(opts || {}); }
+  catch (err) { return { ok: false, error: err.message }; }
+});
+
+// Static info; the exe itself is fetched on first depot download.
+ipcMain.handle('lua:downloader', async () => {
+  try { return await luatoolsPlus.downloaderStatus(); }
+  catch (err) { return { ok: false, error: err.message, installed: false }; }
+});
+
+// Fetch the DepotDownloaderMod tool up front (the renderer calls this when the
+// user asks for a download, so the big tool download has its own progress row).
+ipcMain.handle('lua:downloader-fetch', async () => {
+  try {
+    const exe = await luatoolsPlus.ensureDownloader(
+      (pct) => sendLuaEvent({ type: 'tool', pct, id: 'tool-fetch' }));
+    return { ok: true, exe };
+  } catch (err) { return { ok: false, error: err.message }; }
+});
+
+handleAuthed('lua:depot-download', async (_e, opts) => {
+  try { return await luatoolsPlus.downloadDepots(opts || {}, sendLuaEvent); }
+  catch (err) { return { ok: false, error: err.message }; }
+});
+
+handleAuthed('lua:depot-cancel', async (_e, id) => {
+  try { return luatoolsPlus.cancelDepots(id); }
+  catch (err) { return { ok: false, error: err.message }; }
+});
+
+ipcMain.handle('lua:modes', async () => {
+  try { return await luatoolsPlus.modes(); }
+  catch (err) { return { ok: false, error: err.message, modes: [] }; }
+});
+
+handleAuthed('lua:mode-set', async (_e, opts) => {
+  try { return await luatoolsPlus.setMode(opts || {}, sendLuaEvent); }
+  catch (err) { return { ok: false, error: err.message }; }
+});
+
+handleAuthed('lua:mode-manage', async () => {
+  try { return await luatoolsPlus.manageCloudRedirect(sendLuaEvent); }
+  catch (err) { return { ok: false, error: err.message }; }
+});
+
+// Fetches missing depot manifests from LuaTools' manifest backend so Steam's
+// depotcache holds every pin the applied luas name.
+ipcMain.handle('lua:manifests-repair', async () => {
+  try { return await luatoolsPlus.repairManifests(); }
+  catch (err) { return { ok: false, error: err.message, repaired: [] }; }
+});
+
+// Delete one applied game everywhere: its lua lines, the seeded appmanifest
+// and the depotcache manifests only it needs.
+ipcMain.handle('lua:uninstall-app', async (_e, appId) => {
+  try { return await luatoolsPlus.uninstallApp(appId); }
+  catch (err) { return { ok: false, error: err.message }; }
+});
+
+// Absolute path of the bundled animated wallpaper for the renderer's own
+// <video>. Unpacked out of app.asar (media handlers read from disk, not through
+// the asar fs patch), so packaged builds point at app.asar.unpacked. Dev runs
+// the plain path; an empty answer means the clip is missing.
+ipcMain.handle('wallpaper:file', async () => {
+  const file = path.join(__dirname, 'src', 'wallpaper', 'samurai-autumn.webm');
+  try {
+    const unpacked = file.replace('app.asar', 'app.asar.unpacked');
+    if (fs.existsSync(unpacked)) return require('url').pathToFileURL(unpacked).href;
+  } catch { /* fall through to the plain path */ }
+  return fs.existsSync(file) ? require('url').pathToFileURL(file).href : '';
+});
+
+// The best name Steam knows for one AppID - the storefront first, then the
+// global app list for AppIDs that have no store page.
+ipcMain.handle('store:name', async (_e, appId) => {
+  try { return await catalog.nameFor(appId); }
+  catch (err) { return { ok: false, error: (err && err.message) || 'Name lookup failed' }; }
 });
 
 // Just "is Steam open right now?" - cheap enough to poll while waiting for it

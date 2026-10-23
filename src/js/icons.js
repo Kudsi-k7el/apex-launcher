@@ -47,6 +47,7 @@ const ICON_PATHS = {
   users: '<circle cx="9" cy="8" r="3.5"/><path d="M2.5 21a6.5 6.5 0 0 1 13 0"/><path d="M16 5.2A3.5 3.5 0 0 1 16 12"/><path d="M18 15.3A6.5 6.5 0 0 1 21.5 21"/>',
   gamepad: '<path d="M6 12h4"/><path d="M8 10v4"/><circle cx="15.5" cy="11" r="1"/><circle cx="18" cy="13.5" r="1"/><rect x="2" y="6" width="20" height="12" rx="5"/>',
   cpu: '<rect x="5" y="5" width="14" height="14" rx="2"/><rect x="9" y="9" width="6" height="6" rx="1"/><path d="M9 2v3"/><path d="M15 2v3"/><path d="M9 19v3"/><path d="M15 19v3"/><path d="M2 9h3"/><path d="M2 15h3"/><path d="M19 9h3"/><path d="M19 15h3"/>',
+  wrench: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>',
   hardDrive: '<path d="M21 12H3"/><path d="M5 6h14a2 2 0 0 1 1.8 1.1L22 12v5a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-5l1.2-4.9A2 2 0 0 1 5 6z"/><circle cx="17" cy="15.5" r="1"/><circle cx="13" cy="15.5" r="1"/>',
   clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
   zap: '<path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z"/>',
@@ -128,7 +129,13 @@ const ICON_PATHS = {
   // A television: the shorthand everywhere for the couch/10-foot layout.
   tv: '<rect x="2" y="7.5" width="20" height="13" rx="2.2"/><path d="M8 3l4 4.5"/><path d="M16 3l-4 4.5"/>',
   keyboard: '<rect x="2" y="6" width="20" height="12" rx="2"/><path d="M6 10h.01"/><path d="M10 10h.01"/><path d="M14 10h.01"/><path d="M18 10h.01"/><path d="M6 14h.01"/><path d="M18 14h.01"/><path d="M9 14h6"/>',
-  key: '<circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3"/><path d="M17 6l3 3"/>'
+  key: '<circle cx="8" cy="15" r="4"/><path d="M10.8 12.2L20 3"/><path d="M17 6l3 3"/>',
+  // Apex Tools: the launcher's own mark, vectorised from the white A-triangle
+  // logomark. One filled glyph reading as twin peaks - the left slab rising to
+  // the apex, the bent arm falling to the bottom-right corner - with the
+  // elbow bar and the notch that splits them drawn by the gaps between the
+  // three sub-shapes. Apex's own shape, on the 24x24 grid like the rest.
+  apexMark: '<path fill="currentColor" stroke="none" d="M11.8 1.6 L2.6 21.4 H11.2 Z M13.0 4.2 L21.9 21.4 H16.8 L13.9 12.4 Z M10.9 10.6 H17.9 V12.2 H10.9 Z"/>'
 };
 
 function icon(name, size = 18) {
