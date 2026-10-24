@@ -1,7 +1,7 @@
 {
   "name": "apex-launcher",
   "productName": "Apex Launcher",
-  "version": "2.10.2",
+  "version": "2.11.0",
   "description": "Apex Launcher - your games, one place. A modern, frameless desktop game launcher.",
   "author": "Apex Launcher",
   "license": "MIT",
@@ -14,9 +14,9 @@
     "test:server": "node _server-test.js",
     "icon": "electron _icon.js",
     "pack": "electron-builder --dir",
-    "dist": "electron-builder --win nsis",
+    "dist": "node installer/build-installer.js",
     "release": "node release.js",
-    "release:dry": "electron-builder --win nsis --publish never",
+    "release:dry": "node installer/build-installer.js",
     "test:update": "electron _update-test.js"
   },
   "devDependencies": {

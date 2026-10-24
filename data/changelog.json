@@ -1,6 +1,31 @@
 {
   "entries": [
     {
+      "version": "2.11.0",
+      "date": "2026-10-24",
+      "title": "The Project Apex setup window",
+      "summary": "The installer has a face of its own now: the transparent Apex mark, a launcher-style shell with the same five themes, glass cards and smooth page motion, an install-folder page, then a live installing page. The same NSIS engine still copies the files, so shortcuts, uninstall and silent updates keep working.",
+      "sections": [
+        {
+          "title": "New",
+          "items": [
+            "A launcher-style setup window with the Apex mark, title bar, numbered sidebar, language picker and install-folder field.",
+            "The same five launcher themes - Project Apex, Samurai Autumn, Dark, OLED and Neon - with live switching, accent glows and animated page transitions.",
+            "An installing page with a line-art PC and a field of animated sparkles while the core installer runs behind it.",
+            "The setup accepts `/S` and passes it through to the core installer, so electron-updater can keep installing updates silently."
+          ]
+        },
+        {
+          "title": "Changed",
+          "items": [
+            "The setup is now a small WPF wrapper around the same electron-builder NSIS payload. The installed files, shortcuts, uninstaller and update feed are unchanged.",
+            "The 18+ gate is gone. The folder page keeps a small Terms of use / Privacy Policy line, but Next only depends on a valid install path.",
+            "The white Apex mark is now the logo everywhere - welcome, finish, title bar, app window, taskbar and shortcut - with a transparent background and no charcoal tile."
+          ]
+        }
+      ]
+    },
+    {
       "version": "2.10.2",
       "date": "2026-10-23",
       "title": "Downloaded games actually start",

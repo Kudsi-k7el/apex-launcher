@@ -2,17 +2,14 @@
 'use strict';
 
 /**
- * One-command release: builds the installer and publishes it, its blockmap and
+ * One-command release: builds the Project Apex setup, then publishes it and
  * latest.yml to GitHub Releases - which is exactly where every installed copy of
  * the launcher reads its updates from (see updater.js).
  *
- * electron-builder needs two things that are easy to get wrong by hand, so this
- * script supplies both:
- *
- *   1. A GH_TOKEN. Yours is taken from the GitHub CLI you are already logged in
- *      with, so there is no token to paste anywhere.
- *   2. The git tag. A published release has to point at a tag that exists, so
- *      the tag is created and pushed before the upload starts.
+ * The setup is the custom WPF wrapper around the electron-builder NSIS payload.
+ * It is uploaded at the name electron-updater expects, and its latest.yml points
+ * at that wrapper. The wrapper passes /S through to the core installer, so
+ * silent updates keep working.
  *
  * Usage:
  *   npm version patch --no-git-tag-version   # or edit "version" by hand
@@ -31,11 +28,8 @@ const root = __dirname;
 const pkg = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8'));
 const version = String(pkg.version || '').trim();
 const tag = `v${version}`;
-
-// Spawned directly rather than through a shell: a shell would join the argument
-// list into one string, and `git tag -a v1.0.0 -m Apex Launcher 1.0.0` turns
-// into four arguments ("too many arguments"). Node's own quoting is correct.
-const BUILDER_CLI = path.join(root, 'node_modules', 'electron-builder', 'out', 'cli', 'cli.js');
+const setup = path.join(root, 'dist', `Apex-Launcher-Setup-${version}.exe`);
+const latest = path.join(root, 'dist', 'latest.yml');
 
 function say(msg) {
   process.stdout.write(`${msg}\n`);
@@ -66,16 +60,11 @@ if (!/^\d+\.\d+\.\d+/.test(version)) die(`package.json has no usable version ("$
 
 say(`\nApex Launcher ${version} -> GitHub release ${tag}\n`);
 
-// --- 1. the token -----------------------------------------------------------
-let token = String(process.env.GH_TOKEN || '').trim();
-if (!token) {
-  const gh = capture('gh', ['auth', 'token']);
-  if (gh.code !== 0 || !gh.out) {
-    die('No GitHub token. Run `gh auth login` once, or set GH_TOKEN yourself.');
-  }
-  token = gh.out;
+// --- 1. GitHub CLI auth ------------------------------------------------------
+if (capture('gh', ['auth', 'status']).code !== 0) {
+  die('GitHub CLI is not logged in. Run `gh auth login` once, then retry.');
 }
-say('  ok  GitHub token ready (from the gh CLI)');
+say('  ok  GitHub CLI ready');
 
 // --- 2. say so if this version is already out -------------------------------
 // Re-running is legitimate (it is how a half-finished upload is repaired), so
@@ -122,15 +111,25 @@ if (capture('gh', ['release', 'view', tag, '--json', 'tagName']).code !== 0) {
   say(`  ok  created release ${tag}`);
 }
 
-// --- 4. build + publish -----------------------------------------------------
-if (!fs.existsSync(BUILDER_CLI)) die(`electron-builder is missing at ${BUILDER_CLI}. Run npm install.`);
+// --- 4. build the custom setup ---------------------------------------------
+say('\nBuilding the Project Apex setup...\n');
+if (run(process.execPath, [path.join(root, 'installer', 'build-installer.js')]) !== 0) {
+  die('\nRelease failed. The build output above says why.');
+}
+if (!fs.existsSync(setup) || !fs.existsSync(latest)) {
+  die(`The build did not produce ${setup} and ${latest}.`);
+}
 
-say('\nBuilding and publishing...\n');
-const code = run(process.execPath, [BUILDER_CLI, '--win', 'nsis', '--publish', 'always'], {
-  env: { ...process.env, GH_TOKEN: token }
-});
-
-if (code !== 0) die('\nRelease failed. The build output above says why.');
+// --- 5. upload the wrapper and its update feed ------------------------------
+// The wrapper is the artifact electron-updater downloads. The core installer
+// stays local; uploading it would let an updater pick the wrong file.
+say('\nUploading the setup and latest.yml...\n');
+if (run('gh', ['release', 'upload', tag, setup, '--clobber']) !== 0) {
+  die(`Could not upload ${path.basename(setup)}.`);
+}
+if (run('gh', ['release', 'upload', tag, latest, '--clobber']) !== 0) {
+  die('Could not upload latest.yml.');
+}
 
 const pub = pkg.build.publish[0];
 say(`\nDone. https://github.com/${pub.owner}/${pub.repo}/releases/tag/${tag}`);
